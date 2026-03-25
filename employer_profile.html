@@ -1,0 +1,745 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employer Profile - Smart Hunt Job</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Inter',sans-serif;
+}
+
+body{
+  background:#0c1117;
+  color:white;
+}
+
+/* NAVBAR */
+
+.navbar{
+  position:fixed;
+  top:0;
+  width:100%;
+  background:rgba(0,0,0,0.85);
+  padding:15px 40px;
+  z-index:1000;
+}
+
+.nav-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.logo{
+  font-weight:800;
+  font-size:20px;
+}
+
+.logo span{
+  color:#3aa0ff;
+}
+.back-btn{
+  background:rgba(15,23,42,0.7);
+  border:1px solid rgba(58,160,255,0.4);
+  color:#fff;
+  border-radius:999px;
+  padding:6px 12px;
+  cursor:pointer;
+  font-size:12px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.back-btn:hover{border-color:#3aa0ff;color:#3aa0ff;}
+
+/* PAGE */
+
+.page{
+  padding:140px 60px 60px;
+  max-width:1100px;
+  margin:auto;
+}
+
+/* BANNER */
+
+.company-banner{
+  height:200px;
+  background:linear-gradient(135deg,#3aa0ff,#1f4d8f);
+  border-radius:20px;
+  margin-bottom:-70px;
+}
+
+/* HEADER */
+
+.company-header{
+  text-align:center;
+  margin-bottom:60px;
+  position: relative;
+}
+
+.company-logo{
+  width:120px;
+  height:120px;
+  border-radius:20px;
+  border:4px solid #3aa0ff;
+  background:white;
+  object-fit:contain;
+}
+
+.company-name{
+  font-size:32px;
+  font-weight:800;
+  margin-top:10px;
+}
+
+.company-industry{
+  color:#3aa0ff;
+  font-weight:600;
+}
+
+.company-meta{
+  margin-top:10px;
+  color:#bbb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.company-meta i.edit-icon{
+  color:#2b8be6;
+  cursor:pointer;
+}
+
+/* SECTION */
+
+.section{
+  background:#111827;
+  padding:20px 30px;
+  border-radius:16px;
+  margin-bottom:25px;
+  border:1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
+
+.section-title{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:15px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.section-title i{
+  color:#3aa0ff;
+}
+
+.section .edit-btn{
+  position: absolute;
+  top:20px;
+  right:20px;
+  background:none;
+  border:none;
+  color:#2b8be6;
+  cursor:pointer;
+  font-size:16px;
+}
+
+.section .edit-btn:hover{
+  color:#3aa0ff;
+}
+
+/* ABOUT */
+
+.about-text{
+  color:#bbb;
+  line-height:1.6;
+}
+
+/* INFO GRID */
+
+.info-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+}
+
+.info-box{
+  background:#0c1117;
+  padding:15px;
+  border-radius:10px;
+}
+
+.info-label{
+  font-size:13px;
+  color:#888;
+  margin-bottom:5px;
+}
+
+.info-value{
+  font-weight:600;
+  color:#fff;
+}
+
+/* CONTACT */
+
+.contact-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+  color:#bbb;
+}
+
+.contact-item i{
+  color:#3aa0ff;
+}
+
+.contact-item span{
+  flex:1;
+}
+
+/* EDITABLE INPUT */
+
+.edit-input{
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid #3aa0ff;
+  background:#0c1117;
+  color:white;
+}
+
+/* SAVE BUTTON */
+
+.save-btn{
+  margin-top:10px;
+  background:#3aa0ff;
+  border:none;
+  padding:8px 12px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+}
+
+.save-btn:hover{
+  background:#2b8be6;
+}
+
+/* LOGO UPLOAD TOGGLE */
+.logo-btn{
+  margin-top:10px;
+  background:rgba(15,23,42,0.7);
+  border:1px solid rgba(58,160,255,0.4);
+  color:#fff;
+  border-radius:999px;
+  padding:6px 12px;
+  cursor:pointer;
+  font-size:12px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.logo-btn:hover{border-color:#3aa0ff;color:#3aa0ff;}
+
+.editable-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  width:100%;
+}
+
+/* Keep header edit controls compact + centered (avoid full-width inputs) */
+.company-header .edit-input{
+  width:min(520px, 72vw);
+}
+.company-header .save-btn{
+  margin-top:0;
+}
+.company-meta .edit-input{
+  width:min(360px, 70vw);
+}
+.company-meta .save-btn{
+  margin-top:0;
+}
+
+/* Empty-state placeholders (realistic first-time profile) */
+.company-name:empty::before{content:"Add company name";opacity:.7;}
+.company-industry:empty::before{content:"Add industry";opacity:.7;}
+#companyLocation:empty::before{content:"Add location";opacity:.7;}
+.about-text:empty::before{content:"Add an about description";opacity:.7;}
+#infoIndustry:empty::before{content:"—";opacity:.7;}
+#infoSize:empty::before{content:"—";opacity:.7;}
+#infoFounded:empty::before{content:"—";opacity:.7;}
+#infoWebsite:empty::before{content:"—";opacity:.7;}
+#contactEmail:empty::before{content:"—";opacity:.7;}
+#contactPhone:empty::before{content:"—";opacity:.7;}
+#contactLocation:empty::before{content:"—";opacity:.7;}
+#contactLinkedin:empty::before{content:"—";opacity:.7;}
+
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <div class="nav-top">
+    <div class="logo">SMART <span>HUNT</span>-JOB</div>
+    <button class="back-btn" onclick="goBack()">Back</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="company-banner"></div>
+
+  <div class="company-header">
+
+    <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" class="company-logo" id="companyLogo" alt="Default logo">
+    <input type="file" id="companyLogoInput" accept="image/*" hidden>
+    <button class="logo-btn" id="companyLogoBtn" style="display:none;">Change Photo</button>
+
+    <div class="editable-row">
+      <div class="company-name" id="companyName"></div>
+      <i class="fa-solid fa-pen-to-square edit-icon" onclick="editField('companyName')"></i>
+    </div>
+
+    <div class="editable-row">
+      <div class="company-industry" id="companyIndustry"></div>
+      <i class="fa-solid fa-pen-to-square edit-icon" onclick="editField('companyIndustry')"></i>
+    </div>
+    <div class="company-meta">
+      <i class="fa-solid fa-location-dot"></i>
+      <span id="companyLocation"></span>
+      <i class="fa-solid fa-pen-to-square edit-icon" onclick="editField('companyLocation')"></i>
+    </div>
+
+  </div>
+
+  <!-- ABOUT COMPANY -->
+  <div class="section" id="aboutSection">
+    <div class="section-title">
+      <i class="fa-solid fa-building"></i> About Company
+    </div>
+    <button class="edit-btn" onclick="editField('aboutText')"><i class="fa-solid fa-pen-to-square"></i></button>
+    <p class="about-text" id="aboutText"></p>
+  </div>
+
+  <!-- COMPANY DETAILS -->
+  <div class="section" id="infoSection">
+    <div class="section-title">
+      <i class="fa-solid fa-circle-info"></i> Company Information
+    </div>
+    <button class="edit-btn" onclick="editField('infoSection')"><i class="fa-solid fa-pen-to-square"></i></button>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-label">Industry</div>
+        <div class="info-value" id="infoIndustry"></div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Company Size</div>
+        <div class="info-value" id="infoSize"></div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Founded</div>
+        <div class="info-value" id="infoFounded"></div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Website</div>
+        <div class="info-value" id="infoWebsite"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONTACT -->
+  <div class="section" id="contactSection">
+    <div class="section-title">
+      <i class="fa-solid fa-address-book"></i> Company Contact
+    </div>
+    <button class="edit-btn" onclick="editField('contactSection')"><i class="fa-solid fa-pen-to-square"></i></button>
+
+    <div class="contact-item">
+      <i class="fa-solid fa-envelope"></i>
+      <span id="contactEmail"></span>
+    </div>
+
+    <div class="contact-item">
+      <i class="fa-solid fa-phone"></i>
+      <span id="contactPhone"></span>
+    </div>
+
+    <div class="contact-item">
+      <i class="fa-solid fa-location-dot"></i>
+      <span id="contactLocation"></span>
+    </div>
+
+    <div class="contact-item">
+      <i class="fa-brands fa-linkedin"></i>
+      <span id="contactLinkedin"></span>
+    </div>
+
+  </div>
+
+  <div class="section" style="text-align:center;" id="finishProfileSection">
+    <div class="section-title" style="justify-content:center;">
+      <i class="fa-solid fa-circle-check"></i> Finish Profile
+    </div>
+    <p class="about-text">When you’re done, continue to your dashboard.</p>
+    <button class="save-btn" onclick="finishEmployerProfile()">Continue to Dashboard</button>
+  </div>
+
+</div>
+
+<script>
+function backendRequest(pathname, options){
+  const token = localStorage.getItem("authToken");
+  if (!token) return Promise.reject(new Error("No auth token"));
+  const method = options && options.method ? options.method : "GET";
+  const body = options && options.body ? options.body : null;
+  return fetch(pathname, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
+  }).then(async (res) => {
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = data && data.error ? data.error : `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return data;
+  });
+}
+
+function collectEmployerProfile(){
+  const getText = (id) => (document.getElementById(id)?.innerText || "").trim();
+  return {
+    companyName: getText("companyName"),
+    companyIndustry: getText("companyIndustry"),
+    companyLocation: getText("companyLocation"),
+    aboutText: getText("aboutText"),
+    info: {
+      industry: getText("infoIndustry"),
+      size: getText("infoSize"),
+      founded: getText("infoFounded"),
+      website: getText("infoWebsite"),
+    },
+    contact: {
+      email: getText("contactEmail"),
+      phone: getText("contactPhone"),
+      location: getText("contactLocation"),
+      linkedin: getText("contactLinkedin"),
+    },
+    logoSrc: document.getElementById("companyLogo")?.src || "",
+  };
+}
+
+function applyEmployerProfile(profile){
+  if (!profile || typeof profile !== "object") return;
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && typeof val === "string") el.innerText = val;
+  };
+  if (typeof profile.companyName === "string") setText("companyName", profile.companyName);
+  if (typeof profile.companyIndustry === "string") setText("companyIndustry", profile.companyIndustry);
+  if (typeof profile.companyLocation === "string") setText("companyLocation", profile.companyLocation);
+  if (typeof profile.aboutText === "string") setText("aboutText", profile.aboutText);
+
+  const info = profile.info && typeof profile.info === "object" ? profile.info : {};
+  setText("infoIndustry", info.industry || "");
+  setText("infoSize", info.size || "");
+  setText("infoFounded", info.founded || "");
+  setText("infoWebsite", info.website || "");
+
+  const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
+  setText("contactEmail", contact.email || "");
+  setText("contactPhone", contact.phone || "");
+  setText("contactLocation", contact.location || "");
+  setText("contactLinkedin", contact.linkedin || "");
+
+  if (typeof profile.logoSrc === "string" && profile.logoSrc) {
+    const logo = document.getElementById("companyLogo");
+    if (logo) logo.src = profile.logoSrc;
+  }
+}
+
+function saveEmployerProfileToBackend(){
+  const profile = collectEmployerProfile();
+  return backendRequest("/api/profile", { method: "PUT", body: { profile } });
+}
+
+function editField(sectionId) {
+  if(sectionId === 'companyName'){
+    let el = document.getElementById('companyName');
+    if (!el) return;
+    if (el.dataset.editing === "1") {
+      el.innerText = el.dataset.originalText || "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+      return;
+    }
+    let current = el.innerText;
+    el.dataset.originalText = current;
+    el.dataset.editing = "1";
+    el.innerHTML = `<input type="text" class="edit-input" id="companyNameInput" value="${current}">
+                    <button class="save-btn" onclick="saveField('companyName')">Save</button>`;
+  } else if(sectionId === 'companyIndustry'){
+    let el = document.getElementById('companyIndustry');
+    if (!el) return;
+    if (el.dataset.editing === "1") {
+      el.innerText = el.dataset.originalText || "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+      return;
+    }
+    let current = el.innerText;
+    el.dataset.originalText = current;
+    el.dataset.editing = "1";
+    el.innerHTML = `<input type="text" class="edit-input" id="companyIndustryInput" value="${current}">
+                    <button class="save-btn" onclick="saveField('companyIndustry')">Save</button>`;
+  } else if(sectionId === 'aboutText'){
+    let para = document.getElementById('aboutText');
+    if (!para) return;
+    if (para.dataset.editing === "1") {
+      para.innerText = para.dataset.originalText || "";
+      delete para.dataset.editing;
+      delete para.dataset.originalText;
+      return;
+    }
+    let current = para.innerText;
+    para.dataset.originalText = current;
+    para.dataset.editing = "1";
+    para.innerHTML = `<textarea class="edit-input" id="aboutInput">${current}</textarea>
+                      <button class="save-btn" onclick="saveField('aboutText')">Save</button>`;
+  } else if(sectionId === 'companyLocation'){
+    let span = document.getElementById('companyLocation');
+    if (!span) return;
+    if (span.dataset.editing === "1") {
+      span.innerText = span.dataset.originalText || "";
+      delete span.dataset.editing;
+      delete span.dataset.originalText;
+      return;
+    }
+    let current = span.innerText;
+    span.dataset.originalText = current;
+    span.dataset.editing = "1";
+    span.innerHTML = `<input type="text" class="edit-input" id="locationInput" value="${current}">
+                      <button class="save-btn" onclick="saveField('companyLocation')">Save</button>`;
+  } else if(sectionId === 'infoSection'){
+    const ids = ['infoIndustry','infoSize','infoFounded','infoWebsite'];
+    const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    if (anyEditing) {
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerText = el.dataset.originalText || "";
+        delete el.dataset.editing;
+        delete el.dataset.originalText;
+      });
+      section.querySelectorAll('button[data-save-all="infoSection"]').forEach((b) => b.remove());
+      return;
+    }
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const current = el.innerText;
+      el.dataset.originalText = current;
+      el.dataset.editing = "1";
+      el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">`;
+    });
+
+    if (!section.querySelector('button[data-save-all="infoSection"]')) {
+      section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="infoSection" onclick="saveField('infoSection')">Save All</button>`);
+    }
+  } else if(sectionId === 'contactSection'){
+    const ids = ['contactEmail','contactPhone','contactLocation','contactLinkedin'];
+    const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    if (anyEditing) {
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerText = el.dataset.originalText || "";
+        delete el.dataset.editing;
+        delete el.dataset.originalText;
+      });
+      section.querySelectorAll('button[data-save-all="contactSection"]').forEach((b) => b.remove());
+      return;
+    }
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const current = el.innerText;
+      el.dataset.originalText = current;
+      el.dataset.editing = "1";
+      el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">`;
+    });
+
+    if (!section.querySelector('button[data-save-all="contactSection"]')) {
+      section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="contactSection" onclick="saveField('contactSection')">Save All</button>`);
+    }
+  }
+}
+
+function saveField(sectionId){
+  if(sectionId === 'companyName'){
+    let input = document.getElementById('companyNameInput');
+    const el = document.getElementById('companyName');
+    if (el) {
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    }
+  } else if(sectionId === 'companyIndustry'){
+    let input = document.getElementById('companyIndustryInput');
+    const el = document.getElementById('companyIndustry');
+    if (el) {
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    }
+  } else if(sectionId === 'aboutText'){
+    let input = document.getElementById('aboutInput');
+    const el = document.getElementById('aboutText');
+    if (el) {
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    }
+  } else if(sectionId === 'companyLocation'){
+    let input = document.getElementById('locationInput');
+    const el = document.getElementById('companyLocation');
+    if (el) {
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    }
+  } else if(sectionId === 'infoSection'){
+    const ids = ['infoIndustry','infoSize','infoFounded','infoWebsite'];
+    ids.forEach((id) => {
+      const input = document.getElementById(id + 'Input');
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    });
+    document.getElementById('infoSection')?.querySelectorAll('button[data-save-all="infoSection"]').forEach((b) => b.remove());
+  } else if(sectionId === 'contactSection'){
+    const ids = ['contactEmail','contactPhone','contactLocation','contactLinkedin'];
+    ids.forEach((id) => {
+      const input = document.getElementById(id + 'Input');
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerText = input ? input.value : "";
+      delete el.dataset.editing;
+      delete el.dataset.originalText;
+    });
+    document.getElementById('contactSection')?.querySelectorAll('button[data-save-all="contactSection"]').forEach((b) => b.remove());
+  }
+  saveEmployerProfileToBackend().catch(() => {});
+}
+
+function finishEmployerProfile(){
+  saveEmployerProfileToBackend().catch(() => {});
+  localStorage.setItem("finishProfileDone_employer","true");
+  localStorage.setItem("postSignupWelcome","employer");
+  window.location.href = "index.html";
+}
+
+(function () {
+  const finishSection = document.getElementById("finishProfileSection");
+  if (!finishSection) return;
+  const done = localStorage.getItem("finishProfileDone_employer") === "true";
+  if (done) finishSection.style.display = "none";
+})();
+
+(function () {
+  const logo = document.getElementById("companyLogo");
+  const button = document.getElementById("companyLogoBtn");
+  const input = document.getElementById("companyLogoInput");
+  if (!logo || !button || !input) return;
+
+  logo.addEventListener("click", function () {
+    button.style.display =
+      button.style.display === "inline-block" ? "none" : "inline-block";
+  });
+
+  button.addEventListener("click", function () {
+    input.click();
+  });
+
+  input.addEventListener("change", function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      logo.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    button.style.display = "none";
+    saveEmployerProfileToBackend().catch(() => {});
+  });
+})();
+
+// Load profile from backend when available (multi-device support).
+(function () {
+  backendRequest("/api/profile", { method: "GET" })
+    .then((data) => {
+      if (!data || !data.ok) return;
+      if (data.profile) applyEmployerProfile(data.profile);
+
+      // If backend profile is empty, prefill company name from signup (user.company).
+      const existingName = (document.getElementById("companyName")?.innerText || "").trim();
+      const companyFromUser = String(data.user && data.user.company ? data.user.company : "").trim();
+      if (!existingName && companyFromUser) {
+        const el = document.getElementById("companyName");
+        if (el) el.innerText = companyFromUser;
+        saveEmployerProfileToBackend().catch(() => {});
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+
+<script>
+function goBack(){
+  localStorage.setItem("postLoginTarget","employer");
+  window.location.href = "index.html";
+}
+</script>
+
+<script>
+  const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const role = localStorage.getItem("userRole");
+  if (!loggedIn || role !== "employer") {
+    window.location.href = "index.html";
+  }
+</script>
+
+</body>
+</html>

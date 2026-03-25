@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Hunt Job - Seeker Profile</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Inter',sans-serif;
+}
+
+body{
+background:#0c1117;
+color:white;
+line-height:1.6;
+}
+
+/* NAVBAR */
+
+.navbar{
+position:fixed;
+top:0;
+width:100%;
+background:rgba(0,0,0,0.85);
+backdrop-filter:blur(10px);
+padding:15px 40px;
+z-index:1000;
+}
+
+.nav-top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.logo-section{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.logo-section img{
+width:35px;
+}
+
+.logo-text{
+font-weight:700;
+font-size:20px;
+}
+
+.logo-text span{
+color:#3aa0ff;
+}
+
+.account-icon{
+font-size:22px;
+color:#ccc;
+cursor:pointer;
+}
+.back-btn{
+background:rgba(15,23,42,0.7);
+border:1px solid rgba(58,160,255,0.4);
+color:#fff;
+border-radius:999px;
+padding:6px 12px;
+cursor:pointer;
+font-size:12px;
+letter-spacing:1px;
+text-transform:uppercase;
+}
+.back-btn:hover{border-color:#3aa0ff;color:#3aa0ff;}
+
+/* PAGE */
+
+.profile-page{
+padding:150px 60px 60px;
+max-width:1100px;
+margin:auto;
+}
+
+/* HEADER */
+
+.profile-banner{
+height:180px;
+background:linear-gradient(135deg,#3aa0ff,#1f4d8f);
+border-radius:20px;
+margin-bottom:-60px;
+}
+
+.profile-header{
+text-align:center;
+margin-bottom:60px;
+}
+
+.profile-avatar{
+width:120px;
+height:120px;
+border-radius:50%;
+border:4px solid #3aa0ff;
+object-fit:cover;
+}
+
+.avatar-btn{
+margin-top:12px;
+}
+
+.profile-name{
+font-size:32px;
+font-weight:800;
+margin-top:12px;
+}
+
+.profile-title{
+color:#3aa0ff;
+font-weight:600;
+}
+
+.editable-row{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.edit-icon{
+color:#2b8be6;
+cursor:pointer;
+}
+
+/* Empty-state placeholders */
+.profile-name:empty::before{content:"Your name";opacity:.7;}
+.profile-title:empty::before{content:"Add your title";opacity:.7;}
+#aboutText:empty::before{content:"Add a short bio about you";opacity:.7;}
+#skillsGrid:empty::before{content:"No skills yet. Click Edit to add.";opacity:.7;color:#bbb;display:block;text-align:center;}
+#contactEmail:empty::before{content:"—";opacity:.7;}
+#contactPhone:empty::before{content:"—";opacity:.7;}
+#contactLocation:empty::before{content:"—";opacity:.7;}
+#contactLinkedin:empty::before{content:"—";opacity:.7;}
+#contactGithub:empty::before{content:"—";opacity:.7;}
+
+.availability{
+margin-top:10px;
+display:inline-block;
+background:rgba(0,255,150,0.2);
+color:#00ffa6;
+padding:6px 14px;
+border-radius:20px;
+font-size:13px;
+}
+
+/* SECTION */
+
+.profile-section{
+background:#111827;
+border-radius:16px;
+padding:30px;
+margin-bottom:25px;
+border:1px solid rgba(255,255,255,0.06);
+}
+
+.section-header{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:15px;
+justify-content:space-between;
+}
+
+.section-icon{
+color:#3aa0ff;
+font-size:20px;
+}
+
+.section-title{
+font-size:20px;
+font-weight:700;
+}
+
+.section-title-group{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.section-actions{
+display:flex;
+gap:8px;
+}
+
+/* ABOUT */
+
+.about-content{
+color:#bbb;
+margin-bottom:12px;
+}
+
+textarea{
+width:100%;
+height:120px;
+background:#0c1117;
+border:1px solid #3aa0ff;
+color:white;
+padding:10px;
+border-radius:8px;
+}
+
+.edit-input{
+width:100%;
+margin-bottom:10px;
+background:#0c1117;
+border:1px solid #3aa0ff;
+color:white;
+padding:10px;
+border-radius:8px;
+}
+
+/* BUTTON */
+
+.btn{
+background:#3aa0ff;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+color:white;
+cursor:pointer;
+font-weight:600;
+}
+
+.btn:hover{
+background:#2b8be6;
+}
+
+.btn-ghost{
+background:rgba(15,23,42,0.7);
+border:1px solid rgba(58,160,255,0.4);
+color:#fff;
+padding:8px 14px;
+}
+
+.btn-ghost:hover{
+border-color:#3aa0ff;
+color:#3aa0ff;
+background:rgba(15,23,42,0.9);
+}
+
+/* RESUME */
+
+.resume-box{
+background:#0c1117;
+border:1px dashed #3aa0ff;
+padding:25px;
+border-radius:10px;
+text-align:center;
+}
+
+.resume-file{
+margin-top:12px;
+font-size:14px;
+color:#3aa0ff;
+}
+
+/* SKILLS */
+
+.skills-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+gap:12px;
+}
+
+.skill-tag{
+background:#1a2330;
+padding:10px;
+border-radius:10px;
+text-align:center;
+font-size:13px;
+border:1px solid rgba(58,160,255,0.3);
+}
+
+/* CONTACT */
+
+.contact-item{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:10px;
+color:#bbb;
+}
+
+.contact-item i{
+color:#3aa0ff;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+<div class="nav-top">
+
+<div class="logo-section">
+<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" alt="User logo">
+<div class="logo-text">SMART <span>HUNT</span>-JOB</div>
+</div>
+
+<button class="back-btn" onclick="goBack()">Back</button>
+
+</div>
+</div>
+
+
+<section class="profile-page">
+
+<div class="profile-banner"></div>
+
+<div class="profile-header">
+
+<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" class="profile-avatar" id="profileAvatar" alt="Default avatar">
+<input type="file" id="avatarInput" accept="image/*" hidden>
+<button class="btn btn-ghost avatar-btn" id="avatarBtn" onclick="changeAvatar()" style="display:none;">Change Photo</button>
+
+<div class="editable-row">
+  <h1 class="profile-name" id="profileName"></h1>
+  <i class="fa-solid fa-pen-to-square edit-icon" onclick="editHeaderField('profileName')"></i>
+</div>
+
+<div class="editable-row" style="margin-top:4px;">
+  <div class="profile-title" id="profileTitle"></div>
+  <i class="fa-solid fa-pen-to-square edit-icon" onclick="editHeaderField('profileTitle')"></i>
+</div>
+
+<div class="availability">
+<i class="fa-solid fa-circle"></i> Open to Work
+</div>
+
+</div>
+
+
+<!-- ABOUT -->
+
+<div class="profile-section">
+
+<div class="section-header">
+<i class="fa-solid fa-user section-icon"></i>
+<h3 class="section-title">About Me</h3>
+</div>
+
+<p id="aboutText" class="about-content"></p>
+
+<textarea id="aboutEdit" style="display:none;"></textarea>
+
+<button class="btn" onclick="editAbout()">Edit</button>
+<button class="btn" onclick="saveAbout()" id="saveBtn" style="display:none;">Save</button>
+
+</div>
+
+
+<!-- RESUME -->
+
+<div class="profile-section">
+
+<div class="section-header">
+<i class="fa-solid fa-file-arrow-up section-icon"></i>
+<h3 class="section-title">Resume</h3>
+</div>
+
+<div class="resume-box">
+
+<p style="color:#aaa;margin-bottom:12px;">
+Upload your resume so employers can download it.
+</p>
+
+<input type="file" id="resumeInput" hidden>
+
+<button class="btn" onclick="uploadResume()">
+<i class="fa-solid fa-upload"></i> Upload Resume
+</button>
+
+<div id="resumeFile" class="resume-file"></div>
+
+<button class="btn" onclick="removeResume()" id="removeBtn"
+style="display:none;margin-top:12px;">
+Remove Resume
+</button>
+
+</div>
+
+</div>
+
+
+<!-- SKILLS -->
+
+<div class="profile-section">
+
+<div class="section-header">
+  <div class="section-title-group">
+    <i class="fa-solid fa-code section-icon"></i>
+    <h3 class="section-title">Skills</h3>
+  </div>
+  <div class="section-actions">
+    <button class="btn btn-ghost" onclick="editSkills()">Edit</button>
+    <button class="btn btn-ghost" onclick="saveSkills()" id="saveSkillsBtn" style="display:none;">Save</button>
+  </div>
+</div>
+
+<div class="skills-grid" id="skillsGrid">
+</div>
+
+<textarea id="skillsEdit" style="display:none;margin-top:12px;" placeholder="Add skills separated by commas"></textarea>
+
+</div>
+
+
+<!-- CONTACT -->
+
+<div class="profile-section">
+
+<div class="section-header">
+  <div class="section-title-group">
+    <i class="fa-solid fa-address-book section-icon"></i>
+    <h3 class="section-title">Contact</h3>
+  </div>
+  <div class="section-actions">
+    <button class="btn btn-ghost" onclick="editContact()">Edit</button>
+    <button class="btn btn-ghost" onclick="saveContact()" id="saveContactBtn" style="display:none;">Save</button>
+  </div>
+</div>
+
+<div class="contact-item">
+<i class="fa-solid fa-envelope"></i>
+<span id="contactEmail"></span>
+</div>
+
+<div class="contact-item">
+<i class="fa-solid fa-phone"></i>
+<span id="contactPhone"></span>
+</div>
+
+<div class="contact-item">
+<i class="fa-solid fa-location-dot"></i>
+<span id="contactLocation"></span>
+</div>
+
+<div class="contact-item">
+<i class="fa-brands fa-linkedin"></i>
+<span id="contactLinkedin"></span>
+</div>
+
+<div class="contact-item">
+<i class="fa-brands fa-github"></i>
+<span id="contactGithub"></span>
+</div>
+
+<div id="contactEdit" style="display:none;margin-top:12px;">
+  <input class="edit-input" id="contactEmailInput" type="text" placeholder="Email">
+  <input class="edit-input" id="contactPhoneInput" type="text" placeholder="Phone">
+  <input class="edit-input" id="contactLocationInput" type="text" placeholder="Location">
+  <input class="edit-input" id="contactLinkedinInput" type="text" placeholder="LinkedIn">
+  <input class="edit-input" id="contactGithubInput" type="text" placeholder="GitHub">
+</div>
+
+</div>
+
+</section>
+
+<section class="profile-page" style="padding-top:0;" id="finishProfileSection">
+  <div class="profile-section" style="text-align:center;">
+    <h3 class="section-title" style="justify-content:center;">Finish Profile</h3>
+    <p class="about-content">When you're done, continue to your dashboard.</p>
+    <button class="btn" onclick="finishSeekerProfile()">Continue to Dashboard</button>
+  </div>
+</section>
+
+
+<script>
+
+function getQueryParam(name){
+  try {
+    return new URL(window.location.href).searchParams.get(name) || "";
+  } catch {
+    return "";
+  }
+}
+
+const REVIEW_MODE = getQueryParam("mode") === "review" || getQueryParam("readonly") === "1";
+const REVIEW_USER_ID = String(getQueryParam("userId") || "").trim();
+
+function backendRequest(pathname, options){
+  const token = localStorage.getItem("authToken");
+  if (!token) return Promise.reject(new Error("No auth token"));
+  const method = options && options.method ? options.method : "GET";
+  const body = options && options.body ? options.body : null;
+  return fetch(pathname, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
+  }).then(async (res) => {
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = data && data.error ? data.error : `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return data;
+  });
+}
+
+function collectSeekerProfile(){
+  const skills = Array.from(document.querySelectorAll("#skillsGrid .skill-tag")).map((el) => el.innerText.trim()).filter(Boolean);
+  const resumeEl = document.getElementById("resumeFile");
+  const resumeName = resumeEl ? (resumeEl.innerText || "").trim() : "";
+  const resumeDataUrl = resumeEl && resumeEl.dataset ? String(resumeEl.dataset.dataUrl || "") : "";
+  const resume = resumeName ? { name: resumeName, dataUrl: resumeDataUrl } : null;
+  const nameInput = document.getElementById("profileNameInput");
+  const titleInput = document.getElementById("profileTitleInput");
+  return {
+    name: String(nameInput ? nameInput.value : (document.querySelector(".profile-name")?.innerText || "")).trim(),
+    title: String(titleInput ? titleInput.value : (document.querySelector(".profile-title")?.innerText || "")).trim(),
+    about: (document.getElementById("aboutText")?.innerText || "").trim(),
+    skills,
+    contact: {
+      email: (document.getElementById("contactEmail")?.innerText || "").trim(),
+      phone: (document.getElementById("contactPhone")?.innerText || "").trim(),
+      location: (document.getElementById("contactLocation")?.innerText || "").trim(),
+      linkedin: (document.getElementById("contactLinkedin")?.innerText || "").trim(),
+      github: (document.getElementById("contactGithub")?.innerText || "").trim(),
+    },
+    resume,
+  };
+}
+
+function applySeekerProfile(profile){
+  if (!profile || typeof profile !== "object") return;
+  const nameEl = document.querySelector(".profile-name");
+  const titleEl = document.querySelector(".profile-title");
+  if (nameEl && typeof profile.name === "string" && profile.name.trim()) nameEl.innerText = profile.name.trim();
+  if (titleEl && typeof profile.title === "string") titleEl.innerText = profile.title.trim();
+  const aboutEl = document.getElementById("aboutText");
+  if (aboutEl && typeof profile.about === "string") aboutEl.innerText = profile.about;
+
+  const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && typeof val === "string") el.innerText = val;
+  };
+  setText("contactEmail", contact.email || "");
+  setText("contactPhone", contact.phone || "");
+  setText("contactLocation", contact.location || "");
+  setText("contactLinkedin", contact.linkedin || "");
+  setText("contactGithub", contact.github || "");
+
+  if (Array.isArray(profile.skills)) {
+    const grid = document.getElementById("skillsGrid");
+    if (grid) {
+      grid.innerHTML = "";
+      profile.skills.filter(Boolean).forEach((s) => {
+        const div = document.createElement("div");
+        div.className = "skill-tag";
+        div.innerText = String(s);
+        grid.appendChild(div);
+      });
+    }
+  }
+
+  // Resume (optional)
+  const resume = profile.resume && typeof profile.resume === "object" ? profile.resume : null;
+  const resumeEl = document.getElementById("resumeFile");
+  if (resumeEl && resume && typeof resume.name === "string" && resume.name.trim()) {
+    resumeEl.innerText = resume.name.trim();
+    if (resume.dataUrl) resumeEl.dataset.dataUrl = String(resume.dataUrl);
+    const removeBtn = document.getElementById("removeBtn");
+    if (removeBtn && !REVIEW_MODE) removeBtn.style.display = "inline-block";
+
+    if (REVIEW_MODE && resume.dataUrl) {
+      resumeEl.style.cursor = "pointer";
+      resumeEl.title = "Open resume";
+      resumeEl.onclick = () => {
+        const url = String(resumeEl.dataset && resumeEl.dataset.dataUrl ? resumeEl.dataset.dataUrl : "");
+        if (!url) return;
+        const w = window.open(url, "_blank");
+        if (!w) alert("Popup blocked. Allow popups to view the resume.");
+      };
+    }
+  }
+}
+
+function saveSeekerProfileToBackend(){
+  if (REVIEW_MODE) return Promise.resolve({ ok: true });
+  const profile = collectSeekerProfile();
+  return backendRequest("/api/profile", { method: "PUT", body: { profile } });
+}
+
+function editHeaderField(id){
+  if (REVIEW_MODE) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.dataset.editing === "1") {
+    el.innerText = el.dataset.originalText || "";
+    delete el.dataset.editing;
+    delete el.dataset.originalText;
+    return;
+  }
+  const current = (el.innerText || "").trim();
+  el.dataset.originalText = current;
+  el.dataset.editing = "1";
+  el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">
+                  <button class="btn" type="button" onclick="saveHeaderField('${id}')">Save</button>`;
+}
+
+function saveHeaderField(id){
+  if (REVIEW_MODE) return;
+  const el = document.getElementById(id);
+  const input = document.getElementById(id + "Input");
+  if (!el) return;
+  el.innerText = input ? input.value : "";
+  delete el.dataset.editing;
+  delete el.dataset.originalText;
+  saveSeekerProfileToBackend().catch(() => {});
+}
+
+function goBack(){
+if (REVIEW_MODE) {
+  try {
+    window.close();
+    return;
+  } catch {
+    // ignore
+  }
+}
+window.location.href="index.html"
+}
+
+function editAbout(){
+if (REVIEW_MODE) return;
+
+document.getElementById("aboutEdit").style.display="block"
+document.getElementById("saveBtn").style.display="inline-block"
+
+document.getElementById("aboutEdit").value =
+document.getElementById("aboutText").innerText
+
+document.getElementById("aboutText").style.display="none"
+
+}
+
+function saveAbout(){
+if (REVIEW_MODE) return;
+
+let text=document.getElementById("aboutEdit").value
+
+document.getElementById("aboutText").innerText=text
+
+document.getElementById("aboutText").style.display="block"
+document.getElementById("aboutEdit").style.display="none"
+document.getElementById("saveBtn").style.display="none"
+
+saveSeekerProfileToBackend().catch(() => {});
+}
+
+function editSkills(){
+if (REVIEW_MODE) return;
+  const grid = document.getElementById("skillsGrid");
+  const editor = document.getElementById("skillsEdit");
+  const saveBtn = document.getElementById("saveSkillsBtn");
+  if (!grid || !editor || !saveBtn) return;
+  const skills = Array.from(grid.querySelectorAll(".skill-tag")).map((s) => s.innerText.trim());
+  editor.value = skills.join(", ");
+  editor.style.display = "block";
+  saveBtn.style.display = "inline-block";
+}
+
+function saveSkills(){
+if (REVIEW_MODE) return;
+  const grid = document.getElementById("skillsGrid");
+  const editor = document.getElementById("skillsEdit");
+  const saveBtn = document.getElementById("saveSkillsBtn");
+  if (!grid || !editor || !saveBtn) return;
+  const raw = editor.value || "";
+  const skills = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  grid.innerHTML = "";
+  skills.forEach((skill) => {
+    const tag = document.createElement("div");
+    tag.className = "skill-tag";
+    tag.innerText = skill;
+    grid.appendChild(tag);
+  });
+  editor.style.display = "none";
+  saveBtn.style.display = "none";
+  saveSeekerProfileToBackend().catch(() => {});
+}
+
+function editContact(){
+  if (REVIEW_MODE) return;
+  const edit = document.getElementById("contactEdit");
+  const saveBtn = document.getElementById("saveContactBtn");
+  if (!edit || !saveBtn) return;
+  document.getElementById("contactEmailInput").value = document.getElementById("contactEmail").innerText;
+  document.getElementById("contactPhoneInput").value = document.getElementById("contactPhone").innerText;
+  document.getElementById("contactLocationInput").value = document.getElementById("contactLocation").innerText;
+  document.getElementById("contactLinkedinInput").value = document.getElementById("contactLinkedin").innerText;
+  document.getElementById("contactGithubInput").value = document.getElementById("contactGithub").innerText;
+  edit.style.display = "block";
+  saveBtn.style.display = "inline-block";
+}
+
+function saveContact(){
+  if (REVIEW_MODE) return;
+  const edit = document.getElementById("contactEdit");
+  const saveBtn = document.getElementById("saveContactBtn");
+  if (!edit || !saveBtn) return;
+  document.getElementById("contactEmail").innerText = document.getElementById("contactEmailInput").value;
+  document.getElementById("contactPhone").innerText = document.getElementById("contactPhoneInput").value;
+  document.getElementById("contactLocation").innerText = document.getElementById("contactLocationInput").value;
+  document.getElementById("contactLinkedin").innerText = document.getElementById("contactLinkedinInput").value;
+  document.getElementById("contactGithub").innerText = document.getElementById("contactGithubInput").value;
+  edit.style.display = "none";
+  saveBtn.style.display = "none";
+  saveSeekerProfileToBackend().catch(() => {});
+}
+
+function changeAvatar(){
+  if (REVIEW_MODE) return;
+  const input = document.getElementById("avatarInput");
+  if (input) {
+    input.click();
+  }
+}
+
+document.getElementById("profileAvatar").addEventListener("click", function(){
+  if (REVIEW_MODE) return;
+  const btn = document.getElementById("avatarBtn");
+  if (!btn) return;
+  btn.style.display = btn.style.display === "inline-block" ? "none" : "inline-block";
+});
+
+document.getElementById("avatarInput").addEventListener("change", function(){
+  const file = this.files && this.files[0];
+  if (!file) return;
+  const avatar = document.getElementById("profileAvatar");
+  if (!avatar) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    avatar.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  const btn = document.getElementById("avatarBtn");
+  if (btn) {
+    btn.style.display = "none";
+  }
+});
+
+/* RESUME */
+
+function uploadResume(){
+if (REVIEW_MODE) return;
+document.getElementById("resumeInput").click()
+}
+
+document.getElementById("resumeInput").addEventListener("change",function(){
+
+let file=this.files[0]
+
+if(file){
+
+document.getElementById("resumeFile").innerText=file.name
+
+  const resumeEl = document.getElementById("resumeFile");
+  if (resumeEl && resumeEl.dataset) {
+    // Store resume as a data URL so employers can view it from other devices (school-project friendly).
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      resumeEl.dataset.dataUrl = String(e.target && e.target.result ? e.target.result : "");
+      saveSeekerProfileToBackend().catch(() => {});
+    };
+    reader.readAsDataURL(file);
+  }
+
+document.getElementById("removeBtn").style.display="inline-block"
+
+}
+
+})
+
+function removeResume(){
+if (REVIEW_MODE) return;
+
+document.getElementById("resumeFile").innerText=""
+const resumeEl = document.getElementById("resumeFile");
+if (resumeEl && resumeEl.dataset) {
+  delete resumeEl.dataset.dataUrl;
+}
+
+document.getElementById("removeBtn").style.display="none"
+saveSeekerProfileToBackend().catch(() => {});
+
+}
+
+function finishSeekerProfile(){
+  if (REVIEW_MODE) return;
+  saveSeekerProfileToBackend().catch(() => {});
+  localStorage.setItem("finishProfileDone_seeker","true");
+  localStorage.setItem("postSignupWelcome","seeker");
+  window.location.href="index.html";
+}
+
+(function () {
+  const finishSection = document.getElementById("finishProfileSection");
+  if (!finishSection) return;
+  if (REVIEW_MODE) {
+    finishSection.style.display = "none";
+    return;
+  }
+  const done = localStorage.getItem("finishProfileDone_seeker") === "true";
+  if (done) finishSection.style.display = "none";
+})();
+
+// Load profile from backend when available (multi-device support).
+(function () {
+  const pathname = (REVIEW_MODE && REVIEW_USER_ID)
+    ? `/api/users/${encodeURIComponent(REVIEW_USER_ID)}`
+    : "/api/profile";
+
+  backendRequest(pathname, { method: "GET" })
+    .then((data) => {
+      if (!data || !data.ok) return;
+
+      if (data.profile) applySeekerProfile(data.profile);
+
+      // In review mode, show the account email even if seeker didn't fill contact.email.
+      if (REVIEW_MODE && data.user && data.user.email) {
+        const emailEl = document.getElementById("contactEmail");
+        const existing = String(emailEl && emailEl.innerText ? emailEl.innerText : "").trim();
+        if (emailEl && !existing) emailEl.innerText = String(data.user.email);
+      }
+
+      // If backend profile is empty, prefill name from signup (user.name).
+      const nameEl = document.querySelector(".profile-name");
+      const existingName = (nameEl?.innerText || "").trim();
+      const nameFromUser = String(data.user && data.user.name ? data.user.name : "").trim();
+      if (!existingName && nameFromUser) {
+        if (nameEl) nameEl.innerText = nameFromUser;
+        if (!REVIEW_MODE) saveSeekerProfileToBackend().catch(() => {});
+      }
+    })
+    .catch(() => {});
+})();
+
+// Hide all editing UI in review mode (employer view).
+(function () {
+  if (!REVIEW_MODE) return;
+  document.querySelectorAll(".edit-icon").forEach((el) => (el.style.display = "none"));
+
+  const hide = (sel) => document.querySelectorAll(sel).forEach((el) => (el.style.display = "none"));
+  hide("#avatarBtn");
+  hide("#avatarInput");
+  hide("#resumeInput");
+  hide("#aboutEdit");
+  hide("#skillsEdit");
+  hide("#contactEdit");
+  hide("#saveBtn");
+  hide("#saveSkillsBtn");
+  hide("#saveContactBtn");
+  hide("#removeBtn");
+  hide('button[onclick="editAbout()"]');
+  hide('button[onclick="uploadResume()"]');
+  hide('button[onclick="editSkills()"]');
+  hide('button[onclick="editContact()"]');
+  hide('button[onclick="finishSeekerProfile()"]');
+})();
+
+</script>
+
+</body>
+</html>

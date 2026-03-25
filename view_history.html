@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Application History - Smart Hunt Job</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<div class="navbar">
+  <div class="nav-top">
+    <div class="logo-section">
+      <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" alt="User logo">
+      <div class="logo-text">SMART <span>HUNT</span>-JOB</div>
+    </div>
+    <div class="nav-actions">
+      <button class="logout-btn" onclick="goBack()" title="Back to Dashboard">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Back</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<main class="seeker-home" style="padding-top:140px;">
+  <div class="container">
+    <div class="page-hero">
+      <div class="hero-text">
+        <p class="eyebrow">History • Seeker Portal</p>
+        <h1>Application <span>History</span>.</h1>
+        <p class="lead">Track where you applied and your current outcomes.</p>
+        <div class="quick-actions">
+          <button class="ghost-btn">Export CSV</button>
+          <button class="ghost-btn">Filter</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <h2>Status Board</h2>
+          <p>Applied, pending, rejected, and passed stages.</p>
+        </div>
+      </div>
+      <div class="pipeline-grid">
+        <div class="pipeline-card">
+          <p class="pipeline-label">Pending</p>
+          <p class="pipeline-value">5</p>
+        </div>
+        <div class="pipeline-card">
+          <p class="pipeline-label">Passed</p>
+          <p class="pipeline-value">2</p>
+        </div>
+        <div class="pipeline-card">
+          <p class="pipeline-label">Rejected</p>
+          <p class="pipeline-value">3</p>
+        </div>
+        <div class="pipeline-card">
+          <p class="pipeline-label">Applied</p>
+          <p class="pipeline-value">10</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section split">
+      <div class="panel" data-history-section="pending">
+        <div class="section-head">
+          <div>
+            <h2>Pending</h2>
+            <p>Waiting for interview.</p>
+          </div>
+          <button class="ghost-btn small-btn" data-view-target="pending">View</button>
+        </div>
+        <div class="next-steps">
+          <div class="next-step">
+            <i class="fa-regular fa-clock"></i>
+            <div>
+              <h4>Lead UI Engineer</h4>
+              <p>Netflix • Applied 5 days ago</p>
+            </div>
+          </div>
+          <div class="next-step">
+            <i class="fa-regular fa-clock"></i>
+            <div>
+              <h4>Platform Architect</h4>
+              <p>Coinbase • Applied 1 week ago</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" data-history-section="passed">
+        <div class="section-head">
+          <div>
+            <h2>Passed</h2>
+            <p>Moved forward to next stage.</p>
+          </div>
+          <button class="ghost-btn small-btn" data-view-target="passed">View</button>
+        </div>
+        <div class="next-steps">
+          <div class="next-step">
+            <i class="fa-regular fa-circle-check"></i>
+            <div>
+              <h4>Senior Staff Architect</h4>
+              <p>Google Cloud • Interview scheduled</p>
+            </div>
+          </div>
+          <div class="next-step">
+            <i class="fa-regular fa-circle-check"></i>
+            <div>
+              <h4>Product Strategist</h4>
+              <p>Stripe • Case study review</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section split">
+      <div class="panel" data-history-section="rejected">
+        <div class="section-head">
+          <div>
+            <h2>Rejected</h2>
+            <p>Closed roles and outcomes.</p>
+          </div>
+          <button class="ghost-btn small-btn" data-view-target="rejected">View</button>
+        </div>
+        <div class="next-steps">
+          <div class="next-step">
+            <i class="fa-regular fa-circle-xmark"></i>
+            <div>
+              <h4>Marketing Strategist</h4>
+              <p>Tesla Energy • Closed</p>
+            </div>
+          </div>
+          <div class="next-step">
+            <i class="fa-regular fa-circle-xmark"></i>
+            <div>
+              <h4>Technical Recruiter</h4>
+              <p>Amazon Web Services • Closed</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" data-history-section="applied">
+        <div class="section-head">
+          <div>
+            <h2>Applied</h2>
+            <p>All recent submissions.</p>
+          </div>
+          <button class="ghost-btn small-btn" data-view-target="applied">View</button>
+        </div>
+        <div class="next-steps">
+          <div class="next-step">
+            <i class="fa-regular fa-paper-plane"></i>
+            <div>
+              <h4>Infrastructure Architect</h4>
+              <p>Tesla Energy • Submitted today</p>
+            </div>
+          </div>
+          <div class="next-step">
+            <i class="fa-regular fa-paper-plane"></i>
+            <div>
+              <h4>Lead Cloud Architect</h4>
+              <p>AWS • Submitted yesterday</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function goBack(){
+  window.location.href = "index.html";
+}
+
+const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+const role = localStorage.getItem("userRole");
+if (!loggedIn || role !== "seeker") {
+  window.location.href = "index.html";
+}
+
+const historyPanels = document.querySelectorAll("[data-history-section]");
+const viewButtons = document.querySelectorAll("[data-view-target]");
+
+function showAllHistoryPanels() {
+  historyPanels.forEach((panel) => {
+    panel.style.display = "block";
+  });
+  viewButtons.forEach((btn) => {
+    btn.textContent = "View";
+    btn.setAttribute("data-mode", "view");
+  });
+}
+
+viewButtons.forEach((btn) => {
+  btn.setAttribute("data-mode", "view");
+  btn.addEventListener("click", () => {
+    const mode = btn.getAttribute("data-mode");
+    if (mode === "back") {
+      showAllHistoryPanels();
+      return;
+    }
+    const target = btn.getAttribute("data-view-target");
+    historyPanels.forEach((panel) => {
+      const section = panel.getAttribute("data-history-section");
+      panel.style.display = section === target ? "block" : "none";
+    });
+    viewButtons.forEach((b) => {
+      if (b === btn) {
+        b.textContent = "Back";
+        b.setAttribute("data-mode", "back");
+      } else {
+        b.textContent = "View";
+        b.setAttribute("data-mode", "view");
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "smart-hunt-job",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Hunt Job school project",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
+

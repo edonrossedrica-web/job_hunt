@@ -1,0 +1,1375 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<!-- Set this to your Google OAuth Web Client ID (Google Cloud Console -> OAuth 2.0 Client IDs) -->
+<meta name="google-client-id" content="">
+<title>Smart Hunt Job</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+<div class="nav-top">
+<div class="logo-section">
+<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" alt="User logo">
+<div class="logo-text">SMART <span>HUNT</span>-JOB</div>
+</div>
+<div class="nav-actions">
+<button class="icon-btn" title="Notifications" onclick="openNotifications()">
+<i class="fa-regular fa-bell"></i>
+</button>
+<button class="icon-btn hamburger-btn" onclick="toggleUserMenu()" aria-label="Open menu">
+<i class="fa-solid fa-bars"></i>
+</button>
+<div class="user-menu" id="userMenu">
+  <button class="profile-pill" onclick="openProfile()" title="Profile">
+    <i class="fa-regular fa-user"></i>
+    <span class="pill-name">Profile</span>
+  </button>
+  <button class="logout-btn" id="logoutBtn" onclick="logoutAndReturn()" title="Log out">
+    <i class="fa-solid fa-right-from-bracket"></i>
+    <span>Logout</span>
+  </button>
+</div>
+</div>
+</div>
+
+<div class="nav-links">
+<a id="homeLink" onclick="showHome()">Home</a>
+<a id="howLink" onclick="showHowItWorksRole('seeker')">How it Works</a>
+<a id="roleToggle" onclick="toggleRole()">Employer Site</a>
+<div class="dropdown" id="contactDropdown">
+  <a id="contactLink" onclick="toggleDropdown()">Contact <i class="fa-solid fa-caret-down"></i></a>
+  <div class="dropdown-menu">
+    <a onclick="openFeedback()">Feedback</a>
+    <a onclick="openChat()">Customer Service</a>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- SEEKER LANDING PAGE (Pre-Login) -->
+<section class="hero" id="seekerLandingPage" style="display:none;">
+<div class="hero-content">
+<h1>Welcome Seekers! <span>Find Your Next Role</span></h1>
+<p>Create your profile, explore curated opportunities, and apply in minutes.</p>
+<div class="cta-section">
+<button class="btn-primary" onclick="openSignup('seeker')">SIGN UP</button>
+<button class="btn-secondary" onclick="showHowItWorksRole('seeker')">LEARN MORE</button>
+<div class="login-text">
+Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
+</div>
+</div>
+</div>
+</section>
+
+<!-- HOME PAGE (Seeker Only) -->
+<section class="seeker-home" id="homePage">
+<div class="container">
+<div class="seeker-view" id="seekerHomePage">
+<div class="page-hero">
+<div class="hero-text">
+<p class="eyebrow">Smart Hunt-Job - Seeker Portal</p>
+<h1>Your Career <span>Command</span> Center.</h1>
+<p class="lead">Track your progress, manage applications, and discover new opportunities matched precisely to your professional profile.</p>
+
+<div class="search-panel">
+<div class="search-field">
+<i class="fa-solid fa-briefcase"></i>
+<input id="seekerSearchKeywords" type="text" placeholder="Job Title or Keywords" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+<div class="search-field">
+<i class="fa-solid fa-location-dot"></i>
+<input id="seekerSearchLocation" type="text" placeholder="Location" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+<button class="search-btn" id="seekerSearchBtn" type="button">Search Jobs</button>
+</div>
+
+</div>
+
+</div>
+
+<div class="section">
+<div class="section-head">
+<div>
+<h2>Jobs for You</h2>
+</div>
+<div class="section-controls">
+<button class="link-cta btn-link" id="recoViewAllBtn" onclick="showAllRecommendedJobs()">View All</button>
+<button class="link-cta btn-link is-hidden" id="recoReturnBtn" onclick="showLessRecommendedJobs()">Return</button>
+</div>
+</div>
+
+<div class="match-card" id="recommendedJobsBox">
+  <div class="jobs-grid" id="recommendedJobsGrid"></div>
+  <div class="empty-state-card" id="recommendedJobsEmpty">No jobs posted yet.</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-head">
+<div>
+<h2>Saved Jobs</h2>
+<p>Jobs you bookmarked to review later.</p>
+</div>
+<a class="link-cta" href="#" onclick="openSavedJobsManage(); return false;">Manage -></a>
+</div>
+<div class="saved-searches" id="savedJobsList">
+  <p id="savedJobsEmpty" style="color:#9aa4b2;padding:14px 6px;">No saved jobs yet.</p>
+</div>
+</div>
+
+
+</div>
+<div class="seeker-view" id="seekerHistoryPage">
+<div class="history-hero">
+<div class="history-eyebrow">History • Seeker Portal</div>
+<h1>Application <span>History</span>.</h1>
+<p>Track where you applied and your current outcomes.</p>
+</div>
+
+<div class="section">
+<div class="section-head">
+<div>
+<h2>Status Board</h2>
+<p>Applied, pending, rejected, and passed stages.</p>
+</div>
+</div>
+<div class="status-grid">
+<div class="status-card">
+<p class="status-label">Pending</p>
+<p class="status-value">0</p>
+</div>
+<div class="status-card">
+<p class="status-label">Passed</p>
+<p class="status-value">0</p>
+</div>
+<div class="status-card">
+<p class="status-label">Rejected</p>
+<p class="status-value">0</p>
+</div>
+<div class="status-card">
+<p class="status-label">Applied</p>
+<p class="status-value">0</p>
+</div>
+</div>
+</div>
+
+<div class="status-panels">
+<div class="status-panel" data-history-section="pending">
+<div class="status-panel-head">
+<div>
+<h3>Pending</h3>
+          <p>Waiting for interview.</p>
+</div>
+<button class="ghost-btn small-btn" data-history-view="pending">View</button>
+</div>
+<div class="status-list">
+<div style="padding:10px 4px;color:#9aa4b2;">No items yet.</div>
+</div>
+</div>
+
+<div class="status-panel" data-history-section="passed">
+<div class="status-panel-head">
+<div>
+<h3>Passed</h3>
+<p>Moved forward to next stage.</p>
+</div>
+<button class="ghost-btn small-btn" data-history-view="passed">View</button>
+</div>
+<div class="status-list">
+<div style="padding:10px 4px;color:#9aa4b2;">No items yet.</div>
+</div>
+</div>
+
+<div class="status-panel" data-history-section="rejected">
+<div class="status-panel-head">
+<div>
+<h3>Rejected</h3>
+<p>Closed roles and outcomes.</p>
+</div>
+<button class="ghost-btn small-btn" data-history-view="rejected">View</button>
+</div>
+<div class="status-list">
+<div style="padding:10px 4px;color:#9aa4b2;">No items yet.</div>
+</div>
+</div>
+
+<div class="status-panel" data-history-section="applied">
+<div class="status-panel-head">
+<div>
+<h3>Applied</h3>
+<p>All recent submissions.</p>
+</div>
+<button class="ghost-btn small-btn" data-history-view="applied">View</button>
+</div>
+<div class="status-list">
+<div style="padding:10px 4px;color:#9aa4b2;">No items yet.</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="seeker-view" id="seekerChatPage">
+  <div class="applicants-layout">
+    <div class="applicants-main">
+      <header class="applicants-topbar">
+        <div class="applicants-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="Search employers or roles" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="applicants-top-actions">
+          <button class="filter-pill active">All Messages</button>
+          <button class="filter-pill">Unread</button>
+        </div>
+      </header>
+
+      <div class="applicants-hero">
+        <p class="applicants-eyebrow">Employer Conversations</p>
+        <h1>Seeker <span>Chat Hub</span>.</h1>
+        <p>Message employers, follow up on interviews, and keep every conversation in one place.</p>
+      </div>
+
+      <div class="applicant-list" id="seekerChatList">
+        <div class="empty-state-card">No conversations yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="seeker-view" id="seekerNotificationsPage">
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Notifications</h2>
+        <p>Updates from employers, interviews, and application status.</p>
+      </div>
+    </div>
+    <div class="notice-list">
+      <div class="empty-state-card">No notifications yet.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+<div>
+<div class="footer-brand">Smart Hunt-Job</div>
+<p>Redefining professional job hunting through architectural precision and modern technology.</p>
+</div>
+<div>
+<h5>Dashboard</h5>
+<a href="#">My Profile</a>
+<a href="#">Resume Builder</a>
+<a href="#">Career Assessment</a>
+</div>
+<div>
+<h5>Legal</h5>
+<a href="#">Privacy Policy</a>
+<a href="#">Terms of Service</a>
+</div>
+<div>
+<h5>Connect</h5>
+<div class="footer-icons">
+<button class="icon-btn small"><i class="fa-solid fa-globe"></i></button>
+<button class="icon-btn small"><i class="fa-solid fa-envelope"></i></button>
+</div>
+</div>
+</footer>
+</div>
+
+  <nav class="seeker-bottom-nav" aria-label="Seeker navigation">
+    <button class="seeker-bottom-item active" onclick="showSeekerHome()">
+      <i class="fa-solid fa-house"></i>
+      <span>Career Center</span>
+    </button>
+    <button class="seeker-bottom-item" onclick="showSeekerHistory()">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>History</span>
+    </button>
+    <button class="seeker-bottom-item" onclick="showSeekerChat()">
+      <i class="fa-regular fa-comments"></i>
+      <span>Chat</span>
+    </button>
+  </nav>
+</section>
+
+<!-- EMPLOYER LOGIN PAGE -->
+<section class="hero" id="employerLoginPage" style="display:none;">
+<div class="hero-content">
+<h1>Welcome Employers! <span>Find the Best Talent</span></h1>
+<p>Post jobs, view applicants, and manage hiring efficiently.</p>
+<div class="cta-section">
+<button class="btn-primary" onclick="openSignup('employer')">SIGN UP</button>
+<button class="btn-secondary" onclick="showHowItWorksRole('employer')">LEARN MORE</button>
+<div class="login-text">
+Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
+</div>
+</div>
+</div>
+</section>
+
+<!-- EMPLOYER DASHBOARD -->
+<section class="employee-page" id="employeePage">
+  <div class="employer-shell">
+    <header class="employer-topbar">
+      <div class="employer-brand">Hire<span>Pro</span></div>
+      <div class="employer-top-actions"></div>
+    </header>
+
+    <div class="employer-hero">
+      <h1>Ready to post<br><span>your next role?</span></h1>
+      <p>Gumawa ng job post in minutes, mag-set ng requirements, at i-broadcast sa top candidates. Naka-highlight dito ang activity ng postings mo at mga bagong aplikante.</p>
+    </div>
+    <div class="employer-kpis">
+      <article class="kpi-card">
+        <p class="kpi-label">Active Listings</p>
+        <p class="kpi-value">0</p>
+      </article>
+      <article class="kpi-card">
+        <p class="kpi-label">Total Applicants</p>
+        <p class="kpi-value">0</p>
+      </article>
+    </div>
+
+    <section class="match-section" style="margin-top:18px;">
+      <div class="match-header">
+        <div>
+          <h2>Posted Jobs</h2>
+          <p>Kapag nag-post ka ng job, lalabas ito dito sa overview.</p>
+        </div>
+      </div>
+      <div class="posted-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Search applicant or job title..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div id="postedJobsList"></div>
+      <!-- Sample posted jobs removed (backend renders real postings). -->
+      <!--
+      <div class="match-card posted-job-card">
+        <div class="posted-job-info">
+          <h3>Senior Product Designer</h3>
+          <p>Posted 2 hours ago • 68 applicants</p>
+        </div>
+        <button class="employer-text-btn" onclick="togglePostedApplicants(this)">Applicants</button>
+      </div>
+      <div class="posted-applicants">
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Sarah Jenkins</h4>
+            <p>UI/UX • Applied 2 hours ago</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag new">New</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Senior Product Designer</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>6 years • Design Systems</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Quezon City, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>Immediate</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Passionate about accessible design systems and cross‑functional collaboration.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">Hi! I’d love to contribute to your design system work—especially accessibility audits and component governance.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Sarah...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Marcus Thorne</h4>
+            <p>Product Design • Applied today</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag shortlist">Shortlisted</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Senior Product Designer</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>8 years • Product Strategy</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Makati, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>2 weeks</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Led multiple product launches and mentoring junior designers.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">Excited about the role—my recent launch improved activation by 18% and I’m happy to share case studies.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Marcus...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Elena Rodriguez</h4>
+            <p>Marketing Design • Applied yesterday</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag rejected">Rejected</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Senior Product Designer</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>4 years • Marketing Design</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Pasig, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>Immediate</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Strong marketing background but limited product workflow exposure.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">I’m transitioning into product design and have a portfolio ready—would appreciate feedback.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Elena...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="match-card posted-job-card" style="margin-top:12px;">
+        <div class="posted-job-info">
+          <h3>Fullstack Engineer</h3>
+          <p>Posted yesterday • 41 applicants</p>
+        </div>
+        <button class="employer-text-btn" onclick="togglePostedApplicants(this)">Applicants</button>
+      </div>
+      <div class="posted-applicants">
+        <div class="posted-applicants-row">
+          <div>
+            <h4>David Chen</h4>
+            <p>Fullstack • Applied yesterday</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag interview">Interviewed</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Fullstack Engineer</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>7 years • Node/React</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Taguig, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>3 weeks</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Great system thinking, strong API design background.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">Open to a quick call—happy to walk through my API design work and scalability choices.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to David...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Jasmine Lee</h4>
+            <p>Backend • Applied 2 days ago</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag new">New</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Fullstack Engineer</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>5 years • Backend</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Manila, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>Immediate</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Specialized in databases and performance tuning.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">Recently optimized query performance by 60%—can share benchmarks and approach.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Jasmine...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="match-card posted-job-card" style="margin-top:12px;">
+        <div class="posted-job-info">
+          <h3>Marketing Lead</h3>
+          <p>Posted 3 days ago • 19 applicants</p>
+        </div>
+        <button class="employer-text-btn" onclick="togglePostedApplicants(this)">Applicants</button>
+      </div>
+      <div class="posted-applicants">
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Kim Alvarez</h4>
+            <p>Brand • Applied 3 days ago</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag pending">Pending</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Marketing Lead</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>6 years • Brand</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Pasay, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>2 weeks</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Strong brand storytelling and campaign strategy.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">I’d love to bring campaign insights into product storytelling—attached samples upon request.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Kim...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="posted-applicants-row">
+          <div>
+            <h4>Ravi Singh</h4>
+            <p>Growth • Applied 4 days ago</p>
+          </div>
+          <div class="posted-applicants-actions">
+            <span class="status-tag new">New</span>
+            <button class="employer-text-btn" onclick="toggleApplicantDetail(this)">Details</button>
+          </div>
+        </div>
+        <div class="posted-applicant-detail">
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Role</p>
+              <p>Marketing Lead</p>
+            </div>
+            <div>
+              <p class="detail-label">Experience</p>
+              <p>5 years • Growth</p>
+            </div>
+            <div>
+              <p class="detail-label">Location</p>
+              <p>Quezon City, PH</p>
+            </div>
+            <div>
+              <p class="detail-label">Availability</p>
+              <p>Immediate</p>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="detail-btn primary"><i class="fa-regular fa-file-lines"></i> Resume</button>
+            <button class="detail-btn ghost"><i class="fa-regular fa-address-card"></i> Profile</button>
+            <button class="detail-btn success"><i class="fa-regular fa-circle-check"></i> Hired/Pass</button>
+            <button class="detail-btn danger"><i class="fa-regular fa-circle-xmark"></i> Rejected</button>
+          </div>
+          <p class="detail-note">Strong analytical background with growth experiments.</p>
+          <div class="detail-message-box">
+            <div class="detail-message">
+              <p class="detail-label">Message from Seeker</p>
+              <div class="seeker-message">Happy to share growth experiment results and dashboards if helpful.</div>
+            </div>
+            <div class="detail-chat">
+              <input type="text" placeholder="Write a message to Ravi...">
+              <button class="employer-text-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      -->
+    </section>
+
+    <button class="fab-new-job" onclick="openAddJob()"><i class="fa-solid fa-plus"></i> New Job</button>
+
+  </div>
+
+  <div class="employer-history" id="employerHistory">
+    <header class="employer-topbar">
+      <div class="employer-brand">Hire<span>Pro</span></div>
+      <div class="employer-top-actions"></div>
+    </header>
+
+    <div class="history-hero">
+      <h1>Job Posting<br>History</h1>
+      <p>Manage your workforce evolution. Monitor active recruitment cycles and revisit high-performing past listings.</p>
+    </div>
+
+    <div class="history-stats">
+      <article class="history-stat">
+        <p class="stat-value">12</p>
+        <p class="stat-label">Active</p>
+      </article>
+      <article class="history-stat">
+        <p class="stat-value">154</p>
+        <p class="stat-label">Archived</p>
+      </article>
+    </div>
+
+    <div class="history-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" placeholder="Search candidates or postings..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+
+    <div class="history-actions">
+      <button class="history-btn"><i class="fa-solid fa-filter"></i> Filter</button>
+      <button class="history-btn"><i class="fa-solid fa-arrow-down-short-wide"></i> Sort</button>
+    </div>
+
+    <div class="history-list">
+      <article class="history-card active">
+        <div class="history-card-head">
+          <h3>Senior Product Designer</h3>
+          <span class="history-tag">Active</span>
+        </div>
+        <p class="history-date"><i class="fa-regular fa-calendar"></i> Posted Oct 12, 2023</p>
+        <div class="history-meta">
+          <div>
+            <p class="meta-value">42</p>
+            <p class="meta-label">Applicants</p>
+          </div>
+          <button class="history-cta-btn" data-state="open" type="button">
+            <i class="fa-regular fa-circle-xmark"></i>
+            <span>Close</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="history-card active">
+        <div class="history-card-head">
+          <h3>Fullstack Engineering Lead</h3>
+          <span class="history-tag">Active</span>
+        </div>
+        <p class="history-date"><i class="fa-regular fa-calendar"></i> Posted Oct 08, 2023</p>
+        <div class="history-meta">
+          <div>
+            <p class="meta-value">128</p>
+            <p class="meta-label">Applicants</p>
+          </div>
+          <button class="history-cta-btn" data-state="open" type="button">
+            <i class="fa-regular fa-circle-xmark"></i>
+            <span>Close</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="history-card">
+        <div class="history-card-head">
+          <h3>Technical Recruiter</h3>
+          <span class="history-tag muted">Closed</span>
+        </div>
+        <p class="history-date"><i class="fa-regular fa-calendar"></i> Posted Sep 15, 2023</p>
+        <div class="history-meta">
+          <div>
+            <p class="meta-value">15</p>
+            <p class="meta-label">Applicants</p>
+          </div>
+          <button class="history-cta-btn" data-state="closed" type="button">
+            <i class="fa-regular fa-circle-check"></i>
+            <span>Open</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="history-card">
+        <div class="history-card-head">
+          <h3>Marketing Strategist</h3>
+          <span class="history-tag muted">Closed</span>
+        </div>
+        <p class="history-date"><i class="fa-regular fa-calendar"></i> Posted Aug 22, 2023</p>
+        <div class="history-meta">
+          <div>
+            <p class="meta-value">89</p>
+            <p class="meta-label">Applicants</p>
+          </div>
+          <button class="history-cta-btn" data-state="closed" type="button">
+            <i class="fa-regular fa-circle-check"></i>
+            <span>Open</span>
+          </button>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="employer-applicants" id="employerApplicants">
+    <header class="employer-topbar">
+      <div class="employer-brand">Hire<span>Pro</span></div>
+      <div class="employer-top-actions"></div>
+    </header>
+
+    <div class="history-hero">
+      <h1>Applicant<br><span>Pipeline</span></h1>
+      <p>See seekers you’ve passed, rejected, or still pending.</p>
+    </div>
+
+    <div class="history-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="employerApplicantsSearch" type="text" placeholder="Search seeker or role..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+
+    <div class="status-grid" style="margin-top:8px;">
+      <article class="status-card" data-status-card="pending">
+        <p class="status-label">Pending</p>
+        <p class="status-value">0</p>
+      </article>
+      <article class="status-card" data-status-card="passed">
+        <p class="status-label">Passed</p>
+        <p class="status-value">0</p>
+      </article>
+      <article class="status-card" data-status-card="rejected">
+        <p class="status-label">Rejected</p>
+        <p class="status-value">0</p>
+      </article>
+    </div>
+
+    <div class="status-panels" style="margin-top:6px;">
+      <div class="status-panel" data-employer-status="pending">
+        <div class="status-panel-head">
+          <div>
+            <h3>Pending</h3>
+            <p>New and in-review applications.</p>
+          </div>
+          <button class="ghost-btn small-btn" type="button" data-employer-view="pending">View all</button>
+        </div>
+        <div class="status-list"></div>
+      </div>
+
+      <div class="status-panel" data-employer-status="passed">
+        <div class="status-panel-head">
+          <div>
+            <h3>Passed</h3>
+            <p>Shortlisted / moved forward.</p>
+          </div>
+          <button class="ghost-btn small-btn" type="button" data-employer-view="passed">View all</button>
+        </div>
+        <div class="status-list"></div>
+      </div>
+
+      <div class="status-panel" data-employer-status="rejected">
+        <div class="status-panel-head">
+          <div>
+            <h3>Rejected</h3>
+            <p>Closed candidates.</p>
+          </div>
+          <button class="ghost-btn small-btn" type="button" data-employer-view="rejected">View all</button>
+        </div>
+        <div class="status-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="employer-notifications" id="employerNotifications">
+    <header class="employer-topbar">
+      <div class="employer-brand">Hire<span>Pro</span></div>
+      <div class="employer-top-actions"></div>
+    </header>
+
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <h2>Notifications</h2>
+          <p>Track employer updates, candidate replies, and hiring reminders.</p>
+        </div>
+      </div>
+
+      <div class="notice-list">
+        <div class="empty-state-card">No notifications yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="employer-add-job" id="employerAddJob">
+    <header class="employer-topbar">
+      <div class="employer-brand">Hire<span>Pro</span></div>
+      <button class="employer-text-btn" onclick="closeAddJob()">Back</button>
+      <div class="employer-top-actions"></div>
+    </header>
+
+    <div class="add-job-hero">
+      <span class="add-job-pill"><i class="fa-solid fa-plus"></i> New Listing</span>
+      <h1>Create Opportunity.</h1>
+      <p>Define the role and find the perfect talent for your team's next chapter.</p>
+    </div>
+
+    <section class="add-job-section">
+      <div class="section-number">1</div>
+      <div class="add-job-content">
+        <div class="add-job-heading">
+          <h2>Core Details</h2>
+          <p>Quick essentials candidates scan first.</p>
+        </div>
+        <div class="add-job-grid">
+          <div class="add-job-field">
+            <label class="add-job-label">Job Title</label>
+            <div class="add-job-input">
+              <i class="fa-solid fa-briefcase"></i>
+              <input id="addJobTitle" type="text" placeholder="e.g. Senior Product Designer" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            </div>
+          </div>
+
+          <div class="add-job-field">
+            <label class="add-job-label">Location</label>
+            <div class="add-job-input">
+              <i class="fa-solid fa-location-dot"></i>
+              <input id="addJobLocation" type="text" placeholder="London, UK or Remote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            </div>
+          </div>
+
+          <div class="add-job-field">
+            <label class="add-job-label">Salary Range</label>
+            <div class="add-job-input">
+              <i class="fa-solid fa-sack-dollar"></i>
+              <input id="addJobSalary" type="text" placeholder="$80k - $120k" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="add-job-section">
+      <div class="section-number">2</div>
+      <div class="add-job-content">
+        <div class="add-job-heading">
+          <h2>Description &amp; Scope</h2>
+          <p>Highlight impact, responsibilities, and expectations.</p>
+        </div>
+        <div class="add-job-stack">
+          <div class="add-job-field full">
+            <label class="add-job-label">Description</label>
+            <textarea id="addJobDescription" class="add-job-textarea" rows="4" placeholder="Tell us about the mission and the day-to-day impact..."></textarea>
+          </div>
+
+          <div class="add-job-field full">
+            <label class="add-job-label">Requirements</label>
+            <textarea id="addJobRequirements" class="add-job-textarea" rows="4" placeholder="Skills, experience, and mindset required..."></textarea>
+            <p class="add-job-helper">Use bullet points to separate key requirements.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="add-job-save-note">
+      <i class="fa-solid fa-circle-info"></i>
+      Drafts are saved automatically
+    </div>
+
+    <div class="add-job-actions">
+      <button class="add-job-btn ghost" id="saveJobDraftBtn" type="button">Save Draft</button>
+      <button class="add-job-btn primary" id="publishJobBtn" type="button">Publish Job</button>
+    </div>
+
+    <div class="add-job-card">
+      <div class="add-job-card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div>
+        <h3>AI Optimization</h3>
+        <p>Our AI can help refine your job description to attract more qualified candidates. Enable smart suggestions in settings.</p>
+      </div>
+    </div>
+
+    <div class="add-job-card">
+      <div class="add-job-card-icon"><i class="fa-solid fa-eye"></i></div>
+      <div>
+        <h3>Estimated Reach</h3>
+        <p>Based on your title and role, we expect 1,200+ seekers in our premium network.</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="employer-bottom-nav" aria-label="Employer navigation">
+    <button class="bottom-nav-item active" onclick="showEmployerOverview()">
+      <i class="fa-solid fa-table-cells"></i>
+      <span>Post Job</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showEmployerApplicants()">
+      <i class="fa-solid fa-users"></i>
+      <span>Applicants</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showEmployerHistory()">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <span>History</span>
+    </button>
+  </nav>
+</section>
+
+<!-- HOW IT WORKS PAGE -->
+<section class="hero" id="howItWorksPage" style="display:none;">
+<div class="hero-content">
+<div class="cta-section cta-row" id="howRoleCta" style="margin-bottom:30px;">
+        <button id="howSeekerBtn" class="btn-primary how-btn" onclick="showHowItWorksRole('seeker')">I'm a Job Seeker</button>
+        <button id="howEmployerBtn" class="btn-primary how-btn" onclick="showHowItWorksRole('employer')">I'm an Employer</button>
+</div>
+
+<div id="howItWorksSeeker">
+  <h1>How <span>Smart Hunt Job</span> Works for Seekers</h1>
+  <p>Follow these steps to find and land your next role.</p>
+
+  <div class="dashboard-grid" style="margin-top:50px;">
+    <div class="dashboard-card">
+      <i class="fa-solid fa-user-plus" style="font-size:36px;"></i>
+      <h3>Create Your Account</h3>
+      <p>Sign up and verify your email to start applying.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-clipboard-list" style="font-size:36px;"></i>
+      <h3>Complete Your Profile</h3>
+      <p>Add skills, experience, and preferences to get better matches.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-magnifying-glass" style="font-size:36px;"></i>
+      <h3>Discover Jobs</h3>
+      <p>Search and filter openings that fit your goals.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-paper-plane" style="font-size:36px;"></i>
+      <h3>Apply and Track</h3>
+      <p>Submit applications and monitor your status in one place.</p>
+    </div>
+  </div>
+</div>
+
+<div id="howItWorksEmployer" style="display:none;">
+  <h1>How <span>Smart Hunt Job</span> Works for Employers</h1>
+  <p>Post roles, review talent, and hire faster.</p>
+
+  <div class="dashboard-grid" style="margin-top:50px;">
+    <div class="dashboard-card">
+      <i class="fa-solid fa-briefcase" style="font-size:36px;"></i>
+      <h3>Create Company Profile</h3>
+      <p>Add your company details and hiring preferences.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-square-plus" style="font-size:36px;"></i>
+      <h3>Post a Job</h3>
+      <p>Write a clear job post and publish in minutes.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-users" style="font-size:36px;"></i>
+      <h3>Review Applicants</h3>
+      <p>Shortlist candidates and chat directly in the platform.</p>
+    </div>
+    <div class="dashboard-card">
+      <i class="fa-solid fa-handshake" style="font-size:36px;"></i>
+      <h3>Make an Offer</h3>
+      <p>Send offers and track hiring progress smoothly.</p>
+    </div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<!-- SEEKER LOGIN MODAL -->
+<div class="modal" id="loginModal">
+<div class="modal-content login-box">
+<div class="login-header">
+<i class="fa-solid fa-user"></i>
+<h3 id="loginTitle">Job Seeker Login</h3>
+<p class="login-sub">Welcome back! Please login to continue.</p>
+</div>
+<div class="login-form">
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','login')">
+  <i class="fa-brands fa-google"></i>
+  Continue with Google
+</button>
+<div class="divider"><span>or</span></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="loginEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group">
+  <i class="fa-solid fa-lock"></i>
+  <input id="loginPassword" type="password" placeholder="Password" autocomplete="new-password">
+  <button class="toggle-password" type="button" data-target="loginPassword" aria-label="Show password">
+    <i class="fa-regular fa-eye"></i>
+  </button>
+</div>
+<button class="login-btn" onclick="handleLogin()">Log In</button>
+<p class="login-switch">Don't have an account? <a href="#" onclick="switchToSignup('seeker')">Sign Up -></a></p>
+</div>
+<button class="close-btn" onclick="closeLogin()">Close</button>
+</div>
+</div>
+
+<!-- SEEKER SIGNUP MODAL -->
+<div class="modal" id="seekerSignupModal">
+<div class="modal-content login-box">
+<div class="login-header">
+<i class="fa-solid fa-user-plus"></i>
+<h3>Seeker Sign Up</h3>
+<p class="login-sub">Join Smart Hunt and start applying for jobs.</p>
+</div>
+<div class="login-form">
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','signup')">
+  <i class="fa-brands fa-google"></i>
+  Sign up with Google
+</button>
+<div class="divider"><span>or</span></div>
+<div class="input-group"><i class="fa-solid fa-user"></i><input id="seekerSignupName" type="text" placeholder="Full Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="seekerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group">
+  <i class="fa-solid fa-lock"></i>
+  <input id="seekerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
+  <button class="toggle-password" type="button" data-target="seekerSignupPassword" aria-label="Show password">
+    <i class="fa-regular fa-eye"></i>
+  </button>
+</div>
+<button class="login-btn" onclick="handleSignup('seeker')">Sign Up</button>
+<p class="login-switch">Already have an account? <a href="#" onclick="switchToLogin('seeker')">Log In -></a></p>
+</div>
+<button class="close-btn" onclick="closeSignup('seeker')">Close</button>
+</div>
+</div>
+
+<!-- EMPLOYER LOGIN MODAL -->
+<div class="modal" id="employerLoginModal">
+<div class="modal-content login-box">
+<div class="login-header">
+<i class="fa-solid fa-user"></i>
+<h3>Employer Login</h3>
+<p class="login-sub">Welcome back! Please login to continue.</p>
+</div>
+<div class="login-form">
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','login')">
+  <i class="fa-brands fa-google"></i>
+  Continue with Google
+</button>
+<div class="divider"><span>or</span></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerLoginEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group">
+  <i class="fa-solid fa-lock"></i>
+  <input id="employerLoginPassword" type="password" placeholder="Password" autocomplete="new-password">
+  <button class="toggle-password" type="button" data-target="employerLoginPassword" aria-label="Show password">
+    <i class="fa-regular fa-eye"></i>
+  </button>
+</div>
+<button class="login-btn" onclick="handleLogin()">Log In</button>
+<p class="login-switch">Don't have an account? <a href="#" onclick="switchToSignup('employer')">Sign Up -></a></p>
+</div>
+<button class="close-btn" onclick="closeLogin()">Close</button>
+</div>
+</div>
+
+<!-- EMPLOYER SIGNUP MODAL -->
+<div class="modal" id="employerSignupModal">
+<div class="modal-content login-box">
+<div class="login-header">
+<i class="fa-solid fa-user-plus"></i>
+<h3>Employer Sign Up</h3>
+<p class="login-sub">Create your account to post jobs and manage applicants.</p>
+</div>
+<div class="login-form">
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','signup')">
+  <i class="fa-brands fa-google"></i>
+  Sign up with Google
+</button>
+<div class="divider"><span>or</span></div>
+<div class="input-group"><i class="fa-solid fa-building"></i><input id="employerSignupCompany" type="text" placeholder="Company Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+<div class="input-group">
+  <i class="fa-solid fa-lock"></i>
+  <input id="employerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
+  <button class="toggle-password" type="button" data-target="employerSignupPassword" aria-label="Show password">
+    <i class="fa-regular fa-eye"></i>
+  </button>
+</div>
+<button class="login-btn" onclick="handleSignup('employer')">Sign Up</button>
+<p class="login-switch">Already have an account? <a href="#" onclick="switchToLogin('employer')">Log In -></a></p>
+</div>
+<button class="close-btn" onclick="closeSignup('employer')">Close</button>
+</div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal" id="feedbackModal">
+<div class="modal-content feedback-box">
+<div class="login-header">
+<i class="fa-solid fa-comment-dots"></i>
+<h3>We Value Your Feedback</h3>
+<p class="login-sub">Help us improve Smart Hunt Job by sharing your experience.</p>
+</div>
+<div class="rating">
+<i class="fa-solid fa-star"></i>
+<i class="fa-solid fa-star"></i>
+<i class="fa-solid fa-star"></i>
+<i class="fa-solid fa-star"></i>
+<i class="fa-solid fa-star"></i>
+</div>
+<div class="login-form">
+<div class="input-group"><i class="fa-solid fa-user"></i><input type="text" placeholder="Your Name"></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input type="email" placeholder="Your Email"></div>
+<div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea placeholder="Write your feedback here..."></textarea></div>
+<button class="login-btn">Submit Feedback</button>
+</div>
+<button class="close-btn" onclick="closeFeedback()">Close</button>
+</div>
+</div>
+
+<!-- CHAT MODAL -->
+<div class="modal" id="chatModal">
+<div class="modal-content">
+<h3>Customer Service</h3>
+<p>Our support team will assist you shortly.</p>
+<button class="close-btn" onclick="closeChat()">Close</button>
+</div>
+</div>
+
+<!-- SEEKER CHAT MODAL -->
+<div class="modal" id="seekerChatModal">
+<div class="modal-content chat-modal">
+  <div class="chat-head">
+    <div>
+      <h3 id="seekerChatTitle">Employer Chat</h3>
+      <p id="seekerChatSubtitle" class="chat-sub">Role conversation</p>
+    </div>
+    <button class="close-btn small-btn" onclick="closeSeekerChat()">Close</button>
+  </div>
+  <div class="chat-thread" id="seekerChatThread">
+    <div class="chat-bubble employer">
+      Thanks for your application. Do you have availability this week?
+    </div>
+    <div class="chat-bubble seeker">
+      Yes! I’m available Wed/Thu afternoon. Happy to adjust.
+    </div>
+    <div class="chat-bubble employer">
+      Great. Please share a calendar link and portfolio.
+    </div>
+  </div>
+  <div class="chat-input">
+    <input type="text" id="seekerChatMessage" placeholder="Type your message...">
+    <label class="chat-attach" aria-label="Attach file">
+      <input type="file" id="seekerChatFile" accept="image/*,.pdf,.doc,.docx">
+      <i class="fa-regular fa-square-xmark"></i>
+    </label>
+    <button class="pill-btn" onclick="sendSeekerMessage()">Send</button>
+  </div>
+</div>
+</div>
+
+<!-- APPLY MODAL -->
+<div class="modal" id="applyModal">
+<div class="modal-content apply-modal">
+  <div class="chat-head">
+    <div>
+      <h3 id="applyJobTitle">Apply</h3>
+      <p id="applyCompany" class="chat-sub">Complete the requirements below.</p>
+    </div>
+    <button class="close-btn small-btn" onclick="closeApplyForm()">Close</button>
+  </div>
+  <div class="apply-form">
+    <p>Your profile details and saved requirements will be sent automatically.</p>
+    <div style="margin-top:12px;">
+      <label class="detail-label" for="applyMessage">Message (optional)</label>
+      <textarea id="applyMessage" rows="3" style="width:100%;margin-top:6px;background:rgba(7,12,22,0.9);border:1px solid rgba(148,163,184,0.2);border-radius:14px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;" placeholder="Add a short message to the employer..."></textarea>
+    </div>
+    <div class="applicant-actions">
+      <button class="applicant-btn secondary" onclick="closeApplyForm()">Cancel</button>
+      <button class="applicant-btn primary" onclick="submitApplication(event)">Submit</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- QUICK VIEW MODAL -->
+<div class="modal" id="quickViewModal">
+<div class="modal-content quick-view-content">
+  <div class="quick-view-head">
+    <div>
+      <p class="quick-view-badge" id="quickViewBadge">Role</p>
+      <h3 id="quickViewTitle">Job Title</h3>
+      <p class="quick-view-company" id="quickViewCompany">Company • Location</p>
+    </div>
+    <button class="close-btn small-btn" onclick="closeQuickView()">Close</button>
+  </div>
+  <div class="quick-view-tags" id="quickViewTags"></div>
+  <div class="quick-view-footer">
+    <strong id="quickViewSalary">$0</strong>
+    <button class="pill-btn" onclick="openApplyForm(this)">Apply</button>
+  </div>
+</div>
+</div>
+
+<!-- SAVED JOBS MODAL -->
+<div class="modal" id="savedJobsModal">
+<div class="modal-content">
+<h3>Saved Jobs</h3>
+<p class="login-sub">Manage your bookmarked jobs in one place.</p>
+<div class="saved-searches" id="savedJobsModalList">
+  <p id="savedJobsModalEmpty" class="login-sub" style="margin-top:10px;">No saved jobs yet.</p>
+</div>
+<button class="close-btn" onclick="closeSavedJobsManage()">Close</button>
+</div>
+</div>
+
+
+<!-- WELCOME MODAL -->
+<div class="modal" id="welcomeModal">
+<div class="modal-content welcome-box">
+<div class="login-header">
+<i class="fa-solid fa-circle-check"></i>
+<h3>Welcome to Smart Hunt-Job</h3>
+<p class="login-sub">You are signed in and ready to explore your dashboard.</p>
+</div>
+<button class="login-btn" onclick="closeWelcome()">Continue</button>
+</div>
+</div>
+
+<!-- EMPLOYER WELCOME MODAL -->
+<div class="modal" id="employerWelcomeModal">
+<div class="modal-content welcome-box">
+<div class="login-header">
+<i class="fa-solid fa-circle-check"></i>
+<h3>Welcome, Employer</h3>
+<p class="login-sub">Your hiring dashboard is ready. Let's find great talent.</p>
+</div>
+<button class="login-btn" onclick="closeEmployerWelcome()">Continue</button>
+</div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="script.js"></script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
