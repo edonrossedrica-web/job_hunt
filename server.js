@@ -1,3 +1,5 @@
+console.log("🔥 SERVER STARTED");
+
 const http = require("http");
 const https = require("https");
 const fs = require("fs");
@@ -711,6 +713,11 @@ async function fetchJsonWithHeaders(urlString, headers = {}) {
 
 async function verifyGoogleIdToken(idToken) {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+  if (!clientId) {
+    const err = new Error("Google sign-in is not configured on the server.");
+    err.status = 503;
+    throw err;
+  }
 
   // We use Google's tokeninfo endpoint to validate the token server-side.
   const { statusCode, body, raw } = await fetchJson(
@@ -752,6 +759,34 @@ async function verifyGoogleIdToken(idToken) {
 }
 
 async function verifyGoogleAccessToken(accessToken) {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+  if (!clientId) {
+    const err = new Error("Google sign-in is not configured on the server.");
+    err.status = 503;
+    throw err;
+  }
+
+  const { statusCode: tokenStatusCode, body: tokenBody, raw: tokenRaw } = await fetchJson(
+    `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+  );
+
+  if (tokenStatusCode !== 200 || !tokenBody || typeof tokenBody !== "object") {
+    const message =
+      (tokenBody && (tokenBody.error_description || tokenBody.error)) ||
+      (tokenRaw ? String(tokenRaw).slice(0, 200) : "") ||
+      "Invalid Google access token.";
+    const err = new Error(message);
+    err.status = 401;
+    throw err;
+  }
+
+  const aud = String(tokenBody.aud || tokenBody.azp || tokenBody.issued_to || "").trim();
+  if (!aud || aud !== clientId) {
+    const err = new Error("Google access token audience mismatch.");
+    err.status = 401;
+    throw err;
+  }
+
   const { statusCode, body, raw } = await fetchJsonWithHeaders(
     "https://openidconnect.googleapis.com/v1/userinfo",
     {
@@ -878,8 +913,6 @@ async function handleApi(req, res, url) {
     return;
   }
 
-  const db = await readDb();
-
   if (pathname === "/api/ping" && req.method === "GET") {
     return json(res, 200, { ok: true, time: nowIso() });
   }
@@ -900,12 +933,15 @@ async function handleApi(req, res, url) {
   }
 
   if (pathname === "/api/config" && req.method === "GET") {
+    console.log("🔥 CONFIG ROUTE HIT");
     return json(res, 200, {
       ok: true,
       googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim(),
       linkedinClientId: String(process.env.LINKEDIN_CLIENT_ID || "").trim(),
     });
   }
+
+  const db = await readDb();
 
   if (pathname === "/api/feedback" && req.method === "POST") {
     const body = await readJsonBody(req);
@@ -2010,7 +2046,7 @@ server.listen(PORT, () => {
     cleanPublicOrigin(process.env.BASE_URL) ||
     "";
   // eslint-disable-next-line no-console
-  console.log(`HireUp server running on http://localhost:${PORT}`);
+  console.log(`HireUp server listening on port ${PORT}`);
   // eslint-disable-next-line no-console
   console.log(`HireUp data dir: ${DATA_DIR}`);
   if (configuredOrigin) {

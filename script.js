@@ -3174,22 +3174,8 @@ window.addEventListener("pageshow", () => {
 // Show Seeker Home Page
 function showHome() {
   isEmployer = false;
-  const loggedIn = localStorage.getItem("isLoggedIn") === "true";
-  const role = localStorage.getItem("userRole");
-
-  if (!loggedIn || role !== "seeker") {
-    document.getElementById("homePage").style.display = "none";
-    document.getElementById("seekerLandingPage").style.display = "flex";
-    document.getElementById("employerLoginPage").style.display = "none";
-    document.getElementById("employeePage").style.display = "none";
-    document.getElementById("howItWorksPage").style.display = "none";
-    setRoleToggleLabel("Hunter Site");
-  setActiveNav("homeLink");
-  window.scrollTo(0, 0);
-  updateAuthUI();
-  return;
-}
-
+  // Treat the seeker dashboard as the default public entry so shared links and
+  // direct opens land on the system home without an extra landing-page step.
   document.getElementById("homePage").style.display = "block";
   document.getElementById("seekerLandingPage").style.display = "none";
   document.getElementById("employerLoginPage").style.display = "none";
@@ -4006,7 +3992,7 @@ function getGoogleClientId() {
   const metaValue = meta && typeof meta.content === "string" ? meta.content.trim() : "";
   const globalValue =
     typeof window.GOOGLE_CLIENT_ID === "string" ? window.GOOGLE_CLIENT_ID.trim() : "";
-  return metaValue || globalValue || "";
+  return globalValue || metaValue || "";
 }
 
 async function waitForGoogleIdentityServices(timeoutMs = 12000) {
@@ -4019,7 +4005,6 @@ async function waitForGoogleIdentityServices(timeoutMs = 12000) {
 }
 
 async function bootstrapGoogleClientIdFromServer() {
-  if (getGoogleClientId()) return;
   const proto = window.location && window.location.protocol;
   const runningServer = proto === "http:" || proto === "https:";
   if (!runningServer) return;
@@ -4027,10 +4012,11 @@ async function bootstrapGoogleClientIdFromServer() {
   try {
     const data = await apiRequest("/api/config", { method: "GET" });
     const clientId = data && data.ok ? String(data.googleClientId || "").trim() : "";
-    if (!clientId) return;
-    window.GOOGLE_CLIENT_ID = clientId;
+    if (clientId) {
+      window.GOOGLE_CLIENT_ID = clientId;
+    }
     const meta = document.querySelector('meta[name="google-client-id"]');
-    if (meta) meta.content = clientId;
+    if (meta && clientId) meta.content = clientId;
   } catch {
     // ignore
   }
