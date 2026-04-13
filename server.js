@@ -82,12 +82,46 @@ function resolveDataDir() {
   return path.isAbsolute(raw) ? raw : path.join(ROOT_DIR, raw);
 }
 
-const DATA_DIR = resolveDataDir();
+function getDefaultLocalDataDir() {
+  return path.join(ROOT_DIR, "server-data");
+}
+
+let DATA_DIR = resolveDataDir();
 // Previous versions stored the whole DB in a JSON file. This version stores it in SQLite.
 // To keep the rest of the server code simple, we store the whole JSON blob in a single SQLite row.
-const LEGACY_DB_JSON_PATH = path.join(DATA_DIR, "db.json");
-const SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
+let LEGACY_DB_JSON_PATH = path.join(DATA_DIR, "db.json");
+let SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
 const SQLITE_KV_KEY = "smart_hunt_db_v1";
+
+function setDataDir(nextDir) {
+  DATA_DIR = nextDir;
+  LEGACY_DB_JSON_PATH = path.join(DATA_DIR, "db.json");
+  SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
+}
+
+async function ensureDataDirWritable() {
+  try {
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+    return;
+  } catch (err) {
+    const code = String(err && err.code ? err.code : "").trim().toUpperCase();
+    const configured = resolveDataDir();
+    const fallbackDir = getDefaultLocalDataDir();
+    const shouldFallback =
+      (code === "EACCES" || code === "EPERM" || code === "EROFS") &&
+      path.resolve(DATA_DIR) === path.resolve(configured) &&
+      path.resolve(DATA_DIR) !== path.resolve(fallbackDir);
+
+    if (!shouldFallback) {
+      throw err;
+    }
+
+    setDataDir(fallbackDir);
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+    // eslint-disable-next-line no-console
+    console.warn(`Primary data dir not writable; falling back to ${DATA_DIR}`);
+  }
+}
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -349,7 +383,7 @@ function syncReadableTables(sqlDb, jsonDb) {
 }
 
 async function ensureDb() {
-  await fsp.mkdir(DATA_DIR, { recursive: true });
+  await ensureDataDirWritable();
 
   const db = new DatabaseSync(SQLITE_PATH);
   try {
@@ -611,12 +645,12 @@ function sanitizeUser(user) {
 }
 
 async function appendFeedbackLog(entry) {
-  const filePath = path.join(DATA_DIR, "feedback.jsonl");
   try {
-    await fsp.mkdir(DATA_DIR, { recursive: true });
+    await ensureDataDirWritable();
   } catch {
     // ignore
   }
+  const filePath = path.join(DATA_DIR, "feedback.jsonl");
   const line = JSON.stringify(entry) + "\n";
   await fsp.appendFile(filePath, line, "utf8");
 }
