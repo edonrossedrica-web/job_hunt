@@ -1,6 +1,7 @@
 param(
   [ValidateSet("all", "employer", "seeker")]
-  [string]$Role = "all"
+  [string]$Role = "all",
+  [switch]$AccountsOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,7 +13,11 @@ $nodeReset = Join-Path $root "tools\\reset-db.js"
 
 if (Test-Path $nodeReset) {
   # Preferred path: reset the SQLite DB (and make backups) via Node.
-  node $nodeReset --role $Role
+  if ($AccountsOnly) {
+    node $nodeReset --role $Role --accounts-only
+  } else {
+    node $nodeReset --role $Role
+  }
 } elseif (Test-Path $sqlitePath) {
   throw "Reset script missing: $nodeReset"
 } elseif (Test-Path $legacyJsonPath) {

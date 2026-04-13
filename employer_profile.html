@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employer Profile - Smart Hunt Job</title>
+<title>Employer Profile - HireUp</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -46,6 +46,16 @@ body{
 
 .logo span{
   color:#3aa0ff;
+}
+.brand-logo{
+  height:48px;
+  width:auto;
+  max-width:520px;
+  display:block;
+  border-radius:10px;
+  object-fit:contain;
+  transform:translateY(12px) scale(3.3);
+  transform-origin:left center;
 }
 .back-btn{
   background:rgba(15,23,42,0.7);
@@ -156,6 +166,85 @@ body{
 
 .section .edit-btn:hover{
   color:#3aa0ff;
+}
+
+/* Publish / Finish CTA (match seeker FAB) */
+.publish-fab{
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.55);
+}
+
+/* confirm modal (match seeker) */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.65);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:12000
+}
+.modal-card{
+  width:min(560px,100%);
+  background:#0b1220;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  box-shadow:0 18px 60px rgba(0,0,0,.70);
+  overflow:hidden
+}
+.modal-head{
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,.06)
+}
+.modal-title{
+  font-weight:900;
+  letter-spacing:-.2px
+}
+.modal-close{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(12,17,23,.6);
+  color:#cbd5e1;
+  cursor:pointer
+}
+.modal-close:hover{
+  color:#fff;
+  border-color:rgba(255,255,255,.18)
+}
+.modal-body{
+  padding:16px;
+  color:#cbd5e1;
+  line-height:1.6
+}
+.modal-actions{
+  padding:14px 16px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  border-top:1px solid rgba(255,255,255,.06);
+  background:rgba(12,17,23,.25)
+}
+.modal-cancel{
+  border:1px solid rgba(255,255,255,.10);
+  background:transparent;
+  color:#cbd5e1;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:800
+}
+.modal-cancel:hover{
+  border-color:rgba(255,255,255,.18);
+  color:#fff
 }
 
 /* ABOUT */
@@ -284,7 +373,6 @@ body{
 #infoWebsite:empty::before{content:"—";opacity:.7;}
 #contactEmail:empty::before{content:"—";opacity:.7;}
 #contactPhone:empty::before{content:"—";opacity:.7;}
-#contactLocation:empty::before{content:"—";opacity:.7;}
 #contactLinkedin:empty::before{content:"—";opacity:.7;}
 
 </style>
@@ -294,8 +382,7 @@ body{
 
 <div class="navbar">
   <div class="nav-top">
-    <div class="logo">SMART <span>HUNT</span>-JOB</div>
-    <button class="back-btn" onclick="goBack()">Back</button>
+    <img class="brand-logo" src="assets/brand-logo.png" alt="HireUp logo">
   </div>
 </div>
 
@@ -384,25 +471,30 @@ body{
     </div>
 
     <div class="contact-item">
-      <i class="fa-solid fa-location-dot"></i>
-      <span id="contactLocation"></span>
-    </div>
-
-    <div class="contact-item">
       <i class="fa-brands fa-linkedin"></i>
       <span id="contactLinkedin"></span>
     </div>
 
   </div>
 
-  <div class="section" style="text-align:center;" id="finishProfileSection">
-    <div class="section-title" style="justify-content:center;">
-      <i class="fa-solid fa-circle-check"></i> Finish Profile
-    </div>
-    <p class="about-text">When you’re done, continue to your dashboard.</p>
-    <button class="save-btn" onclick="finishEmployerProfile()">Continue to Dashboard</button>
-  </div>
+</div>
 
+<button class="save-btn publish-fab" id="finishEmployerProfileBtn" type="button" style="display:none" onclick="finishEmployerProfile(this)">
+  Publish Account
+</button>
+
+<div class="modal" id="confirmModal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-card" role="document">
+    <div class="modal-head">
+      <div class="modal-title" id="confirmTitle">Confirm</div>
+      <button class="modal-close" id="confirmCloseBtn" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="confirmMessage">Are you sure?</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="confirmCancelBtn" type="button">Cancel</button>
+      <button class="save-btn" id="confirmOkBtn" type="button"><i class="fa-solid fa-rocket"></i> Publish</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -428,8 +520,234 @@ function backendRequest(pathname, options){
   });
 }
 
+const PROFILE_CACHE_PREFIX = "smartHuntProfileCache_v1:";
+let cacheQuotaWarned = false;
+let backendSaveWarned = false;
+let backendLoadWarned = false;
+
+function getFinishProfileDoneKey(role){
+  const safeRole = role === "employer" ? "employer" : role === "seeker" ? "seeker" : String(role || "user");
+  const email = String(localStorage.getItem("currentUserEmail") || "").trim().toLowerCase();
+  const userId = String(localStorage.getItem("currentUserId") || "").trim();
+  const id = userId || email || "anon";
+  return `finishProfileDone_${safeRole}:${id}`;
+}
+
+function isFinishProfileDone(role){
+  const perUserKey = getFinishProfileDoneKey(role);
+  const perUser = localStorage.getItem(perUserKey);
+  if (perUser !== null) return perUser === "true";
+
+  // Back-compat: older builds used a global key (hid the CTA for all accounts in this browser).
+  const legacyKey = `finishProfileDone_${role}`;
+  const legacy = localStorage.getItem(legacyKey);
+  if (legacy === "true") {
+    try { localStorage.setItem(perUserKey, "true"); } catch {}
+    try { localStorage.removeItem(legacyKey); } catch {}
+    return true;
+  }
+  return false;
+}
+
+function markFinishProfileDone(role, done){
+  const perUserKey = getFinishProfileDoneKey(role);
+  try {
+    if (done) localStorage.setItem(perUserKey, "true");
+    else localStorage.removeItem(perUserKey);
+  } catch {
+    // ignore
+  }
+  try { localStorage.removeItem(`finishProfileDone_${role}`); } catch {}
+}
+
+let confirmResolve = null;
+function closeConfirmModal(result){
+  const modal = document.getElementById("confirmModal");
+  if (modal) {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  }
+  if (typeof confirmResolve === "function") {
+    const r = confirmResolve;
+    confirmResolve = null;
+    r(Boolean(result));
+  }
+}
+
+function setConfirmOkLabel(okBtn, okText){
+  if (!okBtn) return;
+  okBtn.textContent = "";
+  const icon = document.createElement("i");
+  icon.className = "fa-solid fa-rocket";
+  okBtn.appendChild(icon);
+  okBtn.appendChild(document.createTextNode(` ${String(okText || "OK")}`));
+}
+
+function showConfirmModal(message, { title = "Confirm", okText = "OK", cancelText = "Cancel" } = {}){
+  const modal = document.getElementById("confirmModal");
+  const msgEl = document.getElementById("confirmMessage");
+  const titleEl = document.getElementById("confirmTitle");
+  const okBtn = document.getElementById("confirmOkBtn");
+  const cancelBtn = document.getElementById("confirmCancelBtn");
+
+  if (!modal || !msgEl || !titleEl || !okBtn || !cancelBtn) {
+    try { return Promise.resolve(confirm(String(message || "Are you sure?"))); } catch { return Promise.resolve(true); }
+  }
+
+  closeConfirmModal(false);
+  titleEl.textContent = String(title || "Confirm");
+  msgEl.textContent = String(message || "Are you sure?");
+  setConfirmOkLabel(okBtn, okText || "OK");
+  cancelBtn.textContent = String(cancelText || "Cancel");
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+  return new Promise((resolve) => { confirmResolve = resolve; });
+}
+
+(function setupConfirmModal(){
+  const modal = document.getElementById("confirmModal");
+  const okBtn = document.getElementById("confirmOkBtn");
+  const cancelBtn = document.getElementById("confirmCancelBtn");
+  const closeBtn = document.getElementById("confirmCloseBtn");
+
+  if (okBtn) okBtn.addEventListener("click", () => closeConfirmModal(true));
+  if (cancelBtn) cancelBtn.addEventListener("click", () => closeConfirmModal(false));
+  if (closeBtn) closeBtn.addEventListener("click", () => closeConfirmModal(false));
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e && e.target === modal) closeConfirmModal(false);
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    const open = modal && modal.style.display === "flex";
+    if (!open) return;
+    if (e && e.key === "Escape") closeConfirmModal(false);
+    if (e && e.key === "Enter") closeConfirmModal(true);
+  });
+})();
+
+function warnBackendOnce(kind, err){
+  const msg = String(err && err.message ? err.message : "");
+  if (kind === "save") {
+    if (backendSaveWarned) return;
+    backendSaveWarned = true;
+    alert(`Could not save your profile to the backend (${msg || "offline"}). Your changes are kept locally in this browser, but they won't sync across devices until the backend is reachable.`);
+    return;
+  }
+  if (kind === "load") {
+    if (backendLoadWarned) return;
+    backendLoadWarned = true;
+    alert(`Could not load your profile from the backend (${msg || "offline"}). Showing whatever is saved locally in this browser.`);
+  }
+}
+
+function getLocalProfileCacheKey(){
+  const role = "employer";
+  const email = String(localStorage.getItem("currentUserEmail") || "").trim().toLowerCase();
+  const userId = String(localStorage.getItem("currentUserId") || "").trim();
+  const id = email || userId || "anon";
+  return `${PROFILE_CACHE_PREFIX}${role}:${id}`;
+}
+
+function loadAnyLocalProfileCacheForRole(role){
+  try {
+    let best = null;
+    let bestUpdatedAt = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(`${PROFILE_CACHE_PREFIX}${role}:`)) continue;
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      if (!parsed || typeof parsed !== "object") continue;
+      const updatedAt = Number(parsed.__updatedAt || 0);
+      if (updatedAt > bestUpdatedAt) {
+        bestUpdatedAt = updatedAt;
+        best = parsed;
+      }
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+function loadLocalProfileCache(){
+  try {
+    const key = getLocalProfileCacheKey();
+    let current = null;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") current = parsed;
+      } catch {
+        current = null;
+      }
+    }
+
+    const best = loadAnyLocalProfileCacheForRole("employer");
+    const currentTs = current && typeof current === "object" ? (Number(current.__updatedAt || 0) || 0) : 0;
+    const bestTs = best && typeof best === "object" ? (Number(best.__updatedAt || 0) || 0) : 0;
+
+    const chosen = bestTs > currentTs ? best : current;
+
+    // Migrate the newest cache into the current key so profile won't "disappear" when id/email becomes available.
+    try {
+      if (chosen && chosen !== current) {
+        localStorage.setItem(key, JSON.stringify({ ...chosen }));
+      }
+    } catch {
+      // ignore
+    }
+
+    return chosen;
+  } catch {
+    return null;
+  }
+}
+
+function saveLocalProfileCache(profile){
+  try {
+    const payload = profile && typeof profile === "object" ? { ...profile } : {};
+    payload.__schema = 1;
+    payload.__updatedAt = Number(payload.__updatedAt || 0) || Date.now();
+    localStorage.setItem(getLocalProfileCacheKey(), JSON.stringify(payload));
+  } catch (err) {
+    const msg = String(err && err.message ? err.message : "");
+    if (!cacheQuotaWarned && /quota/i.test(msg)) {
+      cacheQuotaWarned = true;
+      // Best-effort fallback: keep text fields even if large logo exceeds quota.
+      try {
+        const minimal = profile && typeof profile === "object" ? { ...profile } : {};
+        minimal.__schema = 1;
+        minimal.__updatedAt = Date.now();
+        delete minimal.logoSrc;
+        minimal.__attachmentsDropped = true;
+        localStorage.setItem(getLocalProfileCacheKey(), JSON.stringify(minimal));
+        alert("Your logo image is too large to save in the browser. Your text info was saved, but please upload a smaller image to keep the logo.");
+        return;
+      } catch {
+        // fall through to original message
+      }
+      alert("Profile logo is too large to save in the browser. Please choose a smaller image (or compress it) and try again.");
+    }
+  }
+}
+
 function collectEmployerProfile(){
-  const getText = (id) => (document.getElementById(id)?.innerText || "").trim();
+  const getText = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return "";
+    const input = el.querySelector ? el.querySelector("input,textarea") : null;
+    if (input && typeof input.value === "string") return input.value.trim();
+    return String(el.innerText || "").trim();
+  };
   return {
     companyName: getText("companyName"),
     companyIndustry: getText("companyIndustry"),
@@ -444,11 +762,40 @@ function collectEmployerProfile(){
     contact: {
       email: getText("contactEmail"),
       phone: getText("contactPhone"),
-      location: getText("contactLocation"),
       linkedin: getText("contactLinkedin"),
     },
     logoSrc: document.getElementById("companyLogo")?.src || "",
   };
+}
+
+function persistEmployerProfileDraft({ attemptBackend = false } = {}){
+  const profile = collectEmployerProfile();
+  saveLocalProfileCache(profile);
+  if (!attemptBackend) return;
+  backendRequest("/api/profile", { method: "PUT", body: { profile } })
+    .catch((err) => warnBackendOnce("save", err));
+}
+
+// Autosave (so users don't lose info if they forget to press Save buttons).
+let employerAutosaveTimer = null;
+function scheduleEmployerAutosave(){
+  if (employerAutosaveTimer) clearTimeout(employerAutosaveTimer);
+  employerAutosaveTimer = setTimeout(() => {
+    employerAutosaveTimer = null;
+    const runningServer = (window.location && (window.location.protocol === "http:" || window.location.protocol === "https:"));
+    try {
+      persistEmployerProfileDraft({ attemptBackend: runningServer });
+    } catch {
+      // ignore
+    }
+  }, 800);
+}
+
+try {
+  document.addEventListener("input", scheduleEmployerAutosave, { capture: true });
+  document.addEventListener("change", scheduleEmployerAutosave, { capture: true });
+} catch {
+  // ignore
 }
 
 function applyEmployerProfile(profile){
@@ -471,7 +818,6 @@ function applyEmployerProfile(profile){
   const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
   setText("contactEmail", contact.email || "");
   setText("contactPhone", contact.phone || "");
-  setText("contactLocation", contact.location || "");
   setText("contactLinkedin", contact.linkedin || "");
 
   if (typeof profile.logoSrc === "string" && profile.logoSrc) {
@@ -482,7 +828,12 @@ function applyEmployerProfile(profile){
 
 function saveEmployerProfileToBackend(){
   const profile = collectEmployerProfile();
-  return backendRequest("/api/profile", { method: "PUT", body: { profile } });
+  saveLocalProfileCache(profile);
+  return backendRequest("/api/profile", { method: "PUT", body: { profile } })
+    .catch((err) => {
+      warnBackendOnce("save", err);
+      throw err;
+    });
 }
 
 function editField(sectionId) {
@@ -573,7 +924,7 @@ function editField(sectionId) {
       section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="infoSection" onclick="saveField('infoSection')">Save All</button>`);
     }
   } else if(sectionId === 'contactSection'){
-    const ids = ['contactEmail','contactPhone','contactLocation','contactLinkedin'];
+    const ids = ['contactEmail','contactPhone','contactLinkedin'];
     const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -650,7 +1001,7 @@ function saveField(sectionId){
     });
     document.getElementById('infoSection')?.querySelectorAll('button[data-save-all="infoSection"]').forEach((b) => b.remove());
   } else if(sectionId === 'contactSection'){
-    const ids = ['contactEmail','contactPhone','contactLocation','contactLinkedin'];
+    const ids = ['contactEmail','contactPhone','contactLinkedin'];
     ids.forEach((id) => {
       const input = document.getElementById(id + 'Input');
       const el = document.getElementById(id);
@@ -664,18 +1015,59 @@ function saveField(sectionId){
   saveEmployerProfileToBackend().catch(() => {});
 }
 
-function finishEmployerProfile(){
-  saveEmployerProfileToBackend().catch(() => {});
-  localStorage.setItem("finishProfileDone_employer","true");
-  localStorage.setItem("postSignupWelcome","employer");
-  window.location.href = "index.html";
+async function finishEmployerProfile(btn){
+  const button = btn && typeof btn === "object" ? btn : document.getElementById("finishEmployerProfileBtn");
+  const prevLabel = button ? String(button.innerText || "") : "";
+
+  if (isFinishProfileDone("employer")) {
+    window.location.href = "index.html?returnTo=employerOverview";
+    return;
+  }
+
+  const ok = await showConfirmModal("Publish your account now?", {
+    title: "Publish Account",
+    okText: "Publish",
+    cancelText: "Cancel",
+  });
+  if (!ok) return;
+
+  if (button) {
+    button.disabled = true;
+    button.innerText = "Saving...";
+  }
+  try {
+    // Ensure the backend write completes before navigating away (navigation can abort in-flight fetch).
+    await saveEmployerProfileToBackend();
+    markFinishProfileDone("employer", true);
+    localStorage.setItem("postSignupWelcome","employer");
+    try {
+      setupFinishEmployerProfileCta();
+    } catch {}
+    window.location.href = "index.html?returnTo=employerOverview";
+  } catch (err) {
+    alert(err?.message || "Failed to save your profile. Please try again.");
+    if (button) {
+      button.disabled = false;
+      button.innerText = prevLabel || "Publish Account";
+    }
+  }
+}
+
+function setupFinishEmployerProfileCta() {
+  const btn = document.getElementById("finishEmployerProfileBtn");
+  if (!btn) return;
+  const done = isFinishProfileDone("employer");
+  btn.style.display = "inline-flex";
+  btn.disabled = false;
+  if (done) {
+    btn.innerHTML = `<i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back`;
+  } else {
+    btn.textContent = "Publish Account";
+  }
 }
 
 (function () {
-  const finishSection = document.getElementById("finishProfileSection");
-  if (!finishSection) return;
-  const done = localStorage.getItem("finishProfileDone_employer") === "true";
-  if (done) finishSection.style.display = "none";
+  setupFinishEmployerProfileCta();
 })();
 
 (function () {
@@ -698,20 +1090,98 @@ function finishEmployerProfile(){
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function (e) {
-      logo.src = e.target.result;
+      const dataUrl = String(e && e.target && e.target.result ? e.target.result : "");
+      if (dataUrl) {
+        logo.src = dataUrl;
+        const existing = loadLocalProfileCache();
+        saveLocalProfileCache({ ...(existing && typeof existing === "object" ? existing : {}), logoSrc: dataUrl });
+      }
+      saveEmployerProfileToBackend().catch(() => {});
     };
     reader.readAsDataURL(file);
     button.style.display = "none";
-    saveEmployerProfileToBackend().catch(() => {});
   });
 })();
 
 // Load profile from backend when available (multi-device support).
 (function () {
+  const cached = loadLocalProfileCache();
+  if (cached) applyEmployerProfile(cached);
+
+  // Prefill the header company name from signup/login state even before the backend profile loads.
+  // This avoids showing a blank header on first load (especially for offline/file:// demo mode).
+  {
+    const existingName = (document.getElementById("companyName")?.innerText || "").trim();
+    const cachedName = String(cached && typeof cached === "object" && cached.companyName ? cached.companyName : "").trim();
+    const nameFromStorage = String(localStorage.getItem("currentUserName") || "").trim();
+    if (!existingName && !cachedName && nameFromStorage) {
+      const el = document.getElementById("companyName");
+      if (el) el.innerText = nameFromStorage;
+      // Persist locally so navigation/reload won't ever show blank even if backend is unreachable.
+      try {
+        if (!cached) saveLocalProfileCache({ companyName: nameFromStorage });
+      } catch {
+        // ignore
+      }
+      // Keep local-only; do not auto-save to backend here (PUT replaces the whole profile).
+    }
+  }
+
+  // Prefill contact email from signup/login state so Contact isn't blank by default.
+  {
+    const existingEmail = (document.getElementById("contactEmail")?.innerText || "").trim();
+    const cachedEmail = String(
+      cached && typeof cached === "object" && cached.contact && typeof cached.contact === "object" && cached.contact.email
+        ? cached.contact.email
+        : "",
+    ).trim();
+    const emailFromStorage = String(localStorage.getItem("currentUserEmail") || "").trim();
+    if (!existingEmail && !cachedEmail && emailFromStorage) {
+      const el = document.getElementById("contactEmail");
+      if (el) el.innerText = emailFromStorage;
+      // Persist locally so navigation/reload won't clear it even if backend is unreachable.
+      try {
+        const base = cached && typeof cached === "object" ? cached : {};
+        const next = {
+          ...base,
+          contact: {
+            ...(base.contact && typeof base.contact === "object" ? base.contact : {}),
+            email: emailFromStorage,
+          },
+        };
+        saveLocalProfileCache(next);
+      } catch {
+        // ignore
+      }
+      // Keep local-only; do not auto-save to backend here (PUT replaces the whole profile).
+    }
+  }
+
   backendRequest("/api/profile", { method: "GET" })
     .then((data) => {
       if (!data || !data.ok) return;
-      if (data.profile) applyEmployerProfile(data.profile);
+      if (data.profile && typeof data.profile === "object") {
+        const backendProfile = data.profile;
+        const cachedObj = cached && typeof cached === "object" ? cached : null;
+        const cachedTs = cachedObj ? (Number(cachedObj.__updatedAt || 0) || 0) : 0;
+        const backendTs = Number(backendProfile.__updatedAt || 0) || 0;
+        const preferCached = cachedObj && cachedTs > backendTs;
+
+        const mergedBase = cachedObj
+          ? (preferCached ? { ...backendProfile, ...cachedObj } : { ...cachedObj, ...backendProfile })
+          : backendProfile;
+
+        const merged = {
+          ...mergedBase,
+          logoSrc: String(
+            (preferCached
+              ? (cachedObj?.logoSrc || backendProfile.logoSrc || "")
+              : (backendProfile.logoSrc || cachedObj?.logoSrc || "")) || "",
+          ).trim(),
+        };
+        applyEmployerProfile(merged);
+        saveLocalProfileCache(merged);
+      }
 
       // If backend profile is empty, prefill company name from signup (user.company).
       const existingName = (document.getElementById("companyName")?.innerText || "").trim();
@@ -722,23 +1192,41 @@ function finishEmployerProfile(){
         saveEmployerProfileToBackend().catch(() => {});
       }
     })
-    .catch(() => {});
+    .catch((err) => warnBackendOnce("load", err));
 })();
 </script>
 
 <script>
 function goBack(){
   localStorage.setItem("postLoginTarget","employer");
-  window.location.href = "index.html";
+  try { persistEmployerProfileDraft({ attemptBackend: true }); } catch {}
+  window.location.href = "index.html?returnTo=employerOverview";
 }
 </script>
 
 <script>
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const role = localStorage.getItem("userRole");
-  if (!loggedIn || role !== "employer") {
+  const runningServer = (window.location && (window.location.protocol === "http:" || window.location.protocol === "https:"));
+  try {
+    console.log(`[HireUp] Employer profile running via ${runningServer ? "server" : "file"} origin. (${window.location.protocol})`);
+  } catch {
+    // ignore
+  }
+  const token = String(localStorage.getItem("authToken") || "").trim();
+  if (!loggedIn || role !== "employer" || (runningServer && !token)) {
     window.location.href = "index.html";
   }
+</script>
+
+<script>
+window.addEventListener("beforeunload", () => {
+  try {
+    persistEmployerProfileDraft({ attemptBackend: false });
+  } catch {
+    // ignore
+  }
+});
 </script>
 
 </body>

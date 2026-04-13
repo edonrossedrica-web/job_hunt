@@ -2,15 +2,17 @@
   "name": "smart-hunt-job",
   "version": "1.0.0",
   "private": true,
-  "description": "Smart Hunt Job school project",
+  "description": "HireUp school project",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.14"
   },
   "engines": {
     "node": ">=22"
   }
 }
-

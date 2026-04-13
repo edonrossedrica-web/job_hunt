@@ -11,6 +11,27 @@ function safeJsonParse(value) {
   }
 }
 
+function toNullableText(value) {
+  if (value === undefined || value === null) return null;
+  const s = String(value);
+  return s.length ? s : null;
+}
+
+function toNullableInt(value) {
+  if (value === undefined || value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function toJsonText(value) {
+  if (value === undefined) return null;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeRole(role) {
   return role === "employer" ? "employer" : role === "seeker" ? "seeker" : "all";
 }
@@ -34,12 +55,12 @@ function ensureShape(db) {
 
 function usageAndExit(code) {
   // eslint-disable-next-line no-console
-  console.error("Usage: node tools/reset-db.js --role all|employer|seeker");
+  console.error("Usage: node tools/reset-db.js --role all|employer|seeker [--accounts-only]");
   process.exit(code);
 }
 
 function parseArgs(argv) {
-  const args = { role: "all" };
+  const args = { role: "all", accountsOnly: false };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--role" || a === "-r") {
@@ -47,6 +68,10 @@ function parseArgs(argv) {
       if (!v) usageAndExit(2);
       args.role = v;
       i += 1;
+      continue;
+    }
+    if (a === "--accounts-only") {
+      args.accountsOnly = true;
       continue;
     }
     if (a === "--help" || a === "-h") usageAndExit(0);
@@ -100,6 +125,198 @@ function ensureSqlite() {
   db.close();
 }
 
+function ensureMirrorTables(db) {
+  // Readable mirror tables (for inspection only; source of truth remains kv.value JSON).
+  db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    role TEXT,
+    email TEXT,
+    passwordSalt TEXT,
+    passwordHash TEXT,
+    name TEXT,
+    company TEXT,
+    authProvider TEXT,
+    googleSub TEXT,
+    createdAt TEXT,
+    profileJson TEXT,
+    rawJson TEXT
+  );`);
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN passwordSalt TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN passwordHash TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+
+  db.exec(`CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    userId TEXT,
+    createdAt INTEGER,
+    expiresAt INTEGER,
+    rawJson TEXT
+  );`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    employerId TEXT,
+    company TEXT,
+    title TEXT,
+    location TEXT,
+    salary TEXT,
+    description TEXT,
+    requirements TEXT,
+    status TEXT,
+    closedAt TEXT,
+    createdAt TEXT,
+    rawJson TEXT
+  );`);
+  try {
+    db.exec("ALTER TABLE jobs ADD COLUMN status TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE jobs ADD COLUMN closedAt TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+
+  db.exec(`CREATE TABLE IF NOT EXISTS applications (
+    id TEXT PRIMARY KEY,
+    jobId TEXT,
+    employerId TEXT,
+    seekerId TEXT,
+    seekerName TEXT,
+    seekerEmail TEXT,
+    status TEXT,
+    message TEXT,
+    createdAt TEXT,
+    updatedAt TEXT,
+    messagesJson TEXT,
+    rawJson TEXT
+  );`);
+  try {
+    db.exec("ALTER TABLE applications ADD COLUMN messagesJson TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+}
+
+function syncMirrorTables(db, jsonDb) {
+  ensureMirrorTables(db);
+
+  const users = Array.isArray(jsonDb?.users) ? jsonDb.users : [];
+  const sessions = Array.isArray(jsonDb?.sessions) ? jsonDb.sessions : [];
+  const jobs = Array.isArray(jsonDb?.jobs) ? jsonDb.jobs : [];
+  const applications = Array.isArray(jsonDb?.applications) ? jsonDb.applications : [];
+
+  db.exec("BEGIN IMMEDIATE;");
+  try {
+    db.exec("DELETE FROM users;");
+    db.exec("DELETE FROM sessions;");
+    db.exec("DELETE FROM jobs;");
+    db.exec("DELETE FROM applications;");
+
+    const insertUser = db.prepare(
+      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const u of users) {
+      if (!u || typeof u !== "object") continue;
+      const id = toNullableText(u.id);
+      if (!id) continue;
+      insertUser.run(
+        id,
+        toNullableText(u.role),
+        toNullableText(u.email),
+        toNullableText(u.passwordSalt),
+        toNullableText(u.passwordHash),
+        toNullableText(u.name),
+        toNullableText(u.company),
+        toNullableText(u.authProvider),
+        toNullableText(u.googleSub),
+        toNullableText(u.createdAt),
+        toJsonText(u.profile ?? null),
+        toJsonText(u),
+      );
+    }
+
+    const insertSession = db.prepare(
+      "INSERT INTO sessions(token, userId, createdAt, expiresAt, rawJson) VALUES(?, ?, ?, ?, ?);",
+    );
+    for (const s of sessions) {
+      if (!s || typeof s !== "object") continue;
+      const token = toNullableText(s.token);
+      if (!token) continue;
+      insertSession.run(
+        token,
+        toNullableText(s.userId),
+        toNullableInt(s.createdAt),
+        toNullableInt(s.expiresAt),
+        toJsonText(s),
+      );
+    }
+
+    const insertJob = db.prepare(
+      "INSERT INTO jobs(id, employerId, company, title, location, salary, description, requirements, status, closedAt, createdAt, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const j of jobs) {
+      if (!j || typeof j !== "object") continue;
+      const id = toNullableText(j.id);
+      if (!id) continue;
+      insertJob.run(
+        id,
+        toNullableText(j.employerId),
+        toNullableText(j.company),
+        toNullableText(j.title),
+        toNullableText(j.location),
+        toNullableText(j.salary),
+        toNullableText(j.description),
+        toNullableText(j.requirements),
+        toNullableText(j.status),
+        toNullableText(j.closedAt),
+        toNullableText(j.createdAt),
+        toJsonText(j),
+      );
+    }
+
+    const insertApplication = db.prepare(
+      "INSERT INTO applications(id, jobId, employerId, seekerId, seekerName, seekerEmail, status, message, createdAt, updatedAt, messagesJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const a of applications) {
+      if (!a || typeof a !== "object") continue;
+      const id = toNullableText(a.id);
+      if (!id) continue;
+      insertApplication.run(
+        id,
+        toNullableText(a.jobId),
+        toNullableText(a.employerId),
+        toNullableText(a.seekerId),
+        toNullableText(a.seekerName),
+        toNullableText(a.seekerEmail),
+        toNullableText(a.status),
+        toNullableText(a.message),
+        toNullableText(a.createdAt),
+        toNullableText(a.updatedAt),
+        toJsonText(Array.isArray(a.messages) ? a.messages : []),
+        toJsonText(a),
+      );
+    }
+
+    db.exec("COMMIT;");
+  } catch (err) {
+    try {
+      db.exec("ROLLBACK;");
+    } catch {
+      // ignore
+    }
+    throw err;
+  }
+}
+
 function readDb() {
   ensureSqlite();
   const db = new DatabaseSync(SQLITE_PATH);
@@ -116,6 +333,16 @@ function writeDb(nextDb) {
     "INSERT INTO kv(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
   ).run(SQLITE_KV_KEY, payload);
   db.close();
+}
+
+function syncMirrorTablesToMatch(nextDb) {
+  ensureSqlite();
+  const db = new DatabaseSync(SQLITE_PATH);
+  try {
+    syncMirrorTables(db, nextDb);
+  } finally {
+    db.close();
+  }
 }
 
 function backupCurrent(dbObj) {
@@ -137,13 +364,18 @@ function backupCurrent(dbObj) {
 }
 
 function main() {
-  const { role } = parseArgs(process.argv);
+  const { role, accountsOnly } = parseArgs(process.argv);
 
   const db = readDb();
   const { backupJsonPath, backupSqlitePath } = backupCurrent(db);
 
+  let nextDb = null;
+
+  if (accountsOnly) {
+    nextDb = { ...db, users: [], sessions: [] };
+  } else
   if (role === "all") {
-    writeDb({ users: [], sessions: [], jobs: [], applications: [] });
+    nextDb = { users: [], sessions: [], jobs: [], applications: [] };
   } else {
     const removedUserIds = db.users.filter((u) => u && u.role === role).map((u) => u.id);
 
@@ -157,15 +389,19 @@ function main() {
       db.applications = db.applications.filter((a) => a && !removedUserIds.includes(a.seekerId));
     }
 
-    writeDb(db);
+    nextDb = db;
   }
+
+  writeDb(nextDb);
+  // Also clear/sync the readable mirror tables so DB inspection shows an empty system.
+  syncMirrorTablesToMatch(nextDb);
 
   // eslint-disable-next-line no-console
   console.log("Reset complete:");
   // eslint-disable-next-line no-console
   console.log(` - Updated DB: ${SQLITE_PATH}`);
   // eslint-disable-next-line no-console
-  console.log(` - Cleared scope: ${role}`);
+  console.log(` - Cleared scope: ${accountsOnly ? "accounts-only" : role}`);
   // eslint-disable-next-line no-console
   console.log(` - Backup JSON: ${backupJsonPath}`);
   if (backupSqlitePath) {

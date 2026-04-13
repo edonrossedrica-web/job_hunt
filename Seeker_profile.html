@@ -1,885 +1,648 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Hunt Job - Seeker Profile</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seeker Profile - HireUp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+    body{background:#0c1117;color:#fff}
+    .navbar{position:fixed;top:0;width:100%;background:rgba(0,0,0,.85);padding:15px 40px;z-index:1000}
+    .nav-top{display:flex;justify-content:space-between;align-items:center}
+    .logo{font-weight:800;font-size:20px}
+    .logo span{color:#3aa0ff}
+    .back-btn{background:rgba(15,23,42,.7);border:1px solid rgba(58,160,255,.4);color:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;display:inline-flex;align-items:center;gap:8px}
+    .back-btn:hover{border-color:#3aa0ff;color:#3aa0ff}
+    .page{padding:140px 60px 60px;max-width:1100px;margin:auto}
+    .banner{height:200px;background:linear-gradient(135deg,#3aa0ff,#1f4d8f);border-radius:20px;margin-bottom:-70px}
+    .header{text-align:center;margin-bottom:60px;position:relative}
+    .avatar-row{display:flex;justify-content:center;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    .avatar{width:120px;height:120px;border-radius:22px;border:4px solid #3aa0ff;background:#ffffff;margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .logo-btn{background:rgba(15,23,42,0.7);border:1px solid rgba(58,160,255,0.4);color:#fff;border-radius:999px;padding:10px 16px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:800;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+    .logo-btn:hover{border-color:#3aa0ff;color:#3aa0ff}
+    .name-row{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:10px}
+    .name{font-size:32px;font-weight:800}
+    .title-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;color:#3aa0ff;font-weight:600}
+    .location-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:10px;color:#cbd5e1;font-size:13px}
+    .location-row i{color:#3aa0ff}
+    .location-row .edit{color:#2b8be6}
+    .location-row .edit:hover{color:#3aa0ff}
+    .edit{color:#2b8be6;cursor:pointer}
+    .edit:hover{color:#3aa0ff}
+    .pill{margin-top:10px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;border:1px solid rgba(255,255,255,.10);background:rgba(15,23,42,.55);color:#a7f3d0;font-weight:700;font-size:12px;cursor:pointer}
+    .pill .dot{width:9px;height:9px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+    .pill.off{color:#cbd5e1;background:rgba(15,23,42,.35)}
+    .pill.off .dot{background:#64748b;box-shadow:none}
+    .section{background:#111827;padding:20px 30px;border-radius:16px;margin-bottom:25px;border:1px solid rgba(255,255,255,.06);position:relative}
+    .st{font-size:20px;font-weight:700;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .st .l{display:flex;align-items:center;gap:10px}
+    .st i{color:#3aa0ff}
+    .eb{position:absolute;top:20px;right:20px;background:none;border:none;color:#2b8be6;cursor:pointer;font-size:16px}
+    .eb:hover{color:#3aa0ff}
+    .about{color:#bbb;line-height:1.6;white-space:pre-wrap}
+    .edit-input{margin-top:10px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff;outline:none}
+    .save-btn{margin-top:10px;background:#2b8be6;border:none;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:10px}
+    .save-btn:hover{background:#3aa0ff}
+    .resume-box{border:1px dashed rgba(58,160,255,.5);border-radius:14px;padding:20px;color:#bbb;background:rgba(12,17,23,.35);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .resume-box .hint{flex:1 1 260px;line-height:1.5}
+    .resume-box .rlist{width:100%;margin-top:12px}
+    .resume-box .ritem{width:100%}
+    .ub{background:#2b8be6;border:none;color:#fff;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:10px}
+    .ub:hover{background:#3aa0ff}
+    .rlist{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+    .ritem{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(12,17,23,.45);border:1px solid rgba(255,255,255,.06)}
+    .rname{font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .ra{display:flex;gap:10px;flex:0 0 auto}
+    .lb{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .lb:hover{border-color:rgba(58,160,255,.45);color:#fff}
+    .skills{display:flex;flex-wrap:wrap;gap:10px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(12,17,23,.40);color:#e2e8f0;font-size:12px;font-weight:800;letter-spacing:.2px}
+    .empty{color:#bbb;line-height:1.6}
+    .clist{display:flex;flex-direction:column;gap:12px}
+    .citem{display:flex;align-items:center;gap:10px;color:#cbd5e1}
+    .citem i{color:#3aa0ff;width:18px;text-align:center}
+    .publish-fab{position:fixed;right:24px;bottom:24px;z-index:9999;box-shadow:0 12px 34px rgba(0,0,0,.55)}
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Inter',sans-serif;
-}
-
-body{
-background:#0c1117;
-color:white;
-line-height:1.6;
-}
-
-/* NAVBAR */
-
-.navbar{
-position:fixed;
-top:0;
-width:100%;
-background:rgba(0,0,0,0.85);
-backdrop-filter:blur(10px);
-padding:15px 40px;
-z-index:1000;
-}
-
-.nav-top{
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.logo-section{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.logo-section img{
-width:35px;
-}
-
-.logo-text{
-font-weight:700;
-font-size:20px;
-}
-
-.logo-text span{
-color:#3aa0ff;
-}
-
-.account-icon{
-font-size:22px;
-color:#ccc;
-cursor:pointer;
-}
-.back-btn{
-background:rgba(15,23,42,0.7);
-border:1px solid rgba(58,160,255,0.4);
-color:#fff;
-border-radius:999px;
-padding:6px 12px;
-cursor:pointer;
-font-size:12px;
-letter-spacing:1px;
-text-transform:uppercase;
-}
-.back-btn:hover{border-color:#3aa0ff;color:#3aa0ff;}
-
-/* PAGE */
-
-.profile-page{
-padding:150px 60px 60px;
-max-width:1100px;
-margin:auto;
-}
-
-/* HEADER */
-
-.profile-banner{
-height:180px;
-background:linear-gradient(135deg,#3aa0ff,#1f4d8f);
-border-radius:20px;
-margin-bottom:-60px;
-}
-
-.profile-header{
-text-align:center;
-margin-bottom:60px;
-}
-
-.profile-avatar{
-width:120px;
-height:120px;
-border-radius:50%;
-border:4px solid #3aa0ff;
-object-fit:cover;
-}
-
-.avatar-btn{
-margin-top:12px;
-}
-
-.profile-name{
-font-size:32px;
-font-weight:800;
-margin-top:12px;
-}
-
-.profile-title{
-color:#3aa0ff;
-font-weight:600;
-}
-
-.editable-row{
-display:flex;
-align-items:center;
-justify-content:center;
-gap:10px;
-flex-wrap:wrap;
-}
-
-.edit-icon{
-color:#2b8be6;
-cursor:pointer;
-}
-
-/* Empty-state placeholders */
-.profile-name:empty::before{content:"Your name";opacity:.7;}
-.profile-title:empty::before{content:"Add your title";opacity:.7;}
-#aboutText:empty::before{content:"Add a short bio about you";opacity:.7;}
-#skillsGrid:empty::before{content:"No skills yet. Click Edit to add.";opacity:.7;color:#bbb;display:block;text-align:center;}
-#contactEmail:empty::before{content:"—";opacity:.7;}
-#contactPhone:empty::before{content:"—";opacity:.7;}
-#contactLocation:empty::before{content:"—";opacity:.7;}
-#contactLinkedin:empty::before{content:"—";opacity:.7;}
-#contactGithub:empty::before{content:"—";opacity:.7;}
-
-.availability{
-margin-top:10px;
-display:inline-block;
-background:rgba(0,255,150,0.2);
-color:#00ffa6;
-padding:6px 14px;
-border-radius:20px;
-font-size:13px;
-}
-
-/* SECTION */
-
-.profile-section{
-background:#111827;
-border-radius:16px;
-padding:30px;
-margin-bottom:25px;
-border:1px solid rgba(255,255,255,0.06);
-}
-
-.section-header{
-display:flex;
-align-items:center;
-gap:10px;
-margin-bottom:15px;
-justify-content:space-between;
-}
-
-.section-icon{
-color:#3aa0ff;
-font-size:20px;
-}
-
-.section-title{
-font-size:20px;
-font-weight:700;
-}
-
-.section-title-group{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.section-actions{
-display:flex;
-gap:8px;
-}
-
-/* ABOUT */
-
-.about-content{
-color:#bbb;
-margin-bottom:12px;
-}
-
-textarea{
-width:100%;
-height:120px;
-background:#0c1117;
-border:1px solid #3aa0ff;
-color:white;
-padding:10px;
-border-radius:8px;
-}
-
-.edit-input{
-width:100%;
-margin-bottom:10px;
-background:#0c1117;
-border:1px solid #3aa0ff;
-color:white;
-padding:10px;
-border-radius:8px;
-}
-
-/* BUTTON */
-
-.btn{
-background:#3aa0ff;
-border:none;
-padding:10px 18px;
-border-radius:8px;
-color:white;
-cursor:pointer;
-font-weight:600;
-}
-
-.btn:hover{
-background:#2b8be6;
-}
-
-.btn-ghost{
-background:rgba(15,23,42,0.7);
-border:1px solid rgba(58,160,255,0.4);
-color:#fff;
-padding:8px 14px;
-}
-
-.btn-ghost:hover{
-border-color:#3aa0ff;
-color:#3aa0ff;
-background:rgba(15,23,42,0.9);
-}
-
-/* RESUME */
-
-.resume-box{
-background:#0c1117;
-border:1px dashed #3aa0ff;
-padding:25px;
-border-radius:10px;
-text-align:center;
-}
-
-.resume-file{
-margin-top:12px;
-font-size:14px;
-color:#3aa0ff;
-}
-
-/* SKILLS */
-
-.skills-grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-gap:12px;
-}
-
-.skill-tag{
-background:#1a2330;
-padding:10px;
-border-radius:10px;
-text-align:center;
-font-size:13px;
-border:1px solid rgba(58,160,255,0.3);
-}
-
-/* CONTACT */
-
-.contact-item{
-display:flex;
-align-items:center;
-gap:10px;
-margin-bottom:10px;
-color:#bbb;
-}
-
-.contact-item i{
-color:#3aa0ff;
-}
-
-</style>
+    /* confirm modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px;z-index:12000}
+    .modal-card{width:min(560px,100%);background:#0b1220;border:1px solid rgba(255,255,255,.10);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.70);overflow:hidden}
+    .modal-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06)}
+    .modal-title{font-weight:900;letter-spacing:-.2px}
+    .modal-close{width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(12,17,23,.6);color:#cbd5e1;cursor:pointer}
+    .modal-close:hover{color:#fff;border-color:rgba(255,255,255,.18)}
+    .modal-body{padding:16px;color:#cbd5e1;line-height:1.6}
+    .modal-actions{padding:14px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,.06);background:rgba(12,17,23,.25)}
+    .modal-cancel{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:800}
+    .modal-cancel:hover{border-color:rgba(255,255,255,.18);color:#fff}
+    @media (max-width:780px){.page{padding:140px 18px 56px}}
+  </style>
 </head>
-
 <body>
-
-<div class="navbar">
-<div class="nav-top">
-
-<div class="logo-section">
-<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" alt="User logo">
-<div class="logo-text">SMART <span>HUNT</span>-JOB</div>
-</div>
-
-<button class="back-btn" onclick="goBack()">Back</button>
-
-</div>
-</div>
-
-
-<section class="profile-page">
-
-<div class="profile-banner"></div>
-
-<div class="profile-header">
-
-<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" class="profile-avatar" id="profileAvatar" alt="Default avatar">
-<input type="file" id="avatarInput" accept="image/*" hidden>
-<button class="btn btn-ghost avatar-btn" id="avatarBtn" onclick="changeAvatar()" style="display:none;">Change Photo</button>
-
-<div class="editable-row">
-  <h1 class="profile-name" id="profileName"></h1>
-  <i class="fa-solid fa-pen-to-square edit-icon" onclick="editHeaderField('profileName')"></i>
-</div>
-
-<div class="editable-row" style="margin-top:4px;">
-  <div class="profile-title" id="profileTitle"></div>
-  <i class="fa-solid fa-pen-to-square edit-icon" onclick="editHeaderField('profileTitle')"></i>
-</div>
-
-<div class="availability">
-<i class="fa-solid fa-circle"></i> Open to Work
-</div>
-
-</div>
-
-
-<!-- ABOUT -->
-
-<div class="profile-section">
-
-<div class="section-header">
-<i class="fa-solid fa-user section-icon"></i>
-<h3 class="section-title">About Me</h3>
-</div>
-
-<p id="aboutText" class="about-content"></p>
-
-<textarea id="aboutEdit" style="display:none;"></textarea>
-
-<button class="btn" onclick="editAbout()">Edit</button>
-<button class="btn" onclick="saveAbout()" id="saveBtn" style="display:none;">Save</button>
-
-</div>
-
-
-<!-- RESUME -->
-
-<div class="profile-section">
-
-<div class="section-header">
-<i class="fa-solid fa-file-arrow-up section-icon"></i>
-<h3 class="section-title">Resume</h3>
-</div>
-
-<div class="resume-box">
-
-<p style="color:#aaa;margin-bottom:12px;">
-Upload your resume so employers can download it.
-</p>
-
-<input type="file" id="resumeInput" hidden>
-
-<button class="btn" onclick="uploadResume()">
-<i class="fa-solid fa-upload"></i> Upload Resume
-</button>
-
-<div id="resumeFile" class="resume-file"></div>
-
-<button class="btn" onclick="removeResume()" id="removeBtn"
-style="display:none;margin-top:12px;">
-Remove Resume
-</button>
-
-</div>
-
-</div>
-
-
-<!-- SKILLS -->
-
-<div class="profile-section">
-
-<div class="section-header">
-  <div class="section-title-group">
-    <i class="fa-solid fa-code section-icon"></i>
-    <h3 class="section-title">Skills</h3>
+  <div class="navbar">
+    <div class="nav-top">
+      <div class="logo">Hire<span>Up</span></div>
+    </div>
   </div>
-  <div class="section-actions">
-    <button class="btn btn-ghost" onclick="editSkills()">Edit</button>
-    <button class="btn btn-ghost" onclick="saveSkills()" id="saveSkillsBtn" style="display:none;">Save</button>
+
+  <div class="page">
+    <div class="banner"></div>
+
+    <div class="header">
+      <div class="avatar-row">
+        <div class="avatar" id="avatarBtn" tabindex="0" role="button" aria-label="Change profile photo">
+          <img id="avatarImg" alt="Profile photo" />
+        </div>
+        <button class="logo-btn" id="changePhotoBtn" type="button" style="display:none">Change Photo</button>
+      </div>
+      <input id="avatarInput" type="file" accept="image/*" style="display:none" />
+
+      <div class="name-row">
+        <div class="name" id="nameText">Your name</div>
+        <i class="fa-solid fa-pen-to-square edit" id="editName" title="Edit"></i>
+      </div>
+      <div class="title-row">
+        <span id="titleText">Add your title</span>
+        <i class="fa-solid fa-pen-to-square edit" id="editTitle" title="Edit"></i>
+      </div>
+      <div class="location-row" id="locationRow">
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+        <span id="headerLocation">Add your location</span>
+        <i class="fa-solid fa-pen-to-square edit" id="editHeaderLocation" title="Edit"></i>
+      </div>
+
+      <button type="button" class="pill" id="openBtn" aria-label="Toggle open to work">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="openLabel">Open to Work</span>
+      </button>
+    </div>
+
+    <div class="section" id="aboutSection">
+      <div class="st"><div class="l"><i class="fa-solid fa-user"></i> About Me</div></div>
+      <button class="eb" type="button" id="editAbout"><i class="fa-solid fa-pen-to-square"></i></button>
+      <p class="about" id="aboutText">Add a short bio about you</p>
+    </div>
+
+    <div class="section" id="resumeSection">
+      <div class="st"><div class="l"><i class="fa-solid fa-file-arrow-up"></i> Resume</div></div>
+      <div class="resume-box">
+        <div class="hint">Upload your resume so employers can download it.</div>
+        <button class="ub" type="button" id="uploadBtn"><i class="fa-solid fa-upload"></i> Upload file(s)</button>
+        <input id="resumeInput" type="file" multiple
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+          style="display:none" />
+        <div class="rlist" id="resumeList" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="section" id="skillsSection">
+      <div class="st"><div class="l"><i class="fa-solid fa-code"></i> Skills</div></div>
+      <button class="eb" type="button" id="editSkills"><i class="fa-solid fa-pen-to-square"></i></button>
+      <div class="skills" id="skillsList"></div>
+      <p class="empty" id="skillsEmpty" style="display:none">Add your top skills (e.g. JavaScript, React, SQL).</p>
+    </div>
+
+    <div class="section" id="contactSection">
+      <div class="st"><div class="l"><i class="fa-solid fa-address-card"></i> Contact</div></div>
+      <button class="eb" type="button" id="editContact"><i class="fa-solid fa-pen-to-square"></i></button>
+      <div class="clist">
+        <div class="citem"><i class="fa-solid fa-envelope"></i> <span id="cEmail"></span></div>
+        <div class="citem"><i class="fa-solid fa-phone"></i> <span id="cPhone"></span></div>
+        <div class="citem"><i class="fa-brands fa-linkedin"></i> <span id="cLinkedin"></span></div>
+        <div class="citem"><i class="fa-brands fa-github"></i> <span id="cGithub"></span></div>
+      </div>
+    </div>
+
   </div>
-</div>
 
-<div class="skills-grid" id="skillsGrid">
-</div>
+  <button class="ub publish-fab" id="finishBtn" type="button" style="display:none">Publish Account</button>
 
-<textarea id="skillsEdit" style="display:none;margin-top:12px;" placeholder="Add skills separated by commas"></textarea>
-
-</div>
-
-
-<!-- CONTACT -->
-
-<div class="profile-section">
-
-<div class="section-header">
-  <div class="section-title-group">
-    <i class="fa-solid fa-address-book section-icon"></i>
-    <h3 class="section-title">Contact</h3>
+  <div class="modal" id="confirmModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-card" role="document">
+      <div class="modal-head">
+        <div class="modal-title" id="confirmTitle">Confirm</div>
+        <button class="modal-close" id="confirmCloseBtn" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="confirmMessage">Are you sure?</div>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="confirmCancelBtn" type="button">Cancel</button>
+        <button class="ub" id="confirmOkBtn" type="button"><i class="fa-solid fa-rocket"></i> Publish</button>
+      </div>
+    </div>
   </div>
-  <div class="section-actions">
-    <button class="btn btn-ghost" onclick="editContact()">Edit</button>
-    <button class="btn btn-ghost" onclick="saveContact()" id="saveContactBtn" style="display:none;">Save</button>
-  </div>
-</div>
 
-<div class="contact-item">
-<i class="fa-solid fa-envelope"></i>
-<span id="contactEmail"></span>
-</div>
+  <script>
+    const KEY_PREFIX="smartHuntProfileCache_v1:seeker:";
+    let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",linkedin:"",github:""},__updatedAt:0,__schema:1};
+    const DEFAULT_AVATAR_SRC="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E";
 
-<div class="contact-item">
-<i class="fa-solid fa-phone"></i>
-<span id="contactPhone"></span>
-</div>
-
-<div class="contact-item">
-<i class="fa-solid fa-location-dot"></i>
-<span id="contactLocation"></span>
-</div>
-
-<div class="contact-item">
-<i class="fa-brands fa-linkedin"></i>
-<span id="contactLinkedin"></span>
-</div>
-
-<div class="contact-item">
-<i class="fa-brands fa-github"></i>
-<span id="contactGithub"></span>
-</div>
-
-<div id="contactEdit" style="display:none;margin-top:12px;">
-  <input class="edit-input" id="contactEmailInput" type="text" placeholder="Email">
-  <input class="edit-input" id="contactPhoneInput" type="text" placeholder="Phone">
-  <input class="edit-input" id="contactLocationInput" type="text" placeholder="Location">
-  <input class="edit-input" id="contactLinkedinInput" type="text" placeholder="LinkedIn">
-  <input class="edit-input" id="contactGithubInput" type="text" placeholder="GitHub">
-</div>
-
-</div>
-
-</section>
-
-<section class="profile-page" style="padding-top:0;" id="finishProfileSection">
-  <div class="profile-section" style="text-align:center;">
-    <h3 class="section-title" style="justify-content:center;">Finish Profile</h3>
-    <p class="about-content">When you're done, continue to your dashboard.</p>
-    <button class="btn" onclick="finishSeekerProfile()">Continue to Dashboard</button>
-  </div>
-</section>
-
-
-<script>
-
-function getQueryParam(name){
-  try {
-    return new URL(window.location.href).searchParams.get(name) || "";
-  } catch {
-    return "";
-  }
-}
-
-const REVIEW_MODE = getQueryParam("mode") === "review" || getQueryParam("readonly") === "1";
-const REVIEW_USER_ID = String(getQueryParam("userId") || "").trim();
-
-function backendRequest(pathname, options){
-  const token = localStorage.getItem("authToken");
-  if (!token) return Promise.reject(new Error("No auth token"));
-  const method = options && options.method ? options.method : "GET";
-  const body = options && options.body ? options.body : null;
-  return fetch(pathname, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  }).then(async (res) => {
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      const msg = data && data.error ? data.error : `Request failed (${res.status})`;
-      throw new Error(msg);
+    function cacheKey(){
+      const email=String(localStorage.getItem("currentUserEmail")||"").trim().toLowerCase();
+      const id=String(localStorage.getItem("currentUserId")||"").trim();
+      return KEY_PREFIX+(email||id||"anon");
     }
-    return data;
-  });
-}
+    function readCache(){
+      try{const raw=localStorage.getItem(cacheKey());return raw?JSON.parse(raw):null}catch{return null}
+    }
+    function writeCache(p){
+      try{localStorage.setItem(cacheKey(),JSON.stringify(p||{}))}catch{}
+    }
+    function backendRequest(path,options){
+      const token=localStorage.getItem("authToken");
+      if(!token) return Promise.reject(new Error("No auth token"));
+      const method=options&&options.method?options.method:"GET";
+      const body=options&&options.body?options.body:null;
+      return fetch(path,{method,headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:body?JSON.stringify(body):null})
+        .then(async(res)=>{const data=await res.json().catch(()=>null);if(!res.ok) throw new Error(data&&data.error?data.error:`Request failed (${res.status})`);return data;});
+    }
+    function ensureShape(p){
+      const o=(p&&typeof p==="object")?{...p}:{};
+      if(!Array.isArray(o.skills)) o.skills=[];
+      if(!Array.isArray(o.resumes)) o.resumes=[];
+      if(!o.contact||typeof o.contact!=="object") o.contact={};
+      o.contact={email:String(o.contact.email||""),phone:String(o.contact.phone||""),location:String(o.contact.location||""),linkedin:String(o.contact.linkedin||""),github:String(o.contact.github||"")};
+      if(typeof o.openToWork!=="boolean") o.openToWork=true;
+      o.name=String(o.name||"");o.title=String(o.title||"");o.about=String(o.about||"");
+      o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
+      o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
+      return o;
+    }
+    function fileToDataUrl(file){
+      return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||""));r.onerror=()=>reject(new Error("File read failed"));r.readAsDataURL(file);});
+    }
+    function dataUrlToBlob(dataUrl){
+      const raw=String(dataUrl||"");
+      const comma=raw.indexOf(",");
+      if(comma<0) throw new Error("Invalid data URL");
+      const header=raw.slice(0,comma);
+      const base64=raw.slice(comma+1);
+      const mimeMatch=/^data:([^;]+);base64$/i.exec(header);
+      const mime=mimeMatch?mimeMatch[1]:"application/octet-stream";
+      const bin=atob(base64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      return new Blob([bytes],{type:mime});
+    }
+    function previewDataUrl(dataUrl){
+      try{
+        const blob=dataUrlToBlob(dataUrl);
+        const url=URL.createObjectURL(blob);
+        const w=window.open(url,"_blank","noopener,noreferrer");
+        if(!w){
+          URL.revokeObjectURL(url);
+          alert("Your browser blocked the preview pop-up. Please allow pop-ups for this site, or use Download instead.");
+          return;
+        }
+        setTimeout(()=>{try{URL.revokeObjectURL(url)}catch{}},60000);
+      }catch{
+        alert("Could not preview this file (it may be too large or corrupted). Please re-upload and try again.");
+      }
+    }
+    function setTxt(id,val){
+      const el=document.getElementById(id);
+      if(!el) return;
+      if(el.dataset&&el.dataset.editing==="1") return;
+      el.textContent=val;
+    }
+    function render(){
+      profile=ensureShape(profile);
+      setTxt("nameText",profile.name.trim()||"Your name");
+      setTxt("titleText",profile.title.trim()||"Add your title");
+      setTxt("aboutText",profile.about.trim()||"Add a short bio about you");
 
-function collectSeekerProfile(){
-  const skills = Array.from(document.querySelectorAll("#skillsGrid .skill-tag")).map((el) => el.innerText.trim()).filter(Boolean);
-  const resumeEl = document.getElementById("resumeFile");
-  const resumeName = resumeEl ? (resumeEl.innerText || "").trim() : "";
-  const resumeDataUrl = resumeEl && resumeEl.dataset ? String(resumeEl.dataset.dataUrl || "") : "";
-  const resume = resumeName ? { name: resumeName, dataUrl: resumeDataUrl } : null;
-  const nameInput = document.getElementById("profileNameInput");
-  const titleInput = document.getElementById("profileTitleInput");
-  return {
-    name: String(nameInput ? nameInput.value : (document.querySelector(".profile-name")?.innerText || "")).trim(),
-    title: String(titleInput ? titleInput.value : (document.querySelector(".profile-title")?.innerText || "")).trim(),
-    about: (document.getElementById("aboutText")?.innerText || "").trim(),
-    skills,
-    contact: {
-      email: (document.getElementById("contactEmail")?.innerText || "").trim(),
-      phone: (document.getElementById("contactPhone")?.innerText || "").trim(),
-      location: (document.getElementById("contactLocation")?.innerText || "").trim(),
-      linkedin: (document.getElementById("contactLinkedin")?.innerText || "").trim(),
-      github: (document.getElementById("contactGithub")?.innerText || "").trim(),
-    },
-    resume,
-  };
-}
+      const pill=document.getElementById("openBtn");
+      pill.classList.toggle("off",!profile.openToWork);
+      document.getElementById("openLabel").textContent=profile.openToWork?"Open to Work":"Not Looking";
 
-function applySeekerProfile(profile){
-  if (!profile || typeof profile !== "object") return;
-  const nameEl = document.querySelector(".profile-name");
-  const titleEl = document.querySelector(".profile-title");
-  if (nameEl && typeof profile.name === "string" && profile.name.trim()) nameEl.innerText = profile.name.trim();
-  if (titleEl && typeof profile.title === "string") titleEl.innerText = profile.title.trim();
-  const aboutEl = document.getElementById("aboutText");
-  if (aboutEl && typeof profile.about === "string") aboutEl.innerText = profile.about;
+      const img=document.getElementById("avatarImg");
+      const avatar = (profile.avatarDataUrl&&profile.avatarDataUrl.startsWith("data:")) ? profile.avatarDataUrl : "";
+      img.src = avatar || DEFAULT_AVATAR_SRC;
 
-  const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
-  const setText = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && typeof val === "string") el.innerText = val;
-  };
-  setText("contactEmail", contact.email || "");
-  setText("contactPhone", contact.phone || "");
-  setText("contactLocation", contact.location || "");
-  setText("contactLinkedin", contact.linkedin || "");
-  setText("contactGithub", contact.github || "");
+      const skillsEl=document.getElementById("skillsList");
+      const skillsSection=document.getElementById("skillsSection");
+      if(!(skillsSection&&skillsSection.dataset&&skillsSection.dataset.editing==="1")){
+        skillsEl.innerHTML="";
+        for(const s of profile.skills){
+          const chip=document.createElement("div");chip.className="chip";chip.textContent=String(s);skillsEl.appendChild(chip);
+        }
+      }
+      document.getElementById("skillsEmpty").style.display=profile.skills.length?"none":"block";
 
-  if (Array.isArray(profile.skills)) {
-    const grid = document.getElementById("skillsGrid");
-    if (grid) {
-      grid.innerHTML = "";
-      profile.skills.filter(Boolean).forEach((s) => {
-        const div = document.createElement("div");
-        div.className = "skill-tag";
-        div.innerText = String(s);
-        grid.appendChild(div);
+      const c=profile.contact||{};
+      const dash="\u2014";
+      setTxt("cEmail",c.email.trim()||dash);
+      setTxt("cPhone",c.phone.trim()||dash);
+      setTxt("cLinkedin",c.linkedin.trim()||dash);
+      setTxt("cGithub",c.github.trim()||dash);
+      setTxt("headerLocation",c.location.trim()||"Add your location");
+
+      const list=document.getElementById("resumeList");
+      list.innerHTML="";
+      for(const r of profile.resumes){
+        if(!r||typeof r!=="object") continue;
+        const row=document.createElement("div");row.className="ritem";
+        const name=document.createElement("div");name.className="rname";name.textContent=String(r.name||"Resume");
+        const actions=document.createElement("div");actions.className="ra";
+
+        const dataUrl=(typeof r.dataUrl==="string"&&r.dataUrl.startsWith("data:"))?r.dataUrl:"";
+        const mimeFromDataUrl = dataUrl ? String(dataUrl.slice(5, dataUrl.indexOf(";") > -1 ? dataUrl.indexOf(";") : dataUrl.length)) : "";
+        const fallbackType = String(r.type||"").toLowerCase();
+        const isPreviewable = Boolean(dataUrl) && (mimeFromDataUrl.startsWith("application/pdf") || mimeFromDataUrl.startsWith("image/") || fallbackType.includes("pdf") || fallbackType.startsWith("image/"));
+        if(isPreviewable){
+          const view=document.createElement("button");view.type="button";view.className="lb";view.innerHTML='<i class="fa-solid fa-eye"></i> View';
+          view.addEventListener("click",()=>previewDataUrl(dataUrl));
+          actions.appendChild(view);
+        }
+
+        const dl=document.createElement("a");dl.className="lb";dl.innerHTML='<i class="fa-solid fa-download"></i> Download';
+        dl.href=dataUrl?dataUrl:"#";dl.download=String(r.name||"resume");
+        if(dl.href==="#") dl.addEventListener("click",(e)=>{e.preventDefault();alert("This resume needs to be re-uploaded.");});
+        const rm=document.createElement("button");rm.type="button";rm.className="lb";rm.innerHTML='<i class="fa-solid fa-trash"></i> Remove';
+        rm.addEventListener("click",()=>{profile.resumes=profile.resumes.filter((x)=>x!==r);save();render();});
+        actions.appendChild(dl);actions.appendChild(rm);
+        row.appendChild(name);row.appendChild(actions);list.appendChild(row);
+      }
+    }
+    function save(){
+      try{profile.__updatedAt=Date.now();profile.__schema=1}catch{}
+      writeCache(profile);
+      backendRequest("/api/profile",{method:"PUT",body:{profile}}).catch(()=>{});
+    }
+    async function load(){
+      profile=ensureShape(readCache()||profile);
+      try{
+        const data=await backendRequest("/api/profile",{method:"GET"});
+        const hadBackendProfile = Boolean(data&&data.ok&&data.profile&&typeof data.profile==="object"&&Object.keys(data.profile||{}).length);
+        if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
+        if(data&&data.ok&&data.user){
+          if(!profile.name.trim()) profile.name=String(data.user.name||"");
+          if(!profile.contact.email.trim()) profile.contact.email=String(data.user.email||"");
+        }
+        // If backend profile was empty, persist the seeded name/email so the page won't show placeholders on refresh.
+        if(data&&data.ok&&!hadBackendProfile&&(profile.name.trim()||profile.contact.email.trim())){
+          try{await backendRequest("/api/profile",{method:"PUT",body:{profile}});}catch{}
+        }
+      }catch{}
+      if(!profile.name.trim()) profile.name=String(localStorage.getItem("currentUserName")||"").trim();
+      if(!profile.contact.email.trim()) profile.contact.email=String(localStorage.getItem("currentUserEmail")||"").trim();
+      writeCache(profile);
+    }
+    function requireSeeker(){
+      const loggedIn=localStorage.getItem("isLoggedIn")==="true";
+      const role=String(localStorage.getItem("userRole")||"");
+      const token=String(localStorage.getItem("authToken")||"");
+      if(!loggedIn||role!=="seeker"||!token){
+        alert("Please log in as a seeker to view this page.");
+        window.location.href="index.html";
+        return false;
+      }
+      return true;
+    }
+    function getFinishProfileDoneKey(role){
+      const safeRole = role==="employer" ? "employer" : role==="seeker" ? "seeker" : String(role||"user");
+      const email=String(localStorage.getItem("currentUserEmail")||"").trim().toLowerCase();
+      const userId=String(localStorage.getItem("currentUserId")||"").trim();
+      const id=userId||email||"anon";
+      return `finishProfileDone_${safeRole}:${id}`;
+    }
+    function isFinishProfileDone(role){
+      const perUserKey=getFinishProfileDoneKey(role);
+      const perUser=localStorage.getItem(perUserKey);
+      if(perUser!==null) return perUser==="true";
+      const legacyKey=`finishProfileDone_${role}`;
+      const legacy=localStorage.getItem(legacyKey);
+      if(legacy==="true"){
+        try{localStorage.setItem(perUserKey,"true");}catch{}
+        try{localStorage.removeItem(legacyKey);}catch{}
+        return true;
+      }
+      return false;
+    }
+    function markFinishProfileDone(role,done){
+      const perUserKey=getFinishProfileDoneKey(role);
+      try{
+        if(done) localStorage.setItem(perUserKey,"true");
+        else localStorage.removeItem(perUserKey);
+      }catch{}
+      try{localStorage.removeItem(`finishProfileDone_${role}`);}catch{}
+    }
+    function setupPublishCta(){
+      const btn=document.getElementById("finishBtn");
+      if(!btn) return;
+      const done=isFinishProfileDone("seeker");
+      btn.style.display="inline-flex";
+      btn.disabled=false;
+      if(done){
+        btn.dataset.mode="back";
+        btn.innerHTML=`<i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back`;
+        return;
+      }
+      btn.dataset.mode="publish";
+      btn.textContent="Publish Account";
+    }
+
+    let confirmResolve=null;
+    function closeConfirmModal(result){
+      const modal=document.getElementById("confirmModal");
+      if(modal){modal.style.display="none";modal.setAttribute("aria-hidden","true");}
+      if(typeof confirmResolve==="function"){
+        const r=confirmResolve;
+        confirmResolve=null;
+        r(Boolean(result));
+      }
+    }
+    function showConfirmModal(message,{title="Confirm",okText="OK",cancelText="Cancel"}={}){
+      const modal=document.getElementById("confirmModal");
+      const msg=document.getElementById("confirmMessage");
+      const titleEl=document.getElementById("confirmTitle");
+      const okBtn=document.getElementById("confirmOkBtn");
+      const cancelBtn=document.getElementById("confirmCancelBtn");
+      if(!modal||!msg||!titleEl||!okBtn||!cancelBtn){
+        try{return Promise.resolve(confirm(String(message||"Are you sure?")));}catch{return Promise.resolve(true);}
+      }
+      closeConfirmModal(false);
+      titleEl.textContent=String(title||"Confirm");
+      msg.textContent=String(message||"Are you sure?");
+      okBtn.innerHTML=`<i class="fa-solid fa-rocket"></i> ${escapeText(okText||"OK")}`;
+      cancelBtn.textContent=String(cancelText||"Cancel");
+      modal.style.display="flex";
+      modal.setAttribute("aria-hidden","false");
+      return new Promise((resolve)=>{confirmResolve=resolve;});
+    }
+    (function setupConfirmModal(){
+      const modal=document.getElementById("confirmModal");
+      const okBtn=document.getElementById("confirmOkBtn");
+      const cancelBtn=document.getElementById("confirmCancelBtn");
+      const closeBtn=document.getElementById("confirmCloseBtn");
+      if(okBtn) okBtn.addEventListener("click",()=>closeConfirmModal(true));
+      if(cancelBtn) cancelBtn.addEventListener("click",()=>closeConfirmModal(false));
+      if(closeBtn) closeBtn.addEventListener("click",()=>closeConfirmModal(false));
+      if(modal){
+        modal.addEventListener("click",(e)=>{if(e&&e.target===modal) closeConfirmModal(false);});
+      }
+      document.addEventListener("keydown",(e)=>{
+        const open=modal&&modal.style.display==="flex";
+        if(!open) return;
+        if(e&&e.key==="Escape") closeConfirmModal(false);
+        if(e&&e.key==="Enter") closeConfirmModal(true);
       });
-    }
-  }
+    })();
 
-  // Resume (optional)
-  const resume = profile.resume && typeof profile.resume === "object" ? profile.resume : null;
-  const resumeEl = document.getElementById("resumeFile");
-  if (resumeEl && resume && typeof resume.name === "string" && resume.name.trim()) {
-    resumeEl.innerText = resume.name.trim();
-    if (resume.dataUrl) resumeEl.dataset.dataUrl = String(resume.dataUrl);
-    const removeBtn = document.getElementById("removeBtn");
-    if (removeBtn && !REVIEW_MODE) removeBtn.style.display = "inline-block";
+    function escapeAttr(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
+    function escapeText(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
-    if (REVIEW_MODE && resume.dataUrl) {
-      resumeEl.style.cursor = "pointer";
-      resumeEl.title = "Open resume";
-      resumeEl.onclick = () => {
-        const url = String(resumeEl.dataset && resumeEl.dataset.dataUrl ? resumeEl.dataset.dataUrl : "");
-        if (!url) return;
-        const w = window.open(url, "_blank");
-        if (!w) alert("Popup blocked. Allow popups to view the resume.");
-      };
-    }
-  }
-}
-
-function saveSeekerProfileToBackend(){
-  if (REVIEW_MODE) return Promise.resolve({ ok: true });
-  const profile = collectSeekerProfile();
-  return backendRequest("/api/profile", { method: "PUT", body: { profile } });
-}
-
-function editHeaderField(id){
-  if (REVIEW_MODE) return;
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (el.dataset.editing === "1") {
-    el.innerText = el.dataset.originalText || "";
-    delete el.dataset.editing;
-    delete el.dataset.originalText;
-    return;
-  }
-  const current = (el.innerText || "").trim();
-  el.dataset.originalText = current;
-  el.dataset.editing = "1";
-  el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">
-                  <button class="btn" type="button" onclick="saveHeaderField('${id}')">Save</button>`;
-}
-
-function saveHeaderField(id){
-  if (REVIEW_MODE) return;
-  const el = document.getElementById(id);
-  const input = document.getElementById(id + "Input");
-  if (!el) return;
-  el.innerText = input ? input.value : "";
-  delete el.dataset.editing;
-  delete el.dataset.originalText;
-  saveSeekerProfileToBackend().catch(() => {});
-}
-
-function goBack(){
-if (REVIEW_MODE) {
-  try {
-    window.close();
-    return;
-  } catch {
-    // ignore
-  }
-}
-window.location.href="index.html"
-}
-
-function editAbout(){
-if (REVIEW_MODE) return;
-
-document.getElementById("aboutEdit").style.display="block"
-document.getElementById("saveBtn").style.display="inline-block"
-
-document.getElementById("aboutEdit").value =
-document.getElementById("aboutText").innerText
-
-document.getElementById("aboutText").style.display="none"
-
-}
-
-function saveAbout(){
-if (REVIEW_MODE) return;
-
-let text=document.getElementById("aboutEdit").value
-
-document.getElementById("aboutText").innerText=text
-
-document.getElementById("aboutText").style.display="block"
-document.getElementById("aboutEdit").style.display="none"
-document.getElementById("saveBtn").style.display="none"
-
-saveSeekerProfileToBackend().catch(() => {});
-}
-
-function editSkills(){
-if (REVIEW_MODE) return;
-  const grid = document.getElementById("skillsGrid");
-  const editor = document.getElementById("skillsEdit");
-  const saveBtn = document.getElementById("saveSkillsBtn");
-  if (!grid || !editor || !saveBtn) return;
-  const skills = Array.from(grid.querySelectorAll(".skill-tag")).map((s) => s.innerText.trim());
-  editor.value = skills.join(", ");
-  editor.style.display = "block";
-  saveBtn.style.display = "inline-block";
-}
-
-function saveSkills(){
-if (REVIEW_MODE) return;
-  const grid = document.getElementById("skillsGrid");
-  const editor = document.getElementById("skillsEdit");
-  const saveBtn = document.getElementById("saveSkillsBtn");
-  if (!grid || !editor || !saveBtn) return;
-  const raw = editor.value || "";
-  const skills = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  grid.innerHTML = "";
-  skills.forEach((skill) => {
-    const tag = document.createElement("div");
-    tag.className = "skill-tag";
-    tag.innerText = skill;
-    grid.appendChild(tag);
-  });
-  editor.style.display = "none";
-  saveBtn.style.display = "none";
-  saveSeekerProfileToBackend().catch(() => {});
-}
-
-function editContact(){
-  if (REVIEW_MODE) return;
-  const edit = document.getElementById("contactEdit");
-  const saveBtn = document.getElementById("saveContactBtn");
-  if (!edit || !saveBtn) return;
-  document.getElementById("contactEmailInput").value = document.getElementById("contactEmail").innerText;
-  document.getElementById("contactPhoneInput").value = document.getElementById("contactPhone").innerText;
-  document.getElementById("contactLocationInput").value = document.getElementById("contactLocation").innerText;
-  document.getElementById("contactLinkedinInput").value = document.getElementById("contactLinkedin").innerText;
-  document.getElementById("contactGithubInput").value = document.getElementById("contactGithub").innerText;
-  edit.style.display = "block";
-  saveBtn.style.display = "inline-block";
-}
-
-function saveContact(){
-  if (REVIEW_MODE) return;
-  const edit = document.getElementById("contactEdit");
-  const saveBtn = document.getElementById("saveContactBtn");
-  if (!edit || !saveBtn) return;
-  document.getElementById("contactEmail").innerText = document.getElementById("contactEmailInput").value;
-  document.getElementById("contactPhone").innerText = document.getElementById("contactPhoneInput").value;
-  document.getElementById("contactLocation").innerText = document.getElementById("contactLocationInput").value;
-  document.getElementById("contactLinkedin").innerText = document.getElementById("contactLinkedinInput").value;
-  document.getElementById("contactGithub").innerText = document.getElementById("contactGithubInput").value;
-  edit.style.display = "none";
-  saveBtn.style.display = "none";
-  saveSeekerProfileToBackend().catch(() => {});
-}
-
-function changeAvatar(){
-  if (REVIEW_MODE) return;
-  const input = document.getElementById("avatarInput");
-  if (input) {
-    input.click();
-  }
-}
-
-document.getElementById("profileAvatar").addEventListener("click", function(){
-  if (REVIEW_MODE) return;
-  const btn = document.getElementById("avatarBtn");
-  if (!btn) return;
-  btn.style.display = btn.style.display === "inline-block" ? "none" : "inline-block";
-});
-
-document.getElementById("avatarInput").addEventListener("change", function(){
-  const file = this.files && this.files[0];
-  if (!file) return;
-  const avatar = document.getElementById("profileAvatar");
-  if (!avatar) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    avatar.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  const btn = document.getElementById("avatarBtn");
-  if (btn) {
-    btn.style.display = "none";
-  }
-});
-
-/* RESUME */
-
-function uploadResume(){
-if (REVIEW_MODE) return;
-document.getElementById("resumeInput").click()
-}
-
-document.getElementById("resumeInput").addEventListener("change",function(){
-
-let file=this.files[0]
-
-if(file){
-
-document.getElementById("resumeFile").innerText=file.name
-
-  const resumeEl = document.getElementById("resumeFile");
-  if (resumeEl && resumeEl.dataset) {
-    // Store resume as a data URL so employers can view it from other devices (school-project friendly).
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      resumeEl.dataset.dataUrl = String(e.target && e.target.result ? e.target.result : "");
-      saveSeekerProfileToBackend().catch(() => {});
-    };
-    reader.readAsDataURL(file);
-  }
-
-document.getElementById("removeBtn").style.display="inline-block"
-
-}
-
-})
-
-function removeResume(){
-if (REVIEW_MODE) return;
-
-document.getElementById("resumeFile").innerText=""
-const resumeEl = document.getElementById("resumeFile");
-if (resumeEl && resumeEl.dataset) {
-  delete resumeEl.dataset.dataUrl;
-}
-
-document.getElementById("removeBtn").style.display="none"
-saveSeekerProfileToBackend().catch(() => {});
-
-}
-
-function finishSeekerProfile(){
-  if (REVIEW_MODE) return;
-  saveSeekerProfileToBackend().catch(() => {});
-  localStorage.setItem("finishProfileDone_seeker","true");
-  localStorage.setItem("postSignupWelcome","seeker");
-  window.location.href="index.html";
-}
-
-(function () {
-  const finishSection = document.getElementById("finishProfileSection");
-  if (!finishSection) return;
-  if (REVIEW_MODE) {
-    finishSection.style.display = "none";
-    return;
-  }
-  const done = localStorage.getItem("finishProfileDone_seeker") === "true";
-  if (done) finishSection.style.display = "none";
-})();
-
-// Load profile from backend when available (multi-device support).
-(function () {
-  const pathname = (REVIEW_MODE && REVIEW_USER_ID)
-    ? `/api/users/${encodeURIComponent(REVIEW_USER_ID)}`
-    : "/api/profile";
-
-  backendRequest(pathname, { method: "GET" })
-    .then((data) => {
-      if (!data || !data.ok) return;
-
-      if (data.profile) applySeekerProfile(data.profile);
-
-      // In review mode, show the account email even if seeker didn't fill contact.email.
-      if (REVIEW_MODE && data.user && data.user.email) {
-        const emailEl = document.getElementById("contactEmail");
-        const existing = String(emailEl && emailEl.innerText ? emailEl.innerText : "").trim();
-        if (emailEl && !existing) emailEl.innerText = String(data.user.email);
+    function editField(kind){
+      if(kind==="name"){
+        const el=document.getElementById("nameText"); if(!el) return;
+        if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
+        const cur=String(el.innerText||"");
+        el.dataset.originalText=cur; el.dataset.editing="1";
+        el.innerHTML=`<input type="text" class="edit-input" id="nameInput" value="${escapeAttr(cur)}"><button type="button" class="save-btn" onclick="saveField('name')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        return;
       }
-
-      // If backend profile is empty, prefill name from signup (user.name).
-      const nameEl = document.querySelector(".profile-name");
-      const existingName = (nameEl?.innerText || "").trim();
-      const nameFromUser = String(data.user && data.user.name ? data.user.name : "").trim();
-      if (!existingName && nameFromUser) {
-        if (nameEl) nameEl.innerText = nameFromUser;
-        if (!REVIEW_MODE) saveSeekerProfileToBackend().catch(() => {});
+      if(kind==="title"){
+        const el=document.getElementById("titleText"); if(!el) return;
+        if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
+        const cur=String(el.innerText||"");
+        el.dataset.originalText=cur; el.dataset.editing="1";
+        el.innerHTML=`<input type="text" class="edit-input" id="titleInput" value="${escapeAttr(cur)}"><button type="button" class="save-btn" onclick="saveField('title')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        return;
       }
-    })
-    .catch(() => {});
-})();
+      if(kind==="about"){
+        const el=document.getElementById("aboutText"); if(!el) return;
+        if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
+        const cur=String(el.innerText||"");
+        el.dataset.originalText=cur; el.dataset.editing="1";
+        el.innerHTML=`<textarea class="edit-input" id="aboutInput">${escapeText(cur)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        return;
+      }
+      if(kind==="skills"){
+        const sec=document.getElementById("skillsSection"); const list=document.getElementById("skillsList"); if(!sec||!list) return;
+        if(sec.dataset.editing==="1"){delete sec.dataset.editing;render();return;}
+        sec.dataset.editing="1";
+        const cur=(Array.isArray(profile.skills)?profile.skills:[]).join(", ");
+        list.innerHTML=`<input type="text" class="edit-input" id="skillsInput" value="${escapeAttr(cur)}" placeholder="JavaScript, React, SQL"><button type="button" class="save-btn" onclick="saveField('skills')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        document.getElementById("skillsEmpty").style.display="none";
+        return;
+      }
+      if(kind==="headerLocation"){
+        const el=document.getElementById("headerLocation"); if(!el) return;
+        if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
+        const cur=String(el.innerText||"");
+        const base=(cur==="Add your location"||cur==="—"||cur==="\u2014")?"":cur;
+        el.dataset.originalText=base; el.dataset.editing="1";
+        el.innerHTML=`<input type="text" class="edit-input" id="headerLocationInput" value="${escapeAttr(base)}" placeholder="City, Country"><button type="button" class="save-btn" onclick="saveField('headerLocation')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        const input=document.getElementById("headerLocationInput");
+        if(input) setTimeout(()=>{try{input.focus()}catch{}},0);
+        return;
+      }
+      if(kind==="contact"){
+        const ids=["cEmail","cPhone","cLinkedin","cGithub"];
+        const sec=document.getElementById("contactSection"); if(!sec) return;
+        const any=ids.some((id)=>document.getElementById(id)?.dataset?.editing==="1");
+        if(any){
+          for(const id of ids){
+            const el=document.getElementById(id); if(!el) continue;
+            el.textContent=el.dataset.originalText||"";
+            delete el.dataset.editing; delete el.dataset.originalText;
+          }
+          sec.querySelectorAll('button[data-save-all="contact"]').forEach((b)=>b.remove());
+          return;
+        }
+        for(const id of ids){
+          const el=document.getElementById(id); if(!el) continue;
+          const cur=String(el.innerText||"");
+          const base=(cur==="—"||cur==="\u2014")?"":cur;
+          el.dataset.originalText=base; el.dataset.editing="1";
+          el.innerHTML=`<input type="text" class="edit-input" id="${id}Input" value="${escapeAttr(base)}">`;
+        }
+        if(!sec.querySelector('button[data-save-all="contact"]')){
+          sec.insertAdjacentHTML("beforeend",`<button type="button" class="save-btn" data-save-all="contact" onclick="saveField('contact')"><i class="fa-solid fa-floppy-disk"></i> Save All</button>`);
+        }
+      }
+    }
 
-// Hide all editing UI in review mode (employer view).
-(function () {
-  if (!REVIEW_MODE) return;
-  document.querySelectorAll(".edit-icon").forEach((el) => (el.style.display = "none"));
+    function saveField(kind){
+      if(kind==="name"){
+        const input=document.getElementById("nameInput");
+        profile.name=String(input?input.value:"").trim();
+        const el=document.getElementById("nameText"); if(el){el.textContent=profile.name;delete el.dataset.editing;delete el.dataset.originalText;}
+      } else if(kind==="title"){
+        const input=document.getElementById("titleInput");
+        profile.title=String(input?input.value:"").trim();
+        const el=document.getElementById("titleText"); if(el){el.textContent=profile.title;delete el.dataset.editing;delete el.dataset.originalText;}
+      } else if(kind==="about"){
+        const input=document.getElementById("aboutInput");
+        profile.about=String(input?input.value:"");
+        const el=document.getElementById("aboutText"); if(el){el.textContent=profile.about;delete el.dataset.editing;delete el.dataset.originalText;}
+      } else if(kind==="skills"){
+        const input=document.getElementById("skillsInput");
+        const raw=String(input?input.value:"");
+        profile.skills=Array.from(new Set(raw.split(",").map((s)=>s.trim()).filter(Boolean))).slice(0,30);
+        const sec=document.getElementById("skillsSection"); if(sec) delete sec.dataset.editing;
+      } else if(kind==="headerLocation"){
+        const input=document.getElementById("headerLocationInput");
+        profile.contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
+        profile.contact.location = String(input?input.value:"").trim();
+        const el=document.getElementById("headerLocation"); if(el){el.textContent=profile.contact.location;delete el.dataset.editing;delete el.dataset.originalText;}
+      } else if(kind==="contact"){
+        const existingLocation = String((profile.contact && typeof profile.contact === "object" ? profile.contact.location : "") || "").trim();
+        profile.contact={
+          email:String(document.getElementById("cEmailInput")?.value||"").trim(),
+          phone:String(document.getElementById("cPhoneInput")?.value||"").trim(),
+          location: existingLocation,
+          linkedin:String(document.getElementById("cLinkedinInput")?.value||"").trim(),
+          github:String(document.getElementById("cGithubInput")?.value||"").trim()
+        };
+        const ids=["cEmail","cPhone","cLinkedin","cGithub"];
+        for(const id of ids){
+          const el=document.getElementById(id); if(!el) continue;
+          el.textContent=String(profile.contact[id.slice(1).toLowerCase()]||"").trim();
+          delete el.dataset.editing; delete el.dataset.originalText;
+        }
+        document.getElementById("contactSection")?.querySelectorAll('button[data-save-all="contact"]').forEach((b)=>b.remove());
+      }
+      save(); render();
+    }
 
-  const hide = (sel) => document.querySelectorAll(sel).forEach((el) => (el.style.display = "none"));
-  hide("#avatarBtn");
-  hide("#avatarInput");
-  hide("#resumeInput");
-  hide("#aboutEdit");
-  hide("#skillsEdit");
-  hide("#contactEdit");
-  hide("#saveBtn");
-  hide("#saveSkillsBtn");
-  hide("#saveContactBtn");
-  hide("#removeBtn");
-  hide('button[onclick="editAbout()"]');
-  hide('button[onclick="uploadResume()"]');
-  hide('button[onclick="editSkills()"]');
-  hide('button[onclick="editContact()"]');
-  hide('button[onclick="finishSeekerProfile()"]');
-})();
+    // UI wiring
+    document.getElementById("openBtn").addEventListener("click",()=>{profile.openToWork=!profile.openToWork;save();render();});
+    document.getElementById("editName").addEventListener("click",()=>editField("name"));
+    document.getElementById("editTitle").addEventListener("click",()=>editField("title"));
+    document.getElementById("editHeaderLocation").addEventListener("click",()=>editField("headerLocation"));
+    document.getElementById("editAbout").addEventListener("click",()=>editField("about"));
+    document.getElementById("editSkills").addEventListener("click",()=>editField("skills"));
+    document.getElementById("editContact").addEventListener("click",()=>editField("contact"));
 
-</script>
+    const avatarBtn=document.getElementById("avatarBtn");
+    const avatarInput=document.getElementById("avatarInput");
+    const changePhotoBtn=document.getElementById("changePhotoBtn");
 
+    function toggleChangePhotoBtn(){
+      if(!changePhotoBtn) return;
+      changePhotoBtn.style.display=(changePhotoBtn.style.display==="none"||!changePhotoBtn.style.display)?"inline-flex":"none";
+    }
+
+    avatarBtn.addEventListener("click",()=>toggleChangePhotoBtn());
+    avatarBtn.addEventListener("keydown",(e)=>{if(e&&(e.key==="Enter"||e.key===" ")){e.preventDefault();toggleChangePhotoBtn();}});
+    if(changePhotoBtn) changePhotoBtn.addEventListener("click",()=>avatarInput.click());
+    avatarInput.addEventListener("change",async(e)=>{
+      const file=e&&e.target?e.target.files&&e.target.files[0]:null;
+      if(!file) return;
+      if(file.size>1.2*1024*1024){alert("Image too large. Use a file under ~1.2MB.");avatarInput.value="";return;}
+      try{profile.avatarDataUrl=await fileToDataUrl(file);}catch{alert("Could not read that image.");}
+      try{if(changePhotoBtn) changePhotoBtn.style.display="none";}catch{}
+      save();render();avatarInput.value="";
+    });
+
+    const resumeInput=document.getElementById("resumeInput");
+    document.getElementById("uploadBtn").addEventListener("click",()=>resumeInput.click());
+    resumeInput.addEventListener("change",async(e)=>{
+      const files=Array.from((e&&e.target&&e.target.files)?e.target.files:[]);
+      for(const file of files){
+        if(file.size>2.5*1024*1024){alert(`"${file.name}" is too large. Use a file under ~2.5MB.`);continue;}
+        let dataUrl="";
+        try{dataUrl=await fileToDataUrl(file);}catch{alert("Could not read that file.");continue;}
+        profile.resumes=Array.isArray(profile.resumes)?profile.resumes:[];
+        profile.resumes.unshift({id:`resume_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,name:file.name,type:file.type||"",size:file.size,dataUrl,uploadedAt:new Date().toISOString()});
+        profile.resumes=profile.resumes.slice(0,5);
+      }
+      save();render();resumeInput.value="";
+    });
+
+    document.getElementById("finishBtn").addEventListener("click",async(e)=>{
+      const btn=e.currentTarget;
+      if(isFinishProfileDone("seeker")){
+        window.location.href="index.html";
+        return;
+      }
+      const prev=btn.innerText;
+      const isEditing = (id) => (document.getElementById(id)?.dataset?.editing === "1");
+      if (isEditing("nameText") || isEditing("titleText") || isEditing("aboutText") || document.getElementById("skillsSection")?.dataset?.editing === "1") {
+        alert("Please save your edits first, then publish your account.");
+        return;
+      }
+      const contactIds = ["cEmail","cPhone","cLinkedin","cGithub"];
+      if (contactIds.some((id) => isEditing(id))) {
+        alert("Please save your contact edits first, then publish your account.");
+        return;
+      }
+      const ok = await showConfirmModal("Publish your account now?", { title: "Publish Account", okText: "Publish", cancelText: "Cancel" });
+      if (!ok) return;
+
+      btn.disabled=true;
+      btn.innerText="Publishing...";
+      try{
+        // Refresh profile from current DOM (in case it was modified outside the editor).
+        profile.name = String(document.getElementById("nameText")?.innerText || "").trim();
+        profile.title = String(document.getElementById("titleText")?.innerText || "").trim();
+        profile.about = String(document.getElementById("aboutText")?.innerText || "");
+
+        if (!profile.name) throw new Error("Name is required before publishing.");
+        if (!profile.title) throw new Error("Title is required before publishing.");
+
+        try{profile.__updatedAt=Date.now();profile.__schema=1}catch{}
+        writeCache(profile);
+        await backendRequest("/api/profile",{method:"PUT",body:{profile}});
+        markFinishProfileDone("seeker",true);
+        localStorage.setItem("postSignupWelcome","seeker");
+        try{setupPublishCta();}catch{}
+        window.location.href="index.html";
+      }catch(err){
+        alert(err&&err.message?err.message:"Failed to publish your account. Please try again.");
+        btn.disabled=false;
+        btn.innerText=prev;
+      }
+    });
+
+    (async function init(){
+      if(!requireSeeker()) return;
+      await load();
+      render();
+      setupPublishCta();
+    })();
+  </script>
 </body>
 </html>

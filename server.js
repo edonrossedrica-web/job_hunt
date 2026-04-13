@@ -5,9 +5,74 @@ const fsp = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const { DatabaseSync } = require("node:sqlite");
+let nodemailer = null;
+try {
+  // Optional dependency. If not installed/configured, feedback is stored locally instead.
+  nodemailer = require("nodemailer");
+} catch {
+  nodemailer = null;
+}
 
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
 const ROOT_DIR = __dirname;
+
+function cleanPublicOrigin(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  return value.replace(/\/+$/, "");
+}
+
+function firstForwardedValue(raw) {
+  return String(raw || "")
+    .split(",")[0]
+    .trim();
+}
+
+function getPublicOrigin(req, url) {
+  const forced =
+    cleanPublicOrigin(process.env.PUBLIC_ORIGIN) ||
+    cleanPublicOrigin(process.env.PUBLIC_URL) ||
+    cleanPublicOrigin(process.env.BASE_URL) ||
+    "";
+  if (forced) return forced;
+
+  const xfProto = firstForwardedValue(req.headers["x-forwarded-proto"]);
+  const xfHost = firstForwardedValue(req.headers["x-forwarded-host"]);
+  const host = xfHost || String(req.headers.host || url.host || "").trim();
+  const proto = xfProto || (req.socket && req.socket.encrypted ? "https" : "http");
+  if (!host) return String(url.origin || "").replace(/\/+$/, "");
+  return `${proto}://${host}`;
+}
+
+function loadDotEnvIfPresent() {
+  // Lightweight .env loader (no dependency). Intended for local development only.
+  const envPath = path.join(ROOT_DIR, ".env");
+  if (!fs.existsSync(envPath)) return;
+  let raw = "";
+  try {
+    raw = fs.readFileSync(envPath, "utf8");
+  } catch {
+    return;
+  }
+  const lines = raw.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = String(line || "").trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx < 1) continue;
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (!key) continue;
+    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadDotEnvIfPresent();
 
 function resolveDataDir() {
   const raw = String(process.env.SMART_HUNT_DATA_DIR || process.env.DATA_DIR || "").trim();
@@ -23,6 +88,11 @@ const SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
 const SQLITE_KV_KEY = "smart_hunt_db_v1";
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// The app stores its "real" database as a single JSON blob (kv.value) for simplicity.
+// For easier inspection in tools like DB Browser for SQLite, we maintain a few readable tables
+// as a best-effort mirror of that JSON. The server continues to use the JSON blob as source of truth.
+let hasSyncedReadableTables = false;
 
 // Very small "realtime" layer for live UI updates (no polling).
 // Clients connect to GET /api/events using Server-Sent Events (SSE).
@@ -54,8 +124,87 @@ setInterval(() => {
   }
 }, 25000).unref();
 
+// Dev-only live reload for local HTML/CSS/JS edits (so you don't need to manually refresh).
+// Enable/disable with SMART_HUNT_LIVE_RELOAD=1/0. Defaults to on when NODE_ENV !== "production".
+const DEV_LIVE_RELOAD =
+  String(process.env.NODE_ENV || "").trim().toLowerCase() !== "production" &&
+  String(process.env.SMART_HUNT_LIVE_RELOAD || "1").trim() !== "0";
+
+function startDevLiveReloadWatcher() {
+  if (!DEV_LIVE_RELOAD) return;
+
+  let timer = null;
+  let lastRel = "";
+  const changedExts = new Set();
+
+  const shouldIgnoreRel = (rel) => {
+    const clean = String(rel || "").replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!clean) return true;
+    // Avoid watching noisy/heavy folders.
+    if (
+      clean.startsWith("node_modules/") ||
+      clean.startsWith(".git/") ||
+      clean.startsWith("server-data/") ||
+      clean.startsWith(".npm-cache/") ||
+      clean.startsWith("tools/")
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  try {
+    fs.watch(ROOT_DIR, { recursive: true }, (_eventType, filename) => {
+      if (!filename) return;
+      const rel = String(filename || "");
+      if (shouldIgnoreRel(rel)) return;
+
+      const ext = path.extname(rel).toLowerCase();
+      const reloadable =
+        ext === ".html" ||
+        ext === ".css" ||
+        ext === ".js" ||
+        ext === ".png" ||
+        ext === ".jpg" ||
+        ext === ".jpeg" ||
+        ext === ".gif" ||
+        ext === ".svg" ||
+        ext === ".webp" ||
+        ext === ".ico" ||
+        ext === ".woff" ||
+        ext === ".woff2" ||
+        ext === ".ttf";
+      if (!reloadable) return;
+
+      lastRel = rel.replace(/\\/g, "/");
+      changedExts.add(ext);
+
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        const exts = Array.from(changedExts);
+        changedExts.clear();
+
+        // CSS can be hot-reloaded without a full page refresh; everything else needs a reload.
+        const type = exts.length === 1 && exts[0] === ".css" ? "dev_css" : "dev_reload";
+        broadcastSse(type, { path: lastRel, exts });
+      }, 150);
+      if (timer && typeof timer.unref === "function") timer.unref();
+    });
+  } catch {
+    // If watch isn't supported, just skip dev live reload.
+  }
+}
+
+startDevLiveReloadWatcher();
+
 function nowIso() {
   return new Date().toISOString();
+}
+
+function normalizeJobStatus(status) {
+  const v = String(status || "").trim().toLowerCase();
+  return v === "closed" ? "closed" : "open";
 }
 
 function safeJsonParse(value) {
@@ -64,6 +213,136 @@ function safeJsonParse(value) {
     return JSON.parse(value);
   } catch {
     return null;
+  }
+}
+
+function toNullableText(value) {
+  if (value === undefined || value === null) return null;
+  const s = String(value);
+  return s.length ? s : null;
+}
+
+function toNullableInt(value) {
+  if (value === undefined || value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function toJsonText(value) {
+  if (value === undefined) return null;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+
+function syncReadableTables(sqlDb, jsonDb) {
+  const users = Array.isArray(jsonDb?.users) ? jsonDb.users : [];
+  const sessions = Array.isArray(jsonDb?.sessions) ? jsonDb.sessions : [];
+  const jobs = Array.isArray(jsonDb?.jobs) ? jsonDb.jobs : [];
+  const applications = Array.isArray(jsonDb?.applications) ? jsonDb.applications : [];
+
+  sqlDb.exec("BEGIN IMMEDIATE;");
+  try {
+    sqlDb.exec("DELETE FROM users;");
+    sqlDb.exec("DELETE FROM sessions;");
+    sqlDb.exec("DELETE FROM jobs;");
+    sqlDb.exec("DELETE FROM applications;");
+
+    const insertUser = sqlDb.prepare(
+      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const u of users) {
+      if (!u || typeof u !== "object") continue;
+      const id = toNullableText(u.id);
+      if (!id) continue;
+      insertUser.run(
+        id,
+        toNullableText(u.role),
+        toNullableText(u.email),
+        toNullableText(u.passwordSalt),
+        toNullableText(u.passwordHash),
+        toNullableText(u.name),
+        toNullableText(u.company),
+        toNullableText(u.authProvider),
+        toNullableText(u.googleSub),
+        toNullableText(u.createdAt),
+        toJsonText(u.profile ?? null),
+        toJsonText(u),
+      );
+    }
+
+    const insertSession = sqlDb.prepare(
+      "INSERT INTO sessions(token, userId, createdAt, expiresAt, rawJson) VALUES(?, ?, ?, ?, ?);",
+    );
+    for (const s of sessions) {
+      if (!s || typeof s !== "object") continue;
+      const token = toNullableText(s.token);
+      if (!token) continue;
+      insertSession.run(
+        token,
+        toNullableText(s.userId),
+        toNullableInt(s.createdAt),
+        toNullableInt(s.expiresAt),
+        toJsonText(s),
+      );
+    }
+
+    const insertJob = sqlDb.prepare(
+      "INSERT INTO jobs(id, employerId, company, title, location, salary, description, requirements, status, closedAt, createdAt, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const j of jobs) {
+      if (!j || typeof j !== "object") continue;
+      const id = toNullableText(j.id);
+      if (!id) continue;
+      insertJob.run(
+        id,
+        toNullableText(j.employerId),
+        toNullableText(j.company),
+        toNullableText(j.title),
+        toNullableText(j.location),
+        toNullableText(j.salary),
+        toNullableText(j.description),
+        toNullableText(j.requirements),
+        toNullableText(normalizeJobStatus(j.status)),
+        toNullableText(j.closedAt),
+        toNullableText(j.createdAt),
+        toJsonText(j),
+      );
+    }
+
+    const insertApplication = sqlDb.prepare(
+      "INSERT INTO applications(id, jobId, employerId, seekerId, seekerName, seekerEmail, status, message, createdAt, updatedAt, messagesJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    );
+    for (const a of applications) {
+      if (!a || typeof a !== "object") continue;
+      const id = toNullableText(a.id);
+      if (!id) continue;
+      insertApplication.run(
+        id,
+        toNullableText(a.jobId),
+        toNullableText(a.employerId),
+        toNullableText(a.seekerId),
+        toNullableText(a.seekerName),
+        toNullableText(a.seekerEmail),
+        toNullableText(a.status),
+        toNullableText(a.message),
+        toNullableText(a.createdAt),
+        toNullableText(a.updatedAt),
+        toJsonText(Array.isArray(a.messages) ? a.messages : []),
+        toJsonText(a),
+      );
+    }
+
+    sqlDb.exec("COMMIT;");
+  } catch (err) {
+    try {
+      sqlDb.exec("ROLLBACK;");
+    } catch {
+      // ignore
+    }
+    throw err;
   }
 }
 
@@ -79,6 +358,78 @@ async function ensureDb() {
   }
 
   db.exec("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);");
+
+  // Readable mirror tables (for inspection only; source of truth remains kv.value JSON).
+  db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    role TEXT,
+    email TEXT,
+    passwordSalt TEXT,
+    passwordHash TEXT,
+    name TEXT,
+    company TEXT,
+    authProvider TEXT,
+    googleSub TEXT,
+    createdAt TEXT,
+    profileJson TEXT,
+    rawJson TEXT
+  );`);
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN passwordSalt TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN passwordHash TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    userId TEXT,
+    createdAt INTEGER,
+    expiresAt INTEGER,
+    rawJson TEXT
+  );`);
+  db.exec(`CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    employerId TEXT,
+    company TEXT,
+    title TEXT,
+    location TEXT,
+    salary TEXT,
+    description TEXT,
+    requirements TEXT,
+    status TEXT,
+    closedAt TEXT,
+    createdAt TEXT,
+    rawJson TEXT
+  );`);
+  try {
+    db.exec("ALTER TABLE jobs ADD COLUMN status TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE jobs ADD COLUMN closedAt TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS applications (
+    id TEXT PRIMARY KEY,
+    jobId TEXT,
+    employerId TEXT,
+    seekerId TEXT,
+    seekerName TEXT,
+    seekerEmail TEXT,
+    status TEXT,
+    message TEXT,
+    createdAt TEXT,
+    updatedAt TEXT,
+    messagesJson TEXT,
+    rawJson TEXT
+  );`);
+
   const row = db.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
   if (!row || typeof row.value !== "string") {
     let seed = null;
@@ -101,18 +452,28 @@ async function ensureDb() {
 
 async function readDb() {
   await ensureDb();
-  const db = new DatabaseSync(SQLITE_PATH);
-  const row = db.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
-  db.close();
-
+  const sqlDb = new DatabaseSync(SQLITE_PATH);
+  const row = sqlDb.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
   const parsed = safeJsonParse(row && typeof row.value === "string" ? row.value : "");
   if (!parsed || typeof parsed !== "object") {
+    sqlDb.close();
     return { users: [], sessions: [], jobs: [], applications: [] };
   }
   parsed.users = Array.isArray(parsed.users) ? parsed.users : [];
   parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
   parsed.jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
   parsed.applications = Array.isArray(parsed.applications) ? parsed.applications : [];
+
+  if (!hasSyncedReadableTables) {
+    try {
+      syncReadableTables(sqlDb, parsed);
+      hasSyncedReadableTables = true;
+    } catch {
+      // best-effort; readable tables are optional
+    }
+  }
+
+  sqlDb.close();
   return parsed;
 }
 
@@ -125,6 +486,14 @@ async function writeDb(db) {
       "INSERT INTO kv(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
     )
     .run(SQLITE_KV_KEY, payload);
+
+  // Keep the readable mirror tables in sync for easier DB inspection.
+  try {
+    syncReadableTables(sqlDb, db);
+    hasSyncedReadableTables = true;
+  } catch {
+    // best-effort; readable tables are optional
+  }
   sqlDb.close();
 }
 
@@ -149,7 +518,7 @@ function text(res, statusCode, body, headers = {}) {
 function addCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token");
 }
 
 function sendNotFound(res) {
@@ -158,6 +527,27 @@ function sendNotFound(res) {
 
 function normalizeRole(role) {
   return role === "employer" ? "employer" : "seeker";
+}
+
+function getAdminToken(req) {
+  const headerToken = String(req.headers["x-admin-token"] || "").trim();
+  if (headerToken) return headerToken;
+  const auth = String(req.headers.authorization || "").trim();
+  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  return "";
+}
+
+function isAdminRequest(req) {
+  const expected = String(process.env.ADMIN_TOKEN || "").trim();
+  if (!expected) return false;
+  const got = getAdminToken(req);
+  if (!got) return false;
+  if (got.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 function createId(prefix) {
@@ -216,6 +606,57 @@ function sanitizeUser(user) {
     company: user.company || "",
     createdAt: user.createdAt,
   };
+}
+
+async function appendFeedbackLog(entry) {
+  const filePath = path.join(DATA_DIR, "feedback.jsonl");
+  try {
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+  } catch {
+    // ignore
+  }
+  const line = JSON.stringify(entry) + "\n";
+  await fsp.appendFile(filePath, line, "utf8");
+}
+
+function smtpConfigFromEnv() {
+  const host = String(process.env.SMTP_HOST || "").trim();
+  const port = Number.parseInt(String(process.env.SMTP_PORT || "").trim() || "587", 10);
+  const user = String(process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.SMTP_PASS || "").trim();
+  const secureRaw = String(process.env.SMTP_SECURE || "").trim().toLowerCase();
+  const secure = secureRaw ? secureRaw === "1" || secureRaw === "true" || secureRaw === "yes" : port === 465;
+  // Defaults:
+  // - to: FEEDBACK_TO (preferred), else SMTP_USER (common when using Gmail app passwords)
+  // - from: FEEDBACK_FROM (preferred), else SMTP_USER
+  const to = String(process.env.FEEDBACK_TO || user || "").trim();
+  const from = String(process.env.FEEDBACK_FROM || user || "").trim();
+  const subjectPrefix = String(process.env.FEEDBACK_SUBJECT_PREFIX || "HireUp").trim();
+  return { host, port, user, pass, secure, to, from, subjectPrefix };
+}
+
+async function sendFeedbackEmail({ subject, text, replyTo }) {
+  const cfg = smtpConfigFromEnv();
+  if (!nodemailer) throw new Error("Email not configured (nodemailer not installed).");
+  if (!cfg.host || !cfg.to || !cfg.from || !cfg.user || !cfg.pass) {
+    throw new Error("Email not configured (missing SMTP_* or FEEDBACK_* env vars).");
+  }
+  const transporter = nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass },
+  });
+  const mail = {
+    from: cfg.from,
+    to: cfg.to,
+    subject,
+    text,
+  };
+  if (replyTo) {
+    mail.replyTo = replyTo;
+  }
+  await transporter.sendMail(mail);
 }
 
 async function fetchJson(urlString) {
@@ -339,7 +780,7 @@ async function verifyGoogleAccessToken(accessToken) {
   return {
     email,
     sub: String(body.sub || body.id || "").trim(),
-    name: String(body.name || "").trim(),
+    name: String(body.name || body.given_name || body.family_name || "").trim(),
     picture: String(body.picture || "").trim(),
     hd: "",
   };
@@ -424,7 +865,7 @@ async function handleApi(req, res, url) {
       // CORS
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Token",
     });
 
     // Initial message so the client knows it's connected.
@@ -443,8 +884,208 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true, time: nowIso() });
   }
 
+  if (pathname === "/api/health" && req.method === "GET") {
+    return json(res, 200, {
+      ok: true,
+      status: "healthy",
+      time: nowIso(),
+      dataDir: DATA_DIR,
+      hasPublicOrigin:
+        !!(
+          cleanPublicOrigin(process.env.PUBLIC_ORIGIN) ||
+          cleanPublicOrigin(process.env.PUBLIC_URL) ||
+          cleanPublicOrigin(process.env.BASE_URL)
+        ),
+    });
+  }
+
   if (pathname === "/api/config" && req.method === "GET") {
-    return json(res, 200, { ok: true, googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim() });
+    return json(res, 200, {
+      ok: true,
+      googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim(),
+      linkedinClientId: String(process.env.LINKEDIN_CLIENT_ID || "").trim(),
+    });
+  }
+
+  if (pathname === "/api/feedback" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
+    const kindRaw = String(body.kind || "").trim().toLowerCase();
+    const kind = kindRaw === "support" ? "support" : kindRaw === "feedback" ? "feedback" : "";
+    const topic = String(body.topic || "").trim();
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim();
+    const message = String(body.message || "").trim();
+    const rating = toNullableInt(body.rating);
+    const clampedRating = rating ? Math.max(1, Math.min(5, rating)) : 5;
+    if (!message) return json(res, 400, { ok: false, error: "message required" });
+
+    const entry = {
+      id: createId("feedback"),
+      createdAt: nowIso(),
+      name,
+      email,
+      rating: clampedRating,
+      message,
+      userAgent: String(req.headers["user-agent"] || ""),
+      ip:
+        String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+        String(req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : ""),
+    };
+
+    let stored = false;
+    try {
+      await appendFeedbackLog(entry);
+      stored = true;
+    } catch {
+      stored = false;
+    }
+
+    const cfg = smtpConfigFromEnv();
+    const inferredKind = kind || (message.startsWith("[Support Request]") ? "support" : "feedback");
+    const subjectBase =
+      inferredKind === "support"
+        ? `${cfg.subjectPrefix} support request${topic ? `: ${topic}` : ""}`
+        : `${cfg.subjectPrefix} feedback (${clampedRating}/5)`;
+    const subject = subjectBase;
+    const text =
+      `Rating: ${clampedRating}/5\n` +
+      `Type: ${inferredKind}\n` +
+      (topic ? `Topic: ${topic}\n` : "") +
+      `Name: ${name || "-"}\n` +
+      `Email: ${email || "-"}\n` +
+      `Time: ${entry.createdAt}\n` +
+      `IP: ${entry.ip || "-"}\n` +
+      `User-Agent: ${entry.userAgent || "-"}\n\n` +
+      `${message}\n`;
+
+    let emailSent = false;
+    let emailError = "";
+    try {
+      await sendFeedbackEmail({ subject, text, replyTo: email || "" });
+      emailSent = true;
+    } catch (err) {
+      emailSent = false;
+      emailError = String(err?.message || "Email not configured");
+    }
+
+    const msg = emailSent
+      ? "Feedback sent to email."
+      : stored
+        ? `Feedback saved on server (email not sent: ${emailError}).`
+        : `Feedback received but could not be saved or emailed (${emailError}).`;
+
+    return json(res, 200, { ok: true, emailSent, stored, message: msg });
+  }
+
+  // Admin endpoints: enabled only when ADMIN_TOKEN is set.
+  // Use header: X-Admin-Token: <ADMIN_TOKEN> (or Authorization: Bearer <ADMIN_TOKEN>).
+  if (pathname === "/api/admin/users" && req.method === "GET") {
+    if (!isAdminRequest(req)) return json(res, 401, { ok: false, error: "Admin token required" });
+    const users = db.users.map((u) => ({
+      id: u.id,
+      role: u.role,
+      email: u.email,
+      name: u.name,
+      company: u.company,
+      authProvider: u.authProvider || "local",
+      createdAt: u.createdAt || "",
+      passwordSalt: u.passwordSalt || "",
+      passwordHash: u.passwordHash || "",
+    }));
+    return json(res, 200, { ok: true, users });
+  }
+
+  if (pathname === "/api/admin/set-password" && req.method === "POST") {
+    if (!isAdminRequest(req)) return json(res, 401, { ok: false, error: "Admin token required" });
+    const body = await readJsonBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
+
+    const userId = String(body.userId || "").trim();
+    const role = body.role ? normalizeRole(body.role) : "";
+    const email = String(body.email || "").trim().toLowerCase();
+    const newPassword = String(body.newPassword || "");
+    if (!newPassword) return json(res, 400, { ok: false, error: "newPassword required" });
+
+    const user = userId
+      ? db.users.find((u) => u.id === userId)
+      : db.users.find((u) => u.email === email && (!role || u.role === role));
+
+    if (!user) return json(res, 404, { ok: false, error: "User not found" });
+
+    const passwordRecord = createPasswordRecord(newPassword);
+    user.passwordSalt = passwordRecord.salt;
+    user.passwordHash = passwordRecord.hash;
+    if (!user.authProvider) user.authProvider = "local";
+
+    // Invalidate sessions for that user.
+    db.sessions = db.sessions.filter((s) => s.userId !== user.id);
+    await writeDb(db);
+    return json(res, 200, { ok: true, userId: user.id });
+  }
+
+  if (pathname === "/api/admin/delete-user" && req.method === "POST") {
+    if (!isAdminRequest(req)) return json(res, 401, { ok: false, error: "Admin token required" });
+    const body = await readJsonBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
+
+    const userId = String(body.userId || "").trim();
+    const role = body.role ? normalizeRole(body.role) : "";
+    const email = String(body.email || "").trim().toLowerCase();
+
+    let target = null;
+    if (userId) {
+      target = db.users.find((u) => u.id === userId) || null;
+    } else if (email) {
+      const matches = db.users.filter((u) => u.email === email && (!role || u.role === role));
+      if (matches.length === 0) return json(res, 404, { ok: false, error: "User not found" });
+      if (matches.length > 1 && !role) {
+        return json(res, 400, { ok: false, error: "Multiple users match this email; provide role (seeker/employer) or userId" });
+      }
+      target = matches[0] || null;
+    } else {
+      return json(res, 400, { ok: false, error: "userId or email required" });
+    }
+
+    if (!target) return json(res, 404, { ok: false, error: "User not found" });
+
+    const beforeUsers = db.users.length;
+    const beforeSessions = db.sessions.length;
+    const beforeJobs = db.jobs.length;
+    const beforeApplications = db.applications.length;
+
+    // Remove user + their sessions.
+    db.users = db.users.filter((u) => u.id !== target.id);
+    db.sessions = db.sessions.filter((s) => s.userId !== target.id);
+
+    // Remove related jobs/applications.
+    let removedJobIds = new Set();
+    if (target.role === "employer") {
+      removedJobIds = new Set(db.jobs.filter((j) => j.employerId === target.id).map((j) => j.id));
+      db.jobs = db.jobs.filter((j) => j.employerId !== target.id);
+      db.applications = db.applications.filter((a) => a.employerId !== target.id && !removedJobIds.has(a.jobId));
+    } else {
+      db.applications = db.applications.filter((a) => a.seekerId !== target.id);
+    }
+
+    await writeDb(db);
+    broadcastSse("jobs_updated", { reason: "admin_delete_user", employerId: target.role === "employer" ? target.id : undefined });
+    broadcastSse("applications_updated", { reason: "admin_delete_user", userId: target.id });
+
+    return json(res, 200, {
+      ok: true,
+      deleted: {
+        userId: target.id,
+        role: target.role,
+        email: target.email,
+      },
+      removedCounts: {
+        users: beforeUsers - db.users.length,
+        sessions: beforeSessions - db.sessions.length,
+        jobs: beforeJobs - db.jobs.length,
+        applications: beforeApplications - db.applications.length,
+      },
+    });
   }
 
   if (pathname === "/api/signup" && req.method === "POST") {
@@ -484,6 +1125,8 @@ async function handleApi(req, res, url) {
       profile:
         role === "employer"
           ? {
+              __schema: 1,
+              __updatedAt: Date.now(),
               companyName: company,
               companyIndustry: "",
               companyLocation: "",
@@ -494,6 +1137,8 @@ async function handleApi(req, res, url) {
             }
           : role === "seeker"
             ? {
+                __schema: 1,
+                __updatedAt: Date.now(),
                 name,
                 title: "",
                 about: "",
@@ -553,6 +1198,8 @@ async function handleApi(req, res, url) {
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
 
     const role = normalizeRole(body.role);
+    const modeRaw = String(body.mode || "").trim().toLowerCase();
+    const mode = modeRaw === "signup" ? "signup" : modeRaw === "login" ? "login" : "";
     const idToken = String(body.credential || body.idToken || "").trim();
     const accessToken = String(body.accessToken || "").trim();
     if (!idToken && !accessToken) {
@@ -569,6 +1216,9 @@ async function handleApi(req, res, url) {
 
     let user = db.users.find((u) => u.email === info.email && u.role === role);
     if (!user) {
+      if (mode === "login") {
+        return json(res, 404, { ok: false, error: "No account found for this Google email. Please sign up first." });
+      }
       const employerCompany = role === "employer" ? String(body.company || "").trim() || "Google Employer" : "";
       user = {
         id: createId("user"),
@@ -582,6 +1232,8 @@ async function handleApi(req, res, url) {
         profile:
           role === "employer"
             ? {
+                __schema: 1,
+                __updatedAt: Date.now(),
                 companyName: employerCompany,
                 companyIndustry: "",
                 companyLocation: "",
@@ -592,6 +1244,8 @@ async function handleApi(req, res, url) {
               }
             : role === "seeker"
               ? {
+                  __schema: 1,
+                  __updatedAt: Date.now(),
                   name: info.name,
                   title: "",
                   about: "",
@@ -764,8 +1418,11 @@ async function handleApi(req, res, url) {
     const enriched = jobs.map((job) => {
       const employer = db.users.find((u) => u.id === job.employerId);
       const applicantCount = db.applications.filter((a) => a.jobId === job.id).length;
+      const status = normalizeJobStatus(job.status);
       return {
         ...job,
+        status,
+        closedAt: status === "closed" ? String(job.closedAt || "") : "",
         company: job.company || (employer ? employer.company || employer.name || "" : ""),
         applicantCount,
       };
@@ -798,12 +1455,46 @@ async function handleApi(req, res, url) {
       salary,
       description,
       requirements,
+      status: "open",
+      closedAt: "",
       createdAt: nowIso(),
     };
     db.jobs.push(job);
     await writeDb(db);
     broadcastSse("jobs_updated", { jobId: job.id, title: job.title, employerId: job.employerId });
     return json(res, 200, { ok: true, job });
+  }
+
+  if (pathname.startsWith("/api/jobs/") && req.method === "PATCH") {
+    const user = await getAuthedUser(req, db);
+    if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
+    if (user.role !== "employer") return json(res, 403, { ok: false, error: "Employer only" });
+
+    const jobId = pathname.split("/").slice(3).join("/").trim();
+    if (!jobId) return json(res, 400, { ok: false, error: "Job id required" });
+
+    const job = db.jobs.find((j) => j && j.id === jobId);
+    if (!job) return json(res, 404, { ok: false, error: "Job not found" });
+    if (String(job.employerId || "") !== String(user.id || "")) {
+      return json(res, 403, { ok: false, error: "Forbidden" });
+    }
+
+    const body = await readJsonBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
+
+    let nextStatus = "";
+    if (Object.prototype.hasOwnProperty.call(body, "status")) {
+      nextStatus = normalizeJobStatus(body.status);
+    } else if (Object.prototype.hasOwnProperty.call(body, "closed")) {
+      nextStatus = body.closed ? "closed" : "open";
+    }
+    if (!nextStatus) return json(res, 400, { ok: false, error: "status or closed required" });
+
+    job.status = nextStatus;
+    job.closedAt = nextStatus === "closed" ? nowIso() : "";
+    await writeDb(db);
+    broadcastSse("jobs_updated", { jobId: job.id, status: job.status, employerId: job.employerId });
+    return json(res, 200, { ok: true, job: { ...job, status: normalizeJobStatus(job.status) } });
   }
 
   // Applications
@@ -850,6 +1541,9 @@ async function handleApi(req, res, url) {
 
     const job = db.jobs.find((j) => j.id === jobId);
     if (!job) return json(res, 404, { ok: false, error: "Job not found" });
+    if (normalizeJobStatus(job.status) === "closed") {
+      return json(res, 400, { ok: false, error: "Job is closed" });
+    }
 
     const already = db.applications.find((a) => a.jobId === jobId && a.seekerId === user.id);
     if (already) return json(res, 409, { ok: false, error: "Already applied" });
@@ -1003,6 +1697,13 @@ async function handleApi(req, res, url) {
 
     // Keep this permissive for a school project; you can tighten later.
     const profile = body.profile && typeof body.profile === "object" ? body.profile : {};
+    // Server-authoritative sync metadata so clients can resolve local draft vs backend.
+    try {
+      profile.__schema = 1;
+      profile.__updatedAt = Date.now();
+    } catch {
+      // ignore (extremely defensive)
+    }
     const u = db.users.find((u2) => u2.id === user.id);
     if (!u) return json(res, 404, { ok: false, error: "User not found" });
     u.profile = profile;
@@ -1013,10 +1714,283 @@ async function handleApi(req, res, url) {
   return sendNotFound(res);
 }
 
+// Warm the database on startup so the SQLite file has readable tables even before the first request.
+// This is best-effort; the server can still run even if it fails.
+readDb().catch(() => {
+  // ignore
+});
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const pathname = url.pathname || "/";
+
+    if (pathname === "/auth/linkedin/start" || pathname === "/auth/linkedin/callback") {
+      const clientId = String(process.env.LINKEDIN_CLIENT_ID || "").trim();
+      const clientSecret = String(process.env.LINKEDIN_CLIENT_SECRET || "").trim();
+
+      const sendAuthResult = (payload) => {
+        res.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        });
+        const safePayload = JSON.stringify(payload || {});
+        res.end(
+          `<!doctype html><html><head><meta charset="utf-8"><title>LinkedIn Auth</title></head><body>` +
+            `<script>(function(){` +
+            `var payload=${safePayload};` +
+            `try{` +
+            `if(window.opener && !window.opener.closed){window.opener.postMessage(payload, window.location.origin);}` +
+            `}catch(e){}` +
+            `try{window.close();}catch(e){}` +
+            `setTimeout(function(){window.location.href="/";}, 250);` +
+            `})();</script>` +
+            `</body></html>`,
+        );
+      };
+
+      if (pathname === "/auth/linkedin/start") {
+        if (req.method !== "GET") return sendNotFound(res);
+
+        const roleRaw = String(url.searchParams.get("role") || "").trim().toLowerCase();
+        const modeRaw = String(url.searchParams.get("mode") || "").trim().toLowerCase();
+        const rid = String(url.searchParams.get("rid") || "").trim();
+        const role = roleRaw === "employer" ? "employer" : "seeker";
+        const mode = modeRaw === "signup" ? "signup" : "login";
+
+        if (!clientId || !clientSecret) {
+          return sendAuthResult({
+            type: "linkedin_auth",
+            ok: false,
+            rid,
+            role,
+            mode,
+            error: "LinkedIn sign-in is not configured on the server (missing LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET).",
+          });
+        }
+
+        const publicOrigin = getPublicOrigin(req, url);
+        const redirectUri =
+          String(process.env.LINKEDIN_REDIRECT_URI || "").trim() ||
+          `${publicOrigin}/auth/linkedin/callback`;
+
+        // Tiny in-memory state store (good enough for a school project).
+        if (!global.__hireupLinkedInStates) global.__hireupLinkedInStates = new Map();
+        const states = global.__hireupLinkedInStates;
+        const state = crypto.randomBytes(18).toString("hex");
+        states.set(state, { createdAt: Date.now(), role, mode, rid });
+
+        const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
+        authUrl.searchParams.set("response_type", "code");
+        authUrl.searchParams.set("client_id", clientId);
+        authUrl.searchParams.set("redirect_uri", redirectUri);
+        authUrl.searchParams.set("state", state);
+        authUrl.searchParams.set("scope", "openid profile email");
+
+        res.writeHead(302, { Location: authUrl.toString(), "Cache-Control": "no-store" });
+        res.end();
+        return;
+      }
+
+      // /auth/linkedin/callback
+      if (req.method !== "GET") return sendNotFound(res);
+      if (!clientId || !clientSecret) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: "LinkedIn sign-in is not configured on the server (missing LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET).",
+        });
+      }
+
+      const code = String(url.searchParams.get("code") || "").trim();
+      const state = String(url.searchParams.get("state") || "").trim();
+      const error = String(url.searchParams.get("error") || "").trim();
+      const errorDesc = String(url.searchParams.get("error_description") || "").trim();
+
+      if (error) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: errorDesc || error || "LinkedIn sign-in failed.",
+        });
+      }
+      if (!code || !state) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: "Missing LinkedIn OAuth parameters.",
+        });
+      }
+
+      if (!global.__hireupLinkedInStates) global.__hireupLinkedInStates = new Map();
+      const states = global.__hireupLinkedInStates;
+      const stored = states.get(state);
+      states.delete(state);
+      if (!stored) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: "LinkedIn sign-in expired. Please try again.",
+        });
+      }
+      if (stored && typeof stored.createdAt === "number" && Date.now() - stored.createdAt > 10 * 60 * 1000) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: "LinkedIn sign-in expired. Please try again.",
+        });
+      }
+
+      const publicOrigin = getPublicOrigin(req, url);
+      const redirectUri =
+        String(process.env.LINKEDIN_REDIRECT_URI || "").trim() ||
+        `${publicOrigin}/auth/linkedin/callback`;
+
+      let accessToken = "";
+      try {
+        const tokenResp = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: redirectUri,
+            client_id: clientId,
+            client_secret: clientSecret,
+          }).toString(),
+        });
+        const tokenData = await tokenResp.json().catch(() => null);
+        if (!tokenResp.ok || !tokenData) {
+          throw new Error(String(tokenData?.error_description || tokenData?.error || "Failed to exchange LinkedIn code."));
+        }
+        accessToken = String(tokenData.access_token || "").trim();
+        if (!accessToken) throw new Error("LinkedIn access token missing.");
+      } catch (err) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: err?.message || "LinkedIn token exchange failed.",
+          rid: stored.rid || "",
+        });
+      }
+
+      let info;
+      try {
+        const profileResp = await fetch("https://api.linkedin.com/v2/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const profileData = await profileResp.json().catch(() => null);
+        if (!profileResp.ok || !profileData) {
+          throw new Error(String(profileData?.error_description || profileData?.error || "Failed to fetch LinkedIn profile."));
+        }
+        info = profileData;
+      } catch (err) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: err?.message || "LinkedIn profile fetch failed.",
+          rid: stored.rid || "",
+        });
+      }
+
+      const email = String(info.email || info.emailAddress || "").trim().toLowerCase();
+      const name = String(info.name || info.given_name || "").trim();
+      const sub = String(info.sub || "").trim();
+      if (!email) {
+        return sendAuthResult({
+          type: "linkedin_auth",
+          ok: false,
+          error: "LinkedIn account email is missing.",
+          rid: stored.rid || "",
+        });
+      }
+
+      // Create or fetch a user, then issue a session token (same pattern as Google).
+      let db;
+      try {
+        db = await readDb();
+      } catch {
+        db = { users: [], sessions: [], jobs: [], applications: [], feedback: [] };
+      }
+
+      const role = stored.role === "employer" ? "employer" : "seeker";
+      let user = db.users.find((u) => u.email === email && u.role === role);
+      if (!user) {
+        if (stored.mode === "login") {
+          return sendAuthResult({
+            type: "linkedin_auth",
+            ok: false,
+            rid: stored.rid || "",
+            role,
+            mode: stored.mode || "login",
+            error: "No account found for this LinkedIn email. Please sign up first.",
+          });
+        }
+        const employerCompany = role === "employer" ? "LinkedIn Employer" : "";
+        user = {
+          id: createId("user"),
+          role,
+          email,
+          passwordSalt: "",
+          passwordHash: "",
+          name: role === "seeker" ? name : "",
+          company: role === "employer" ? employerCompany : "",
+          profile:
+            role === "employer"
+              ? {
+                  __schema: 1,
+                  __updatedAt: Date.now(),
+                  companyName: employerCompany,
+                  companyIndustry: "",
+                  companyLocation: "",
+                  aboutText: "",
+                  info: { industry: "", size: "", founded: "", website: "" },
+                  contact: { email: "", phone: "", location: "", linkedin: "" },
+                  logoSrc: "",
+                }
+              : role === "seeker"
+                ? {
+                    __schema: 1,
+                    __updatedAt: Date.now(),
+                    name,
+                    title: "",
+                    about: "",
+                    skills: [],
+                    contact: { email: "", phone: "", location: "", linkedin: "", github: "" },
+                    resume: null,
+                  }
+                : undefined,
+          authProvider: "linkedin",
+          linkedinSub: sub,
+          createdAt: nowIso(),
+        };
+        db.users.push(user);
+      } else {
+        if (role === "seeker" && !user.name && name) user.name = name;
+        if (role === "employer" && !user.company) user.company = "LinkedIn Employer";
+        if (!user.authProvider) user.authProvider = "linkedin";
+        if (!user.linkedinSub && sub) user.linkedinSub = sub;
+      }
+
+      const token = crypto.randomBytes(24).toString("hex");
+      db.sessions.push({
+        token,
+        userId: user.id,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      });
+      await writeDb(db);
+
+      return sendAuthResult({
+        type: "linkedin_auth",
+        ok: true,
+        rid: stored.rid || "",
+        role,
+        mode: stored.mode || "login",
+        token,
+        user: sanitizeUser(user),
+      });
+    }
 
     if (pathname.startsWith("/api/")) {
       return await handleApi(req, res, url);
@@ -1030,6 +2004,17 @@ const server = http.createServer(async (req, res) => {
 
 // Bind without an explicit hostname so Node can listen on both IPv4/IPv6 where supported.
 server.listen(PORT, () => {
+  const configuredOrigin =
+    cleanPublicOrigin(process.env.PUBLIC_ORIGIN) ||
+    cleanPublicOrigin(process.env.PUBLIC_URL) ||
+    cleanPublicOrigin(process.env.BASE_URL) ||
+    "";
   // eslint-disable-next-line no-console
-  console.log(`Smart Hunt Job server running on http://localhost:${PORT}`);
+  console.log(`HireUp server running on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`HireUp data dir: ${DATA_DIR}`);
+  if (configuredOrigin) {
+    // eslint-disable-next-line no-console
+    console.log(`HireUp public origin: ${configuredOrigin}`);
+  }
 });

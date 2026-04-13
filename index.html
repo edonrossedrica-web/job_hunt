@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <!-- Set this to your Google OAuth Web Client ID (Google Cloud Console -> OAuth 2.0 Client IDs) -->
 <meta name="google-client-id" content="">
-<title>Smart Hunt Job</title>
+<title>HireUp</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 
 <body>
@@ -18,16 +18,18 @@
 <div class="navbar">
 <div class="nav-top">
 <div class="logo-section">
-<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" alt="User logo">
-<div class="logo-text">SMART <span>HUNT</span>-JOB</div>
+<img class="brand-logo" src="assets/brand-logo.png" alt="HireUp logo">
 </div>
-<div class="nav-actions">
-<button class="icon-btn" title="Notifications" onclick="openNotifications()">
-<i class="fa-regular fa-bell"></i>
-</button>
-<button class="icon-btn hamburger-btn" onclick="toggleUserMenu()" aria-label="Open menu">
-<i class="fa-solid fa-bars"></i>
-</button>
+ <div class="nav-actions">
+ <button class="icon-btn" id="notifBackBtn" title="Back" type="button" onclick="goBackFromNotifications()" style="display:none;">
+ <i class="fa-solid fa-arrow-left"></i>
+ </button>
+ <button class="icon-btn" title="Notifications" onclick="openNotifications()">
+ <i class="fa-regular fa-bell"></i>
+ </button>
+ <button class="icon-btn hamburger-btn" onclick="toggleUserMenu()" aria-label="Open menu">
+ <i class="fa-solid fa-bars"></i>
+ </button>
 <div class="user-menu" id="userMenu">
   <button class="profile-pill" onclick="openProfile()" title="Profile">
     <i class="fa-regular fa-user"></i>
@@ -42,9 +44,12 @@
 </div>
 
 <div class="nav-links">
-<a id="homeLink" onclick="showHome()">Home</a>
+<a id="homeLink" onclick="goHome()">Home</a>
 <a id="howLink" onclick="showHowItWorksRole('seeker')">How it Works</a>
-<a id="roleToggle" onclick="toggleRole()">Employer Site</a>
+<a id="roleToggle" onclick="toggleRole()" aria-label="Switch between hunter and employer site">
+  <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+  <span id="roleToggleText">Employer Site</span>
+</a>
 <div class="dropdown" id="contactDropdown">
   <a id="contactLink" onclick="toggleDropdown()">Contact <i class="fa-solid fa-caret-down"></i></a>
   <div class="dropdown-menu">
@@ -58,7 +63,7 @@
 <!-- SEEKER LANDING PAGE (Pre-Login) -->
 <section class="hero" id="seekerLandingPage" style="display:none;">
 <div class="hero-content">
-<h1>Welcome Seekers! <span>Find Your Next Role</span></h1>
+<h1>Welcome Hunters! <span>Find Your Next Role</span></h1>
 <p>Create your profile, explore curated opportunities, and apply in minutes.</p>
 <div class="cta-section">
 <button class="btn-primary" onclick="openSignup('seeker')">SIGN UP</button>
@@ -76,7 +81,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div class="seeker-view" id="seekerHomePage">
 <div class="page-hero">
 <div class="hero-text">
-<p class="eyebrow">Smart Hunt-Job - Seeker Portal</p>
+<p class="eyebrow">Smart Hunt-Job - Hunter Portal</p>
 <h1>Your Career <span>Command</span> Center.</h1>
 <p class="lead">Track your progress, manage applications, and discover new opportunities matched precisely to your professional profile.</p>
 
@@ -130,7 +135,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 </div>
 <div class="seeker-view" id="seekerHistoryPage">
 <div class="history-hero">
-<div class="history-eyebrow">History • Seeker Portal</div>
+<div class="history-eyebrow">History • Hunter Portal</div>
 <h1>Application <span>History</span>.</h1>
 <p>Track where you applied and your current outcomes.</p>
 </div>
@@ -234,7 +239,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 
       <div class="applicants-hero">
         <p class="applicants-eyebrow">Employer Conversations</p>
-        <h1>Seeker <span>Chat Hub</span>.</h1>
+        <h1>Hunter <span>Chat Hub</span>.</h1>
         <p>Message employers, follow up on interviews, and keep every conversation in one place.</p>
       </div>
 
@@ -285,7 +290,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 </footer>
 </div>
 
-  <nav class="seeker-bottom-nav" aria-label="Seeker navigation">
+  <nav class="seeker-bottom-nav" aria-label="Hunter navigation">
     <button class="seeker-bottom-item active" onclick="showSeekerHome()">
       <i class="fa-solid fa-house"></i>
       <span>Career Center</span>
@@ -339,7 +344,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       </article>
     </div>
 
-    <section class="match-section" style="margin-top:18px;">
+    <section class="match-section">
       <div class="match-header">
         <div>
           <h2>Posted Jobs</h2>
@@ -399,7 +404,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Passionate about accessible design systems and cross‑functional collaboration.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">Hi! I’d love to contribute to your design system work—especially accessibility audits and component governance.</div>
             </div>
             <div class="detail-chat">
@@ -447,7 +452,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Led multiple product launches and mentoring junior designers.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">Excited about the role—my recent launch improved activation by 18% and I’m happy to share case studies.</div>
             </div>
             <div class="detail-chat">
@@ -495,7 +500,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Strong marketing background but limited product workflow exposure.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">I’m transitioning into product design and have a portfolio ready—would appreciate feedback.</div>
             </div>
             <div class="detail-chat">
@@ -551,7 +556,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Great system thinking, strong API design background.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">Open to a quick call—happy to walk through my API design work and scalability choices.</div>
             </div>
             <div class="detail-chat">
@@ -599,7 +604,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Specialized in databases and performance tuning.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">Recently optimized query performance by 60%—can share benchmarks and approach.</div>
             </div>
             <div class="detail-chat">
@@ -655,7 +660,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Strong brand storytelling and campaign strategy.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">I’d love to bring campaign insights into product storytelling—attached samples upon request.</div>
             </div>
             <div class="detail-chat">
@@ -703,7 +708,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           <p class="detail-note">Strong analytical background with growth experiments.</p>
           <div class="detail-message-box">
             <div class="detail-message">
-              <p class="detail-label">Message from Seeker</p>
+              <p class="detail-label">Message from Hunter</p>
               <div class="seeker-message">Happy to share growth experiment results and dashboards if helpful.</div>
             </div>
             <div class="detail-chat">
@@ -833,63 +838,107 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       <div class="employer-top-actions"></div>
     </header>
 
-    <div class="history-hero">
-      <h1>Applicant<br><span>Pipeline</span></h1>
-      <p>See seekers you’ve passed, rejected, or still pending.</p>
-    </div>
-
-    <div class="history-search">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input id="employerApplicantsSearch" type="text" placeholder="Search seeker or role..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    </div>
-
-    <div class="status-grid" style="margin-top:8px;">
-      <article class="status-card" data-status-card="pending">
-        <p class="status-label">Pending</p>
-        <p class="status-value">0</p>
-      </article>
-      <article class="status-card" data-status-card="passed">
-        <p class="status-label">Passed</p>
-        <p class="status-value">0</p>
-      </article>
-      <article class="status-card" data-status-card="rejected">
-        <p class="status-label">Rejected</p>
-        <p class="status-value">0</p>
-      </article>
-    </div>
-
-    <div class="status-panels" style="margin-top:6px;">
-      <div class="status-panel" data-employer-status="pending">
-        <div class="status-panel-head">
-          <div>
-            <h3>Pending</h3>
-            <p>New and in-review applications.</p>
-          </div>
-          <button class="ghost-btn small-btn" type="button" data-employer-view="pending">View all</button>
-        </div>
-        <div class="status-list"></div>
+    <!-- Step 1: Employer picks a job -->
+    <div id="employerApplicantsJobsView">
+      <div class="history-hero">
+        <h1>Applicants<br><span>&amp; History</span></h1>
+        <p>Search your job postings, then review passed/rejected/pending applicants.</p>
       </div>
 
-      <div class="status-panel" data-employer-status="passed">
-        <div class="status-panel-head">
-          <div>
-            <h3>Passed</h3>
-            <p>Shortlisted / moved forward.</p>
-          </div>
-          <button class="ghost-btn small-btn" type="button" data-employer-view="passed">View all</button>
-        </div>
-        <div class="status-list"></div>
+      <div class="history-stats">
+        <article class="history-stat">
+          <p class="stat-value" id="employerApplicantsJobsActiveCount">0</p>
+          <p class="stat-label">Active</p>
+        </article>
+        <article class="history-stat">
+          <p class="stat-value" id="employerApplicantsJobsArchivedCount">0</p>
+          <p class="stat-label">Archived</p>
+        </article>
       </div>
 
-      <div class="status-panel" data-employer-status="rejected">
-        <div class="status-panel-head">
+      <div class="history-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="employerApplicantsJobsSearch" type="text" placeholder="Search postings..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <button class="history-search-btn" id="employerApplicantsJobsSearchBtn" type="button">Search</button>
+      </div>
+
+      <div class="history-actions">
+        <button class="history-btn" id="employerApplicantsJobsFilterBtn" type="button"><i class="fa-solid fa-filter"></i> Filter</button>
+        <button class="history-btn" id="employerApplicantsJobsSortBtn" type="button"><i class="fa-solid fa-arrow-down-short-wide"></i> Sort</button>
+      </div>
+
+      <div class="history-list" id="employerApplicantsJobsList"></div>
+    </div>
+
+    <!-- Step 2: Job-specific applicant pipeline -->
+    <div id="employerApplicantsDetailView" style="display:none;">
+      <div class="section" style="padding-top:0;">
+        <div class="section-head">
           <div>
-            <h3>Rejected</h3>
-            <p>Closed candidates.</p>
+            <h2 id="employerApplicantsSelectedJobTitle">Job</h2>
+            <p id="employerApplicantsSelectedJobMeta">Choose a job to see details.</p>
           </div>
-          <button class="ghost-btn small-btn" type="button" data-employer-view="rejected">View all</button>
+          <div class="section-controls">
+            <button class="ghost-btn small-btn" type="button" id="employerApplicantsClosePostingBtn" disabled>Close Posting</button>
+            <button class="ghost-btn small-btn" type="button" id="employerApplicantsBackBtn">Back</button>
+          </div>
         </div>
-        <div class="status-list"></div>
+      </div>
+
+      <div class="history-search" style="margin-top:0;">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="employerApplicantsSearch" type="text" placeholder="Search hunter..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <button class="history-search-btn" id="employerApplicantsSearchBtn" type="button">Search</button>
+      </div>
+
+      <div class="status-grid" style="margin-top:8px;">
+        <article class="status-card" data-status-card="pending">
+          <p class="status-label">Pending</p>
+          <p class="status-value">0</p>
+        </article>
+        <article class="status-card" data-status-card="passed">
+          <p class="status-label">Passed</p>
+          <p class="status-value">0</p>
+        </article>
+        <article class="status-card" data-status-card="rejected">
+          <p class="status-label">Rejected</p>
+          <p class="status-value">0</p>
+        </article>
+      </div>
+
+      <div class="status-panels" style="margin-top:6px;">
+        <div class="status-panel" data-employer-status="pending">
+          <div class="status-panel-head">
+            <div>
+              <h3>Pending</h3>
+              <p>New and in-review applications.</p>
+            </div>
+            <button class="ghost-btn small-btn" type="button" data-employer-view="pending">View all</button>
+          </div>
+          <div class="status-list"></div>
+        </div>
+
+        <div class="status-panel" data-employer-status="passed">
+          <div class="status-panel-head">
+            <div>
+              <h3>Passed</h3>
+              <p>Shortlisted / moved forward.</p>
+            </div>
+            <button class="ghost-btn small-btn" type="button" data-employer-view="passed">View all</button>
+          </div>
+          <div class="status-list"></div>
+        </div>
+
+        <div class="status-panel" data-employer-status="rejected">
+          <div class="status-panel-head">
+            <div>
+              <h3>Rejected</h3>
+              <p>Closed candidates.</p>
+            </div>
+            <button class="ghost-btn small-btn" type="button" data-employer-view="rejected">View all</button>
+          </div>
+          <div class="status-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -922,7 +971,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
     </header>
 
     <div class="add-job-hero">
-      <span class="add-job-pill"><i class="fa-solid fa-plus"></i> New Listing</span>
+      <button class="add-job-pill" id="newListingBtn" type="button" title="Start a new listing (clears the form)"><i class="fa-solid fa-plus"></i> New Listing</button>
       <h1>Create Opportunity.</h1>
       <p>Define the role and find the perfect talent for your team's next chapter.</p>
     </div>
@@ -986,7 +1035,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 
     <div class="add-job-save-note">
       <i class="fa-solid fa-circle-info"></i>
-      Drafts are saved automatically
+      <span id="addJobDraftStatus">Drafts are saved automatically</span>
     </div>
 
     <div class="add-job-actions">
@@ -1006,7 +1055,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       <div class="add-job-card-icon"><i class="fa-solid fa-eye"></i></div>
       <div>
         <h3>Estimated Reach</h3>
-        <p>Based on your title and role, we expect 1,200+ seekers in our premium network.</p>
+        <p>Based on your title and role, we expect 1,200+ hunters in our premium network.</p>
       </div>
     </div>
   </div>
@@ -1020,10 +1069,6 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       <i class="fa-solid fa-users"></i>
       <span>Applicants</span>
     </button>
-    <button class="bottom-nav-item" onclick="showEmployerHistory()">
-      <i class="fa-solid fa-clock-rotate-left"></i>
-      <span>History</span>
-    </button>
   </nav>
 </section>
 
@@ -1031,12 +1076,12 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <section class="hero" id="howItWorksPage" style="display:none;">
 <div class="hero-content">
 <div class="cta-section cta-row" id="howRoleCta" style="margin-bottom:30px;">
-        <button id="howSeekerBtn" class="btn-primary how-btn" onclick="showHowItWorksRole('seeker')">I'm a Job Seeker</button>
+        <button id="howSeekerBtn" class="btn-primary how-btn" onclick="showHowItWorksRole('seeker')">I'm a Job Hunter</button>
         <button id="howEmployerBtn" class="btn-primary how-btn" onclick="showHowItWorksRole('employer')">I'm an Employer</button>
 </div>
 
 <div id="howItWorksSeeker">
-  <h1>How <span>Smart Hunt Job</span> Works for Seekers</h1>
+  <h1>How <span>HireUp</span> Works for Hunters</h1>
   <p>Follow these steps to find and land your next role.</p>
 
   <div class="dashboard-grid" style="margin-top:50px;">
@@ -1064,7 +1109,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 </div>
 
 <div id="howItWorksEmployer" style="display:none;">
-  <h1>How <span>Smart Hunt Job</span> Works for Employers</h1>
+  <h1>How <span>HireUp</span> Works for Employers</h1>
   <p>Post roles, review talent, and hire faster.</p>
 
   <div class="dashboard-grid" style="margin-top:50px;">
@@ -1099,15 +1144,10 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div class="modal-content login-box">
 <div class="login-header">
 <i class="fa-solid fa-user"></i>
-<h3 id="loginTitle">Job Seeker Login</h3>
+      <h3 id="loginTitle">Job Hunter Login</h3>
 <p class="login-sub">Welcome back! Please login to continue.</p>
 </div>
 <div class="login-form">
-<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','login')">
-  <i class="fa-brands fa-google"></i>
-  Continue with Google
-</button>
-<div class="divider"><span>or</span></div>
 <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="loginEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
 <div class="input-group">
   <i class="fa-solid fa-lock"></i>
@@ -1117,6 +1157,15 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
   </button>
 </div>
 <button class="login-btn" onclick="handleLogin()">Log In</button>
+<div class="divider"><span>or</span></div>
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','login')">
+  <i class="fa-brands fa-google"></i>
+  Continue with Google
+</button>
+<button class="social-btn linkedin-btn" type="button" onclick="handleLinkedInAuth('seeker','login')">
+  <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i>
+  Continue with LinkedIn
+</button>
 <p class="login-switch">Don't have an account? <a href="#" onclick="switchToSignup('seeker')">Sign Up -></a></p>
 </div>
 <button class="close-btn" onclick="closeLogin()">Close</button>
@@ -1128,25 +1177,29 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div class="modal-content login-box">
 <div class="login-header">
 <i class="fa-solid fa-user-plus"></i>
-<h3>Seeker Sign Up</h3>
+      <h3>Hunter Sign Up</h3>
 <p class="login-sub">Join Smart Hunt and start applying for jobs.</p>
 </div>
-<div class="login-form">
-<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','signup')">
-  <i class="fa-brands fa-google"></i>
-  Sign up with Google
-</button>
-<div class="divider"><span>or</span></div>
-<div class="input-group"><i class="fa-solid fa-user"></i><input id="seekerSignupName" type="text" placeholder="Full Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
-<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="seekerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
-<div class="input-group">
-  <i class="fa-solid fa-lock"></i>
+ <div class="login-form">
+ <div class="input-group"><i class="fa-solid fa-user"></i><input id="seekerSignupName" type="text" placeholder="Full Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+ <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="seekerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+ <div class="input-group">
+   <i class="fa-solid fa-lock"></i>
   <input id="seekerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
   <button class="toggle-password" type="button" data-target="seekerSignupPassword" aria-label="Show password">
     <i class="fa-regular fa-eye"></i>
   </button>
 </div>
 <button class="login-btn" onclick="handleSignup('seeker')">Sign Up</button>
+ <div class="divider"><span>or</span></div>
+ <button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','signup')">
+   <i class="fa-brands fa-google"></i>
+   Sign up with Google
+ </button>
+ <button class="social-btn linkedin-btn" type="button" onclick="handleLinkedInAuth('seeker','signup')">
+   <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i>
+   Sign up with LinkedIn
+ </button>
 <p class="login-switch">Already have an account? <a href="#" onclick="switchToLogin('seeker')">Log In -></a></p>
 </div>
 <button class="close-btn" onclick="closeSignup('seeker')">Close</button>
@@ -1162,11 +1215,6 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <p class="login-sub">Welcome back! Please login to continue.</p>
 </div>
 <div class="login-form">
-<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','login')">
-  <i class="fa-brands fa-google"></i>
-  Continue with Google
-</button>
-<div class="divider"><span>or</span></div>
 <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerLoginEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
 <div class="input-group">
   <i class="fa-solid fa-lock"></i>
@@ -1176,6 +1224,15 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
   </button>
 </div>
 <button class="login-btn" onclick="handleLogin()">Log In</button>
+<div class="divider"><span>or</span></div>
+<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','login')">
+  <i class="fa-brands fa-google"></i>
+  Continue with Google
+</button>
+<button class="social-btn linkedin-btn" type="button" onclick="handleLinkedInAuth('employer','login')">
+  <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i>
+  Continue with LinkedIn
+</button>
 <p class="login-switch">Don't have an account? <a href="#" onclick="switchToSignup('employer')">Sign Up -></a></p>
 </div>
 <button class="close-btn" onclick="closeLogin()">Close</button>
@@ -1190,22 +1247,26 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <h3>Employer Sign Up</h3>
 <p class="login-sub">Create your account to post jobs and manage applicants.</p>
 </div>
-<div class="login-form">
-<button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','signup')">
-  <i class="fa-brands fa-google"></i>
-  Sign up with Google
-</button>
-<div class="divider"><span>or</span></div>
-<div class="input-group"><i class="fa-solid fa-building"></i><input id="employerSignupCompany" type="text" placeholder="Company Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
-<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
-<div class="input-group">
-  <i class="fa-solid fa-lock"></i>
+ <div class="login-form">
+ <div class="input-group"><i class="fa-solid fa-building"></i><input id="employerSignupCompany" type="text" placeholder="Company Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+ <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+ <div class="input-group">
+   <i class="fa-solid fa-lock"></i>
   <input id="employerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
   <button class="toggle-password" type="button" data-target="employerSignupPassword" aria-label="Show password">
     <i class="fa-regular fa-eye"></i>
   </button>
 </div>
 <button class="login-btn" onclick="handleSignup('employer')">Sign Up</button>
+ <div class="divider"><span>or</span></div>
+ <button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','signup')">
+   <i class="fa-brands fa-google"></i>
+   Sign up with Google
+ </button>
+ <button class="social-btn linkedin-btn" type="button" onclick="handleLinkedInAuth('employer','signup')">
+   <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i>
+   Sign up with LinkedIn
+ </button>
 <p class="login-switch">Already have an account? <a href="#" onclick="switchToLogin('employer')">Log In -></a></p>
 </div>
 <button class="close-btn" onclick="closeSignup('employer')">Close</button>
@@ -1218,32 +1279,110 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div class="login-header">
 <i class="fa-solid fa-comment-dots"></i>
 <h3>We Value Your Feedback</h3>
-<p class="login-sub">Help us improve Smart Hunt Job by sharing your experience.</p>
+<p class="login-sub">Help us improve HireUp by sharing your experience.</p>
 </div>
 <div class="rating">
-<i class="fa-solid fa-star"></i>
-<i class="fa-solid fa-star"></i>
-<i class="fa-solid fa-star"></i>
-<i class="fa-solid fa-star"></i>
-<i class="fa-solid fa-star"></i>
+<button class="rating-star active" type="button" aria-label="Rate 1 star" onclick="setFeedbackRating(1)"><i class="fa-solid fa-star"></i></button>
+<button class="rating-star active" type="button" aria-label="Rate 2 stars" onclick="setFeedbackRating(2)"><i class="fa-solid fa-star"></i></button>
+<button class="rating-star active" type="button" aria-label="Rate 3 stars" onclick="setFeedbackRating(3)"><i class="fa-solid fa-star"></i></button>
+<button class="rating-star active" type="button" aria-label="Rate 4 stars" onclick="setFeedbackRating(4)"><i class="fa-solid fa-star"></i></button>
+<button class="rating-star active" type="button" aria-label="Rate 5 stars" onclick="setFeedbackRating(5)"><i class="fa-solid fa-star"></i></button>
+<input type="hidden" id="feedbackRating" value="5">
 </div>
 <div class="login-form">
-<div class="input-group"><i class="fa-solid fa-user"></i><input type="text" placeholder="Your Name"></div>
-<div class="input-group"><i class="fa-solid fa-envelope"></i><input type="email" placeholder="Your Email"></div>
-<div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea placeholder="Write your feedback here..."></textarea></div>
-<button class="login-btn">Submit Feedback</button>
+<div class="input-group"><i class="fa-solid fa-user"></i><input id="feedbackName" type="text" placeholder="Your Name" autocomplete="name"></div>
+<div class="input-group"><i class="fa-solid fa-envelope"></i><input id="feedbackEmail" type="email" placeholder="Your Email" autocomplete="email"></div>
+<div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="feedbackText" placeholder="Write your feedback here..." rows="4"></textarea></div>
+<button class="login-btn" type="button" onclick="submitFeedback(event)">Submit Feedback</button>
 </div>
 <button class="close-btn" onclick="closeFeedback()">Close</button>
 </div>
 </div>
 
+<!-- CONFIRM MODAL -->
+<div class="modal" id="confirmModal">
+  <div class="modal-content confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="login-header">
+      <i class="fa-solid fa-circle-question"></i>
+      <h3 id="confirmTitle">Confirm</h3>
+      <p id="confirmMessage" class="login-sub">Are you sure?</p>
+    </div>
+    <div class="confirm-actions">
+      <button class="ghost-btn small-btn" id="confirmCancelBtn" type="button">Cancel</button>
+      <button class="login-btn" id="confirmOkBtn" type="button">Yes</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div class="modal" id="infoModal">
+  <div class="modal-content confirm-modal info-modal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <div class="login-header">
+      <i class="fa-solid fa-circle-check"></i>
+      <h3 id="infoTitle">Thank you!</h3>
+      <p id="infoMessage" class="login-sub">We received your feedback.</p>
+    </div>
+    <div class="confirm-actions">
+      <button class="login-btn" id="infoOkBtn" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHAT MODAL -->
 <div class="modal" id="chatModal">
-<div class="modal-content">
-<h3>Customer Service</h3>
-<p>Our support team will assist you shortly.</p>
-<button class="close-btn" onclick="closeChat()">Close</button>
-</div>
+  <div class="modal-content support-modal" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
+    <div class="chat-head">
+      <div>
+        <h3 id="supportTitle">Customer Service</h3>
+        <p class="chat-sub">Quick help + send a support request (we’ll reply to your email).</p>
+      </div>
+      <button class="close-btn small-btn" type="button" onclick="closeChat()">Close</button>
+    </div>
+
+    <div class="support-body">
+      <div class="support-faq">
+        <h4>Quick Help</h4>
+        <button class="faq-item" type="button" onclick="setSupportTemplate('I can’t log in to my account. I’m seeing an error when I try to sign in.')">
+          <i class="fa-solid fa-key"></i> Login trouble
+        </button>
+        <button class="faq-item" type="button" onclick="setSupportTemplate('I can’t see my applications / history. Can you help me find them?')">
+          <i class="fa-solid fa-list-check"></i> Missing applications
+        </button>
+        <button class="faq-item" type="button" onclick="setSupportTemplate('A job post looks wrong (title, salary, or details). Please review it.')">
+          <i class="fa-solid fa-triangle-exclamation"></i> Report an issue
+        </button>
+        <button class="faq-item" type="button" onclick="setSupportTemplate('I have a suggestion to improve HireUp.')">
+          <i class="fa-solid fa-lightbulb"></i> Suggest a feature
+        </button>
+
+        <div class="support-meta">
+          <div><i class="fa-regular fa-clock"></i> Typical reply: within 24 hours</div>
+          <div><i class="fa-regular fa-envelope"></i> Please include an email we can reply to</div>
+        </div>
+      </div>
+
+      <div class="support-form">
+        <div class="input-group"><i class="fa-solid fa-user"></i><input id="supportName" type="text" placeholder="Your name (optional)" autocomplete="name"></div>
+        <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="supportEmail" type="email" placeholder="Your email (required)" autocomplete="email"></div>
+        <div class="input-group select-group">
+          <i class="fa-solid fa-tag"></i>
+          <select id="supportTopic" aria-label="Support topic">
+            <option value="Account">Account</option>
+            <option value="Applications">Applications</option>
+            <option value="Jobs">Jobs</option>
+            <option value="Employer">Employer</option>
+            <option value="Bug">Bug</option>
+            <option value="Suggestion">Suggestion</option>
+            <option value="Other" selected>Other</option>
+          </select>
+          <i class="fa-solid fa-chevron-down select-caret" aria-hidden="true"></i>
+        </div>
+        <div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="supportText" placeholder="Describe what happened, what you expected, and any error text..." rows="5"></textarea></div>
+        <button class="login-btn" type="button" onclick="submitSupportTicket(event)">Send to Support</button>
+        <p class="support-note">Tip: include your role (Hunter/Employer) and the page you were on. Avoid passwords or sensitive info.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- SEEKER CHAT MODAL -->
@@ -1315,9 +1454,84 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
   </div>
   <div class="quick-view-tags" id="quickViewTags"></div>
   <div class="quick-view-footer">
-    <strong id="quickViewSalary">$0</strong>
+    <div class="quick-view-pay">
+      <span class="job-pay-label">Pay</span>
+      <strong id="quickViewSalary">$0</strong>
+    </div>
     <button class="pill-btn" onclick="openApplyForm(this)">Apply</button>
   </div>
+</div>
+</div>
+
+<!-- SEEKER PROFILE REVIEW MODAL (EMPLOYER) -->
+<div class="modal" id="seekerProfileModal">
+<div class="modal-content profile-review-content">
+  <div class="profile-review-head">
+    <div class="profile-header" style="margin-bottom:0;">
+      <div class="profile-avatar seeker-profile-avatar" id="seekerProfileAvatar">A</div>
+      <div class="profile-review-titlewrap">
+        <h2 id="seekerProfileName">Applicant</h2>
+        <p id="seekerProfileTitle">—</p>
+        <div class="profile-review-status">
+          <span class="notice-tag success" id="seekerProfileOpenTag">Open to Work</span>
+        </div>
+      </div>
+    </div>
+    <button class="close-btn small-btn" onclick="closeSeekerProfileReview()">Close</button>
+  </div>
+
+  <div class="profile-item profile-about-box">
+    <p class="detail-label">About</p>
+    <p class="detail-value" id="seekerProfileAbout">—</p>
+  </div>
+
+  <div class="profile-review-section">
+    <p class="detail-label" style="margin-bottom:8px;">Skills</p>
+    <div class="tag-row" id="seekerProfileSkills"></div>
+  </div>
+
+  <div class="profile-grid profile-review-grid">
+    <div class="profile-item">
+      <p class="detail-label">Email</p>
+      <p class="detail-value" id="seekerProfileEmail">—</p>
+    </div>
+    <div class="profile-item">
+      <p class="detail-label">Phone</p>
+      <p class="detail-value" id="seekerProfilePhone">—</p>
+    </div>
+    <div class="profile-item">
+      <p class="detail-label">Location</p>
+      <p class="detail-value" id="seekerProfileLocation">—</p>
+    </div>
+    <div class="profile-item">
+      <p class="detail-label">LinkedIn</p>
+      <a class="profile-link" id="seekerProfileLinkedIn" href="#" target="_blank" rel="noopener noreferrer">—</a>
+    </div>
+    <div class="profile-item">
+      <p class="detail-label">GitHub</p>
+      <a class="profile-link" id="seekerProfileGithub" href="#" target="_blank" rel="noopener noreferrer">—</a>
+    </div>
+  </div>
+
+  <div class="quick-view-footer profile-review-footer">
+    <div></div>
+    <button class="pill-btn secondary" id="seekerProfileFileBtn" type="button">File</button>
+  </div>
+</div>
+</div>
+
+<!-- FILE PICKER MODAL (EMPLOYER) -->
+<div class="modal" id="filePickerModal">
+<div class="modal-content file-picker-content">
+  <div class="quick-view-head">
+    <div>
+      <p class="quick-view-badge">Files</p>
+      <h3 id="filePickerTitle">Choose a file</h3>
+      <p class="quick-view-company" id="filePickerSub">Select one to open in a new tab.</p>
+    </div>
+    <button class="close-btn small-btn" onclick="closeFilePicker()">Close</button>
+  </div>
+  <div class="file-picker-list" id="filePickerList"></div>
 </div>
 </div>
 
@@ -1359,17 +1573,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="script.js"></script>
+<script src="script.js?v=5"></script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
