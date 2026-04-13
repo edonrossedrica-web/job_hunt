@@ -2034,6 +2034,17 @@ const server = http.createServer(async (req, res) => {
 
     return await serveStatic(req, res, pathname);
   } catch (err) {
+    try {
+      // eslint-disable-next-line no-console
+      console.error("SERVER REQUEST ERROR", {
+        method: req.method,
+        url: req.url || "",
+        message: err && err.message ? err.message : String(err),
+        stack: err && err.stack ? String(err.stack) : "",
+      });
+    } catch {
+      // ignore logging failures
+    }
     text(res, 500, "Server error");
   }
 });
