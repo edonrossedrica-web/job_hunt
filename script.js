@@ -3174,8 +3174,22 @@ window.addEventListener("pageshow", () => {
 // Show Seeker Home Page
 function showHome() {
   isEmployer = false;
-  // Treat the seeker dashboard as the default public entry so shared links and
-  // direct opens land on the system home without an extra landing-page step.
+  const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const role = localStorage.getItem("userRole");
+
+  if (!loggedIn || role !== "seeker") {
+    document.getElementById("homePage").style.display = "none";
+    document.getElementById("seekerLandingPage").style.display = "flex";
+    document.getElementById("employerLoginPage").style.display = "none";
+    document.getElementById("employeePage").style.display = "none";
+    document.getElementById("howItWorksPage").style.display = "none";
+    setRoleToggleLabel("Hunter Site");
+    setActiveNav("homeLink");
+    window.scrollTo(0, 0);
+    updateAuthUI();
+    return;
+  }
+
   document.getElementById("homePage").style.display = "block";
   document.getElementById("seekerLandingPage").style.display = "none";
   document.getElementById("employerLoginPage").style.display = "none";
