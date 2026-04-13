@@ -97,6 +97,16 @@ function navigateWithLoader(url, { message = "Loading page...", delay = 260 } = 
   }, Math.max(0, Number(delay || 0)));
 }
 
+function finishInitialRender() {
+  if (!document || !document.body) return;
+  document.body.classList.remove("app-booting");
+  document.body.classList.add("app-ready");
+}
+
+window.addEventListener("load", () => {
+  finishInitialRender();
+});
+
 function cycleEmployerApplicantsJobsFilter() {
   const order = ["active", "archived", "all"];
   const idx = order.indexOf(employerApplicantsJobsFilterMode);
@@ -3522,6 +3532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     refreshDataViews();
     renderSavedJobs();
     syncBookmarkButtons(document);
+    finishInitialRender();
     return;
   }
   const postSignup = localStorage.getItem("postSignupWelcome");
@@ -3540,6 +3551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPasswordToggles();
     setupHistoryViewButtons();
     setupHistoryStatusButtons();
+    finishInitialRender();
     return;
   }
   if (target === "employer" && loggedIn && role === "employer") {
@@ -3548,6 +3560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPasswordToggles();
     setupHistoryViewButtons();
     setupHistoryStatusButtons();
+    finishInitialRender();
     return;
   }
   showHome();
@@ -3566,6 +3579,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showSeekerHome();
     }
   }
+  finishInitialRender();
 });
 
 // Toggle Employer/Seeker view

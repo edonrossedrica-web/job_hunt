@@ -20,6 +20,12 @@ body{
   color:var(--text);
   min-height:100vh;
 }
+body.app-booting{
+  visibility:hidden;
+}
+body.app-ready{
+  visibility:visible;
+}
 body.page-loading{
   overflow:hidden;
 }
