@@ -1289,7 +1289,7 @@ async function handleApi(req, res, url) {
       if (mode === "login") {
         return json(res, 404, { ok: false, error: "No account found for this Google email. Please sign up first." });
       }
-      const employerCompany = role === "employer" ? String(body.company || "").trim() || "Google Employer" : "";
+      const employerCompany = role === "employer" ? String(body.company || "").trim() : "";
       user = {
         id: createId("user"),
         role,
@@ -1332,7 +1332,7 @@ async function handleApi(req, res, url) {
     } else {
       // Backfill missing profile basics for older accounts.
       if (role === "seeker" && !user.name && info.name) user.name = info.name;
-      if (role === "employer" && !user.company) user.company = "Google Employer";
+      if (role === "employer" && !user.company) user.company = "";
       if (!user.authProvider) user.authProvider = "google";
       if (!user.googleSub && info.sub) user.googleSub = info.sub;
     }

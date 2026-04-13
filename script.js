@@ -4123,7 +4123,7 @@ async function handleGoogleAuth(role, mode) {
         role: normalizedRole,
         email,
         name: normalizedRole === "seeker" ? "Google User" : "",
-        company: normalizedRole === "employer" ? "Google Employer" : "",
+        company: normalizedRole === "employer" ? "" : "",
         provider: "google",
       });
       users.push(user);
@@ -4223,7 +4223,7 @@ async function handleGoogleAuth(role, mode) {
       role: normalizedRole,
       email,
       name: normalizedRole === "seeker" ? String(profile?.name || "").trim() : "",
-      company: normalizedRole === "employer" ? "Google Employer" : "",
+      company: normalizedRole === "employer" ? "" : "",
       provider: "google",
     });
     users.push(user);
