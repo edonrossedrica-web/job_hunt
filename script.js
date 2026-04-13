@@ -3958,7 +3958,7 @@ async function handleSignup(type) {
       setCurrentUser(backend.user);
       closeSignup(type);
       if (role === "seeker") {
-        window.location.href = "seeker_profile.html";
+        window.location.href = "Seeker_profile.html";
       } else {
         window.location.href = "employer_profile.html";
       }
@@ -3993,7 +3993,7 @@ async function handleSignup(type) {
   setCurrentUser(newUser);
   closeSignup(type);
   if (role === "seeker") {
-    window.location.href = "seeker_profile.html";
+    window.location.href = "Seeker_profile.html";
   } else {
     window.location.href = "employer_profile.html";
   }
@@ -4142,7 +4142,7 @@ async function handleGoogleAuth(role, mode) {
 
     if (mode === "signup") {
       if (normalizedRole === "seeker") {
-        window.location.href = "seeker_profile.html";
+        window.location.href = "Seeker_profile.html";
       } else {
         window.location.href = "employer_profile.html";
       }
@@ -4248,7 +4248,7 @@ function handleLinkedInAuth(role, mode) {
 
     if (mode === "signup") {
       if (normalizedRole === "seeker") {
-        window.location.href = "seeker_profile.html";
+        window.location.href = "Seeker_profile.html";
       } else {
         window.location.href = "employer_profile.html";
       }
@@ -4388,7 +4388,7 @@ function openProfile() {
     return;
   }
   if (role === "seeker") {
-    window.location.href = "seeker_profile.html";
+    window.location.href = "Seeker_profile.html";
     return;
   }
   openLogin();
