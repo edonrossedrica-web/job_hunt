@@ -7,10 +7,16 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 
 <body>
+<div class="global-page-loader" id="globalPageLoader" aria-hidden="true">
+  <div class="global-page-loader__panel" role="status" aria-live="polite">
+    <div class="global-page-loader__spinner" aria-hidden="true"></div>
+    <div class="global-page-loader__text" id="globalPageLoaderText">Loading...</div>
+  </div>
+</div>
 <div class="navbar">
   <div class="nav-top">
     <div class="logo-section">
@@ -177,14 +183,31 @@
 </main>
 
 <script>
+function showPageLoader(message){
+  const loader = document.getElementById("globalPageLoader");
+  const text = document.getElementById("globalPageLoaderText");
+  if (!loader) return;
+  if (text) text.textContent = String(message || "Loading...");
+  loader.classList.add("is-visible");
+  loader.setAttribute("aria-hidden", "false");
+  document.body.classList.add("page-loading");
+}
+
+function navigateWithLoader(url, message){
+  showPageLoader(message || "Loading page...");
+  setTimeout(() => {
+    window.location.href = url;
+  }, 260);
+}
+
 function goBack(){
-  window.location.href = "index.html";
+  navigateWithLoader("index.html", "Returning to home...");
 }
 
 const loggedIn = localStorage.getItem("isLoggedIn") === "true";
 const role = localStorage.getItem("userRole");
 if (!loggedIn || role !== "seeker") {
-  window.location.href = "index.html";
+  navigateWithLoader("index.html", "Returning to home...");
 }
 
 const historyPanels = document.querySelectorAll("[data-history-section]");

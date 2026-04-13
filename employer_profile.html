@@ -246,6 +246,58 @@ body{
   border-color:rgba(255,255,255,.18);
   color:#fff
 }
+body.page-loading{
+  overflow:hidden;
+}
+.page-loader{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(6,10,16,.78);
+  backdrop-filter:blur(12px);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .22s ease,visibility .22s ease;
+  z-index:25000;
+}
+.page-loader.is-visible{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+.page-loader-card{
+  min-width:min(90vw,340px);
+  padding:24px 26px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(17,24,39,.98),rgba(11,18,32,.98));
+  box-shadow:0 22px 60px rgba(0,0,0,.45);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+.page-loader-spin{
+  width:50px;
+  height:50px;
+  border-radius:999px;
+  border:4px solid rgba(255,255,255,.12);
+  border-top-color:#3aa0ff;
+  animation:pageLoaderSpin .85s linear infinite;
+}
+.page-loader-text{
+  font-weight:800;
+  letter-spacing:.3px;
+  text-align:center;
+  color:#e2e8f0;
+}
+@keyframes pageLoaderSpin{
+  to{transform:rotate(360deg)}
+}
 
 /* ABOUT */
 
@@ -379,6 +431,12 @@ body{
 </head>
 
 <body>
+<div class="page-loader" id="pageLoader" aria-hidden="true">
+  <div class="page-loader-card" role="status" aria-live="polite">
+    <div class="page-loader-spin" aria-hidden="true"></div>
+    <div class="page-loader-text" id="pageLoaderText">Loading...</div>
+  </div>
+</div>
 
 <div class="navbar">
   <div class="nav-top">
@@ -524,6 +582,44 @@ const PROFILE_CACHE_PREFIX = "smartHuntProfileCache_v1:";
 let cacheQuotaWarned = false;
 let backendSaveWarned = false;
 let backendLoadWarned = false;
+let pageLoaderDepth = 0;
+
+function showPageLoader(message){
+  const loader = document.getElementById("pageLoader");
+  const text = document.getElementById("pageLoaderText");
+  if (!loader) return;
+  if (text) text.textContent = String(message || "Loading...");
+  pageLoaderDepth += 1;
+  loader.classList.add("is-visible");
+  loader.setAttribute("aria-hidden", "false");
+  document.body.classList.add("page-loading");
+}
+
+function hidePageLoader(){
+  const loader = document.getElementById("pageLoader");
+  if (!loader) return;
+  pageLoaderDepth = Math.max(0, pageLoaderDepth - 1);
+  if (pageLoaderDepth > 0) return;
+  loader.classList.remove("is-visible");
+  loader.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("page-loading");
+}
+
+async function withPageLoader(task, message){
+  showPageLoader(message);
+  try {
+    return await task();
+  } finally {
+    hidePageLoader();
+  }
+}
+
+function navigateWithLoader(url, message){
+  showPageLoader(message || "Loading page...");
+  setTimeout(() => {
+    window.location.href = url;
+  }, 260);
+}
 
 function getFinishProfileDoneKey(role){
   const safeRole = role === "employer" ? "employer" : role === "seeker" ? "seeker" : String(role || "user");
@@ -1020,7 +1116,7 @@ async function finishEmployerProfile(btn){
   const prevLabel = button ? String(button.innerText || "") : "";
 
   if (isFinishProfileDone("employer")) {
-    window.location.href = "index.html?returnTo=employerOverview";
+    navigateWithLoader("index.html?returnTo=employerOverview", "Returning to dashboard...");
     return;
   }
 
@@ -1037,13 +1133,13 @@ async function finishEmployerProfile(btn){
   }
   try {
     // Ensure the backend write completes before navigating away (navigation can abort in-flight fetch).
-    await saveEmployerProfileToBackend();
+    await withPageLoader(() => saveEmployerProfileToBackend(), "Publishing profile...");
     markFinishProfileDone("employer", true);
     localStorage.setItem("postSignupWelcome","employer");
     try {
       setupFinishEmployerProfileCta();
     } catch {}
-    window.location.href = "index.html?returnTo=employerOverview";
+    navigateWithLoader("index.html?returnTo=employerOverview", "Returning to dashboard...");
   } catch (err) {
     alert(err?.message || "Failed to save your profile. Please try again.");
     if (button) {
@@ -1200,7 +1296,7 @@ function setupFinishEmployerProfileCta() {
 function goBack(){
   localStorage.setItem("postLoginTarget","employer");
   try { persistEmployerProfileDraft({ attemptBackend: true }); } catch {}
-  window.location.href = "index.html?returnTo=employerOverview";
+  navigateWithLoader("index.html?returnTo=employerOverview", "Returning to dashboard...");
 }
 </script>
 
@@ -1215,7 +1311,7 @@ function goBack(){
   }
   const token = String(localStorage.getItem("authToken") || "").trim();
   if (!loggedIn || role !== "employer" || (runningServer && !token)) {
-    window.location.href = "index.html";
+    navigateWithLoader("index.html", "Returning to home...");
   }
 </script>
 

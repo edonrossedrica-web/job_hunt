@@ -27,6 +27,75 @@ let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
 let addJobDraftAutosaveTimer = null;
 let notificationsReturnState = null;
+let pageLoaderDepth = 0;
+let pageLoaderStartedAt = 0;
+
+function ensurePageLoader() {
+  if (typeof document === "undefined" || !document.body) return null;
+  let loader = document.getElementById("globalPageLoader");
+  if (loader) return loader;
+
+  loader = document.createElement("div");
+  loader.id = "globalPageLoader";
+  loader.className = "global-page-loader";
+  loader.setAttribute("aria-hidden", "true");
+  loader.innerHTML = `
+    <div class="global-page-loader__panel" role="status" aria-live="polite">
+      <div class="global-page-loader__spinner" aria-hidden="true"></div>
+      <div class="global-page-loader__text" id="globalPageLoaderText">Loading...</div>
+    </div>
+  `;
+  document.body.appendChild(loader);
+  return loader;
+}
+
+function showPageLoader(message = "Loading...") {
+  const loader = ensurePageLoader();
+  if (!loader) return;
+  const text = document.getElementById("globalPageLoaderText");
+  if (text) text.textContent = String(message || "Loading...");
+  pageLoaderDepth += 1;
+  pageLoaderStartedAt = Date.now();
+  loader.classList.add("is-visible");
+  loader.setAttribute("aria-hidden", "false");
+  document.body.classList.add("page-loading");
+}
+
+function hidePageLoader({ force = false, minDuration = 320 } = {}) {
+  const loader = document.getElementById("globalPageLoader");
+  if (!loader) return;
+  if (force) {
+    pageLoaderDepth = 0;
+  } else {
+    pageLoaderDepth = Math.max(0, pageLoaderDepth - 1);
+  }
+  if (pageLoaderDepth > 0) return;
+
+  const elapsed = Date.now() - pageLoaderStartedAt;
+  const wait = Math.max(0, Number(minDuration || 0) - elapsed);
+  window.setTimeout(() => {
+    if (pageLoaderDepth > 0) return;
+    loader.classList.remove("is-visible");
+    loader.setAttribute("aria-hidden", "true");
+    if (document.body) document.body.classList.remove("page-loading");
+  }, wait);
+}
+
+async function withPageLoader(task, { message = "Loading...", minDuration = 320 } = {}) {
+  showPageLoader(message);
+  try {
+    return await task();
+  } finally {
+    hidePageLoader({ minDuration });
+  }
+}
+
+function navigateWithLoader(url, { message = "Loading page...", delay = 260 } = {}) {
+  showPageLoader(message);
+  window.setTimeout(() => {
+    window.location.href = url;
+  }, Math.max(0, Number(delay || 0)));
+}
 
 function cycleEmployerApplicantsJobsFilter() {
   const order = ["active", "archived", "all"];
@@ -852,7 +921,10 @@ function setupSeekerSearch() {
   if (!keywordsEl || !locationEl || !btn) return;
 
   const run = async () => {
-    const jobs = await getJobsSnapshot();
+    const jobs = await withPageLoader(() => getJobsSnapshot(), {
+      message: "Searching jobs...",
+      minDuration: 250,
+    });
     if (!Array.isArray(jobs)) {
       alert("Backend is not reachable yet. Start the server (node server.js) and try again.");
       return;
@@ -2253,24 +2325,26 @@ async function publishJobFromForm() {
   if (!ok) return;
 
   try {
-    await apiRequest("/api/jobs", {
-      method: "POST",
-      auth: true,
-      body: { title, location, salary, description, requirements },
-    });
-    if (titleEl) titleEl.value = "";
-    if (locationEl) locationEl.value = "";
-    if (salaryEl) salaryEl.value = "";
-    if (descEl) descEl.value = "";
-    if (reqEl) reqEl.value = "";
-    try {
-      localStorage.removeItem("jobDraft");
-    } catch {
-      // ignore
-    }
-    closeAddJob();
-    await refreshDataViews();
-    emitSyncEvent("jobs_updated", { jobTitle: title });
+    await withPageLoader(async () => {
+      await apiRequest("/api/jobs", {
+        method: "POST",
+        auth: true,
+        body: { title, location, salary, description, requirements },
+      });
+      if (titleEl) titleEl.value = "";
+      if (locationEl) locationEl.value = "";
+      if (salaryEl) salaryEl.value = "";
+      if (descEl) descEl.value = "";
+      if (reqEl) reqEl.value = "";
+      try {
+        localStorage.removeItem("jobDraft");
+      } catch {
+        // ignore
+      }
+      closeAddJob();
+      await refreshDataViews();
+      emitSyncEvent("jobs_updated", { jobTitle: title });
+    }, { message: "Publishing job..." });
     alert("Job published!");
   } catch (err) {
     if (err && err.status === 401) {
@@ -3952,15 +4026,18 @@ async function handleSignup(type) {
   }
 
   try {
-    const backend = await tryBackendSignup({ role, email, password, name, company });
+    const backend = await withPageLoader(
+      () => tryBackendSignup({ role, email, password, name, company }),
+      { message: "Creating account..." },
+    );
     if (backend) {
       setAuth(role);
       setCurrentUser(backend.user);
       closeSignup(type);
       if (role === "seeker") {
-        window.location.href = "Seeker_profile.html";
+        navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
       } else {
-        window.location.href = "employer_profile.html";
+        navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
       }
       updateAuthUI();
       syncBookmarkButtons(document);
@@ -3993,9 +4070,9 @@ async function handleSignup(type) {
   setCurrentUser(newUser);
   closeSignup(type);
   if (role === "seeker") {
-    window.location.href = "Seeker_profile.html";
+    navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
   } else {
-    window.location.href = "employer_profile.html";
+    navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
   }
   updateAuthUI();
   syncBookmarkButtons(document);
@@ -4142,9 +4219,9 @@ async function handleGoogleAuth(role, mode) {
 
     if (mode === "signup") {
       if (normalizedRole === "seeker") {
-        window.location.href = "Seeker_profile.html";
+        navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
       } else {
-        window.location.href = "employer_profile.html";
+        navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
       }
       updateAuthUI();
       syncBookmarkButtons(document);
@@ -4248,9 +4325,9 @@ function handleLinkedInAuth(role, mode) {
 
     if (mode === "signup") {
       if (normalizedRole === "seeker") {
-        window.location.href = "Seeker_profile.html";
+        navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
       } else {
-        window.location.href = "employer_profile.html";
+        navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
       }
       updateAuthUI();
       syncBookmarkButtons(document);
@@ -4384,11 +4461,11 @@ function openProfile() {
     return;
   }
   if (role === "employer") {
-    window.location.href = "employer_profile.html";
+    navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
     return;
   }
   if (role === "seeker") {
-    window.location.href = "Seeker_profile.html";
+    navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
     return;
   }
   openLogin();
@@ -4402,7 +4479,7 @@ function openEmployerProfile() {
     openLogin();
     return;
   }
-  window.location.href = "employer_profile.html";
+  navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
 }
 
 let confirmModalResolve = null;

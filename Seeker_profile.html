@@ -77,10 +77,23 @@
     .modal-actions{padding:14px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,.06);background:rgba(12,17,23,.25)}
     .modal-cancel{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:800}
     .modal-cancel:hover{border-color:rgba(255,255,255,.18);color:#fff}
+    body.page-loading{overflow:hidden}
+    .page-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(6,10,16,.78);backdrop-filter:blur(12px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s ease;z-index:25000}
+    .page-loader.is-visible{opacity:1;visibility:visible;pointer-events:auto}
+    .page-loader-card{min-width:min(90vw,340px);padding:24px 26px;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(17,24,39,.98),rgba(11,18,32,.98));box-shadow:0 22px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;gap:14px}
+    .page-loader-spin{width:50px;height:50px;border-radius:999px;border:4px solid rgba(255,255,255,.12);border-top-color:#3aa0ff;animation:spin .85s linear infinite}
+    .page-loader-text{font-weight:800;letter-spacing:.3px;text-align:center;color:#e2e8f0}
+    @keyframes spin{to{transform:rotate(360deg)}}
     @media (max-width:780px){.page{padding:140px 18px 56px}}
   </style>
 </head>
 <body>
+  <div class="page-loader" id="pageLoader" aria-hidden="true">
+    <div class="page-loader-card" role="status" aria-live="polite">
+      <div class="page-loader-spin" aria-hidden="true"></div>
+      <div class="page-loader-text" id="pageLoaderText">Loading...</div>
+    </div>
+  </div>
   <div class="navbar">
     <div class="nav-top">
       <div class="logo">Hire<span>Up</span></div>
@@ -177,6 +190,35 @@
     const KEY_PREFIX="smartHuntProfileCache_v1:seeker:";
     let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",linkedin:"",github:""},__updatedAt:0,__schema:1};
     const DEFAULT_AVATAR_SRC="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E";
+    let pageLoaderDepth=0;
+
+    function showPageLoader(message){
+      const loader=document.getElementById("pageLoader");
+      const text=document.getElementById("pageLoaderText");
+      if(!loader) return;
+      if(text) text.textContent=String(message||"Loading...");
+      pageLoaderDepth+=1;
+      loader.classList.add("is-visible");
+      loader.setAttribute("aria-hidden","false");
+      document.body.classList.add("page-loading");
+    }
+    function hidePageLoader(){
+      const loader=document.getElementById("pageLoader");
+      if(!loader) return;
+      pageLoaderDepth=Math.max(0,pageLoaderDepth-1);
+      if(pageLoaderDepth>0) return;
+      loader.classList.remove("is-visible");
+      loader.setAttribute("aria-hidden","true");
+      document.body.classList.remove("page-loading");
+    }
+    async function withPageLoader(task,message){
+      showPageLoader(message);
+      try{return await task();}finally{hidePageLoader();}
+    }
+    function navigateWithLoader(url,message){
+      showPageLoader(message||"Loading page...");
+      setTimeout(()=>{window.location.href=url;},260);
+    }
 
     function cacheKey(){
       const email=String(localStorage.getItem("currentUserEmail")||"").trim().toLowerCase();
@@ -335,7 +377,7 @@
       const token=String(localStorage.getItem("authToken")||"");
       if(!loggedIn||role!=="seeker"||!token){
         alert("Please log in as a seeker to view this page.");
-        window.location.href="index.html";
+        navigateWithLoader("index.html","Returning to home...");
         return false;
       }
       return true;
@@ -595,7 +637,7 @@
     document.getElementById("finishBtn").addEventListener("click",async(e)=>{
       const btn=e.currentTarget;
       if(isFinishProfileDone("seeker")){
-        window.location.href="index.html";
+        navigateWithLoader("index.html","Returning to home...");
         return;
       }
       const prev=btn.innerText;
@@ -625,11 +667,11 @@
 
         try{profile.__updatedAt=Date.now();profile.__schema=1}catch{}
         writeCache(profile);
-        await backendRequest("/api/profile",{method:"PUT",body:{profile}});
+        await withPageLoader(()=>backendRequest("/api/profile",{method:"PUT",body:{profile}}),"Publishing profile...");
         markFinishProfileDone("seeker",true);
         localStorage.setItem("postSignupWelcome","seeker");
         try{setupPublishCta();}catch{}
-        window.location.href="index.html";
+        navigateWithLoader("index.html","Returning to home...");
       }catch(err){
         alert(err&&err.message?err.message:"Failed to publish your account. Please try again.");
         btn.disabled=false;
