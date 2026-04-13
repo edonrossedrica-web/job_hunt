@@ -1285,11 +1285,10 @@ async function handleApi(req, res, url) {
     }
 
     let user = db.users.find((u) => u.email === info.email && u.role === role);
+    let recoveredAccount = false;
     if (!user) {
-      if (mode === "login") {
-        return json(res, 404, { ok: false, error: "No account found for this Google email. Please sign up first." });
-      }
       const employerCompany = role === "employer" ? String(body.company || "").trim() : "";
+      recoveredAccount = mode === "login";
       user = {
         id: createId("user"),
         role,
@@ -1345,7 +1344,7 @@ async function handleApi(req, res, url) {
       expiresAt: Date.now() + SESSION_TTL_MS,
     });
     await writeDb(db);
-    return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
+    return json(res, 200, { ok: true, token, user: sanitizeUser(user), recoveredAccount });
   }
 
   if (pathname === "/api/logout" && req.method === "POST") {
