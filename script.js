@@ -280,7 +280,7 @@ async function refreshOpenEmployerConversationThreads() {
   return true;
 }
 
-function scheduleMessageRefresh() {
+function scheduleMessageRefresh(payload = {}) {
   if (syncRefreshTimer) return;
   syncRefreshTimer = setTimeout(async () => {
     syncRefreshTimer = null;
@@ -295,7 +295,11 @@ function scheduleMessageRefresh() {
       const chat = document.getElementById("seekerChatModal");
       const appId = chat ? String(chat.getAttribute("data-application-id") || "") : "";
       const shouldRefreshThread = Date.now() >= seekerChatSuppressRefreshUntil;
-      if (appId && chat && chat.style.display === "flex" && shouldRefreshThread) {
+      const payloadAppId = String(payload.applicationId || "").trim();
+      const payloadFromRole = String(payload.fromRole || "").trim().toLowerCase();
+      const isOwnOpenThreadMessage =
+        payloadFromRole === "seeker" && payloadAppId && appId && payloadAppId === appId && chat && chat.style.display === "flex";
+      if (appId && chat && chat.style.display === "flex" && shouldRefreshThread && !isOwnOpenThreadMessage) {
         loadSeekerChatThread(appId).catch(() => {});
       }
       loadSeekerConversationsFromBackend().catch(() => {});
@@ -390,7 +394,7 @@ function setupServerEvents() {
       scheduleLiveRefresh();
     }
     if (type === "messages_updated") {
-      scheduleMessageRefresh();
+      scheduleMessageRefresh(msg.payload || {});
       return;
     }
     if (type === "jobs_updated" || type === "applications_updated" || type === "profile_updated") {
