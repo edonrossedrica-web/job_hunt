@@ -86,12 +86,23 @@ function getDefaultLocalDataDir() {
   return path.join(ROOT_DIR, "server-data");
 }
 
+function isManagedHost() {
+  return Boolean(
+    String(process.env.RENDER || "").trim() ||
+      String(process.env.RENDER_SERVICE_ID || "").trim() ||
+      String(process.env.RENDER_EXTERNAL_URL || "").trim() ||
+      String(process.env.RAILWAY_ENVIRONMENT || "").trim() ||
+      String(process.env.RAILWAY_PROJECT_ID || "").trim(),
+  );
+}
+
 let DATA_DIR = resolveDataDir();
 // Previous versions stored the whole DB in a JSON file. This version stores it in SQLite.
 // To keep the rest of the server code simple, we store the whole JSON blob in a single SQLite row.
 let LEGACY_DB_JSON_PATH = path.join(DATA_DIR, "db.json");
 let SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
 const SQLITE_KV_KEY = "smart_hunt_db_v1";
+let USED_DATA_DIR_FALLBACK = false;
 
 function setDataDir(nextDir) {
   DATA_DIR = nextDir;
@@ -107,16 +118,26 @@ async function ensureDataDirWritable() {
     const code = String(err && err.code ? err.code : "").trim().toUpperCase();
     const configured = resolveDataDir();
     const fallbackDir = getDefaultLocalDataDir();
+    const configuredExplicitly = Boolean(String(process.env.SMART_HUNT_DATA_DIR || process.env.DATA_DIR || "").trim());
     const shouldFallback =
       (code === "EACCES" || code === "EPERM" || code === "EROFS") &&
       path.resolve(DATA_DIR) === path.resolve(configured) &&
       path.resolve(DATA_DIR) !== path.resolve(fallbackDir);
+
+    if (configuredExplicitly && isManagedHost()) {
+      const fail = new Error(
+        `Configured data dir is not writable on this hosted deploy: ${DATA_DIR}. Attach and mount a persistent disk, then keep SMART_HUNT_DATA_DIR pointing to that mount path.`,
+      );
+      fail.code = code || "DATA_DIR_UNWRITABLE";
+      throw fail;
+    }
 
     if (!shouldFallback) {
       throw err;
     }
 
     setDataDir(fallbackDir);
+    USED_DATA_DIR_FALLBACK = true;
     await fsp.mkdir(DATA_DIR, { recursive: true });
     // eslint-disable-next-line no-console
     console.warn(`Primary data dir not writable; falling back to ${DATA_DIR}`);
@@ -1006,6 +1027,8 @@ async function handleApi(req, res, url) {
       status: "healthy",
       time: nowIso(),
       dataDir: DATA_DIR,
+      usingDataDirFallback: USED_DATA_DIR_FALLBACK,
+      dataDirConfigured: Boolean(String(process.env.SMART_HUNT_DATA_DIR || process.env.DATA_DIR || "").trim()),
       hasPublicOrigin:
         !!(
           cleanPublicOrigin(process.env.PUBLIC_ORIGIN) ||
@@ -1021,6 +1044,8 @@ async function handleApi(req, res, url) {
       ok: true,
       googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim(),
       linkedinClientId: String(process.env.LINKEDIN_CLIENT_ID || "").trim(),
+      dataDir: DATA_DIR,
+      usingDataDirFallback: USED_DATA_DIR_FALLBACK,
     });
   }
 
@@ -2192,6 +2217,10 @@ server.listen(PORT, () => {
   console.log(`HireUp server listening on port ${PORT}`);
   // eslint-disable-next-line no-console
   console.log(`HireUp data dir: ${DATA_DIR}`);
+  // eslint-disable-next-line no-console
+  console.log(`HireUp managed host: ${isManagedHost() ? "yes" : "no"}`);
+  // eslint-disable-next-line no-console
+  console.log(`HireUp data dir fallback: ${USED_DATA_DIR_FALLBACK ? "yes" : "no"}`);
   if (configuredOrigin) {
     // eslint-disable-next-line no-console
     console.log(`HireUp public origin: ${configuredOrigin}`);

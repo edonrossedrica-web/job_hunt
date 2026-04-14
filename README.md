@@ -11,6 +11,7 @@
 - Recommended host: Railway
 - Copy `.env.example` to your host's environment variables panel
 - Set `SMART_HUNT_DATA_DIR=/data` and mount a persistent volume at `/data`
+- On managed hosts like Render/Railway, the server now fails loudly if that configured data dir is not writable, instead of silently falling back to ephemeral storage
 - Set `PUBLIC_ORIGIN` to your live URL so OAuth callbacks resolve correctly
 - Optional OAuth vars: `GOOGLE_CLIENT_ID`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`
 - For feedback/support email on hosted deploys, prefer `BREVO_API_KEY` with `FEEDBACK_FROM` and `FEEDBACK_TO`
