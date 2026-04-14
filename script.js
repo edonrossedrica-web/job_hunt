@@ -25,6 +25,7 @@ let employerApplicantsSelectedJobId = "";
 let employerApplicantsSelectedJob = null;
 let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
+let seekerChatSuppressRefreshUntil = 0;
 let addJobDraftAutosaveTimer = null;
 let notificationsReturnState = null;
 let pageLoaderDepth = 0;
@@ -237,6 +238,23 @@ function renderConversationThread(thread, msgs) {
   thread.scrollTop = thread.scrollHeight;
 }
 
+function appendConversationBubble(thread, text, role) {
+  if (!thread) return null;
+  const fromRole = String(role || "").toLowerCase() === "seeker" ? "seeker" : "employer";
+  const myRole = String(getLoggedInRole() || "").toLowerCase();
+  const bubble = document.createElement("div");
+  const sideClass = myRole && fromRole === myRole ? "me" : "them";
+  bubble.className = `chat-bubble ${fromRole} ${sideClass}`;
+  bubble.textContent = String(text || "");
+  const empty = thread.firstElementChild;
+  if (empty && thread.children.length === 1 && !empty.classList.contains("chat-bubble")) {
+    thread.innerHTML = "";
+  }
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
 async function refreshOpenEmployerConversationThreads() {
   const details = Array.from(document.querySelectorAll(".posted-applicant-detail.show[data-application-id]"));
   if (!details.length || !hasBackendToken()) return false;
@@ -276,7 +294,8 @@ function scheduleMessageRefresh() {
 
       const chat = document.getElementById("seekerChatModal");
       const appId = chat ? String(chat.getAttribute("data-application-id") || "") : "";
-      if (appId && chat && chat.style.display === "flex") {
+      const shouldRefreshThread = Date.now() >= seekerChatSuppressRefreshUntil;
+      if (appId && chat && chat.style.display === "flex" && shouldRefreshThread) {
         loadSeekerChatThread(appId).catch(() => {});
       }
       loadSeekerConversationsFromBackend().catch(() => {});
@@ -5282,34 +5301,32 @@ function sendSeekerMessage() {
     if (!text) return;
     // If connected to backend, persist the message so employer can see it.
     if (applicationId && hasBackendToken()) {
+      const optimisticBubble = appendConversationBubble(thread, text, "seeker");
+      seekerChatSuppressRefreshUntil = Date.now() + 1200;
       try {
         await apiRequest("/api/messages", { method: "POST", auth: true, body: { applicationId, text } });
         input.value = "";
-        await loadSeekerChatThread(applicationId);
         loadSeekerConversationsFromBackend();
         emitSyncEvent("messages_updated", { applicationId });
         return;
       } catch (err) {
+        if (optimisticBubble && optimisticBubble.parentNode) {
+          optimisticBubble.parentNode.removeChild(optimisticBubble);
+        }
         alert(err?.message || "Failed to send message.");
         return;
       }
     }
 
     // Fallback (file:// demo)
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble seeker me";
-    bubble.textContent = text;
-    thread.appendChild(bubble);
+    appendConversationBubble(thread, text, "seeker");
     input.value = "";
     thread.scrollTop = thread.scrollHeight;
   };
 
   sendText();
   if (file) {
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble seeker me";
-    bubble.textContent = `Sent file: ${file.name}`;
-    thread.appendChild(bubble);
+    appendConversationBubble(thread, `Sent file: ${file.name}`, "seeker");
     fileInput.value = "";
   }
   thread.scrollTop = thread.scrollHeight;
