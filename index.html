@@ -996,7 +996,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
             <label class="add-job-label">Location</label>
             <div class="add-job-input">
               <i class="fa-solid fa-location-dot"></i>
-              <input id="addJobLocation" type="text" placeholder="London, UK or Remote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+              <input id="addJobLocation" type="text" placeholder="Olongapo, Subic or Remote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
             </div>
           </div>
 
@@ -1004,7 +1004,12 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
             <label class="add-job-label">Salary Range</label>
             <div class="add-job-input">
               <i class="fa-solid fa-sack-dollar"></i>
-              <input id="addJobSalary" type="text" placeholder="$80k - $120k" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+              <select id="addJobSalaryCurrency" class="add-job-select" aria-label="Salary currency">
+                <option value="PHP">PHP</option>
+                <option value="USD">USD</option>
+                <option value="JPY">JPY</option>
+              </select>
+              <input id="addJobSalary" type="text" placeholder="45,000 - 60,000" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
             </div>
           </div>
         </div>

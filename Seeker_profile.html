@@ -163,7 +163,7 @@
       <div class="clist">
         <div class="citem"><i class="fa-solid fa-envelope"></i> <span id="cEmail"></span></div>
         <div class="citem"><i class="fa-solid fa-phone"></i> <span id="cPhone"></span></div>
-        <div class="citem"><i class="fa-brands fa-linkedin"></i> <span id="cLinkedin"></span></div>
+        <div class="citem"><i class="fa-brands fa-facebook"></i> <span id="cFacebook"></span></div>
         <div class="citem"><i class="fa-brands fa-github"></i> <span id="cGithub"></span></div>
       </div>
     </div>
@@ -188,7 +188,7 @@
 
   <script>
     const KEY_PREFIX="smartHuntProfileCache_v1:seeker:";
-    let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",linkedin:"",github:""},__updatedAt:0,__schema:1};
+    let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",facebook:"",github:""},__updatedAt:0,__schema:1};
     const DEFAULT_AVATAR_SRC="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E";
     let pageLoaderDepth=0;
 
@@ -244,7 +244,13 @@
       if(!Array.isArray(o.skills)) o.skills=[];
       if(!Array.isArray(o.resumes)) o.resumes=[];
       if(!o.contact||typeof o.contact!=="object") o.contact={};
-      o.contact={email:String(o.contact.email||""),phone:String(o.contact.phone||""),location:String(o.contact.location||""),linkedin:String(o.contact.linkedin||""),github:String(o.contact.github||"")};
+      o.contact={
+        email:String(o.contact.email||""),
+        phone:String(o.contact.phone||""),
+        location:String(o.contact.location||""),
+        facebook:String(o.contact.facebook||o.contact.linkedin||""),
+        github:String(o.contact.github||"")
+      };
       if(typeof o.openToWork!=="boolean") o.openToWork=true;
       o.name=String(o.name||"");o.title=String(o.title||"");o.about=String(o.about||"");
       o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
@@ -316,7 +322,7 @@
       const dash="\u2014";
       setTxt("cEmail",c.email.trim()||dash);
       setTxt("cPhone",c.phone.trim()||dash);
-      setTxt("cLinkedin",c.linkedin.trim()||dash);
+      setTxt("cFacebook",c.facebook.trim()||dash);
       setTxt("cGithub",c.github.trim()||dash);
       setTxt("headerLocation",c.location.trim()||"Add your location");
 
@@ -521,7 +527,7 @@
         return;
       }
       if(kind==="contact"){
-        const ids=["cEmail","cPhone","cLinkedin","cGithub"];
+        const ids=["cEmail","cPhone","cFacebook","cGithub"];
         const sec=document.getElementById("contactSection"); if(!sec) return;
         const any=ids.some((id)=>document.getElementById(id)?.dataset?.editing==="1");
         if(any){
@@ -575,10 +581,10 @@
           email:String(document.getElementById("cEmailInput")?.value||"").trim(),
           phone:String(document.getElementById("cPhoneInput")?.value||"").trim(),
           location: existingLocation,
-          linkedin:String(document.getElementById("cLinkedinInput")?.value||"").trim(),
+          facebook:String(document.getElementById("cFacebookInput")?.value||"").trim(),
           github:String(document.getElementById("cGithubInput")?.value||"").trim()
         };
-        const ids=["cEmail","cPhone","cLinkedin","cGithub"];
+        const ids=["cEmail","cPhone","cFacebook","cGithub"];
         for(const id of ids){
           const el=document.getElementById(id); if(!el) continue;
           el.textContent=String(profile.contact[id.slice(1).toLowerCase()]||"").trim();
@@ -646,7 +652,7 @@
         alert("Please save your edits first, then publish your account.");
         return;
       }
-      const contactIds = ["cEmail","cPhone","cLinkedin","cGithub"];
+      const contactIds = ["cEmail","cPhone","cFacebook","cGithub"];
       if (contactIds.some((id) => isEditing(id))) {
         alert("Please save your contact edits first, then publish your account.");
         return;

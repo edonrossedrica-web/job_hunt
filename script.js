@@ -2303,13 +2303,16 @@ function setupEmployerApplicantsViewButtons() {
 async function publishJobFromForm() {
   const titleEl = document.getElementById("addJobTitle");
   const locationEl = document.getElementById("addJobLocation");
+  const salaryCurrencyEl = document.getElementById("addJobSalaryCurrency");
   const salaryEl = document.getElementById("addJobSalary");
   const descEl = document.getElementById("addJobDescription");
   const reqEl = document.getElementById("addJobRequirements");
 
   const title = (titleEl?.value || "").trim();
   const location = (locationEl?.value || "").trim();
-  const salary = (salaryEl?.value || "").trim();
+  const salaryCurrency = (salaryCurrencyEl?.value || "PHP").trim();
+  const salaryAmount = (salaryEl?.value || "").trim();
+  const salary = salaryAmount ? `${salaryCurrency} ${salaryAmount}` : "";
   const description = (descEl?.value || "").trim();
   const requirements = (reqEl?.value || "").trim();
 
@@ -2343,6 +2346,7 @@ async function publishJobFromForm() {
       });
       if (titleEl) titleEl.value = "";
       if (locationEl) locationEl.value = "";
+      if (salaryCurrencyEl) salaryCurrencyEl.value = "PHP";
       if (salaryEl) salaryEl.value = "";
       if (descEl) descEl.value = "";
       if (reqEl) reqEl.value = "";
@@ -2380,6 +2384,7 @@ function saveDraftFromForm() {
   const draft = {
     title: (document.getElementById("addJobTitle")?.value || "").trim(),
     location: (document.getElementById("addJobLocation")?.value || "").trim(),
+    salaryCurrency: (document.getElementById("addJobSalaryCurrency")?.value || "PHP").trim(),
     salary: (document.getElementById("addJobSalary")?.value || "").trim(),
     description: (document.getElementById("addJobDescription")?.value || "").trim(),
     requirements: (document.getElementById("addJobRequirements")?.value || "").trim(),
@@ -2410,6 +2415,7 @@ function loadDraftToForm() {
   };
   setVal("addJobTitle", draft.title || "");
   setVal("addJobLocation", draft.location || "");
+  setVal("addJobSalaryCurrency", draft.salaryCurrency || "PHP");
   setVal("addJobSalary", draft.salary || "");
   setVal("addJobDescription", draft.description || "");
   setVal("addJobRequirements", draft.requirements || "");
@@ -2420,10 +2426,11 @@ function loadDraftToForm() {
 }
 
 function clearAddJobFormAndDraft() {
-  const ids = ["addJobTitle", "addJobLocation", "addJobSalary", "addJobDescription", "addJobRequirements"];
+  const ids = ["addJobTitle", "addJobLocation", "addJobSalaryCurrency", "addJobSalary", "addJobDescription", "addJobRequirements"];
   ids.forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.value = "";
+    if (!el) return;
+    el.value = id === "addJobSalaryCurrency" ? "PHP" : "";
   });
   try {
     localStorage.removeItem("jobDraft");
@@ -2440,6 +2447,7 @@ function setupAddJobDraftAutosave() {
   const fields = [
     document.getElementById("addJobTitle"),
     document.getElementById("addJobLocation"),
+    document.getElementById("addJobSalaryCurrency"),
     document.getElementById("addJobSalary"),
     document.getElementById("addJobDescription"),
     document.getElementById("addJobRequirements"),
