@@ -668,11 +668,43 @@ function smtpConfigFromEnv() {
   const to = String(process.env.FEEDBACK_TO || user || "").trim();
   const from = String(process.env.FEEDBACK_FROM || user || "").trim();
   const subjectPrefix = String(process.env.FEEDBACK_SUBJECT_PREFIX || "HireUp").trim();
-  return { host, port, user, pass, secure, to, from, subjectPrefix };
+  const brevoApiKey = String(process.env.BREVO_API_KEY || "").trim();
+  return { host, port, user, pass, secure, to, from, subjectPrefix, brevoApiKey };
 }
 
 async function sendFeedbackEmail({ subject, text, replyTo }) {
   const cfg = smtpConfigFromEnv();
+  if (cfg.brevoApiKey) {
+    if (!cfg.to || !cfg.from) {
+      throw new Error("Email not configured (missing FEEDBACK_TO / FEEDBACK_FROM env vars).");
+    }
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "api-key": cfg.brevoApiKey,
+      },
+      body: JSON.stringify({
+        sender: { email: cfg.from, name: "HireUp" },
+        to: [{ email: cfg.to }],
+        subject,
+        textContent: text,
+        ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+      }),
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) {
+      const message =
+        data?.message ||
+        data?.code ||
+        data?.error ||
+        `Brevo API request failed (${resp.status}).`;
+      throw new Error(String(message));
+    }
+    return;
+  }
+
   if (!nodemailer) throw new Error("Email not configured (nodemailer not installed).");
   if (!cfg.host || !cfg.to || !cfg.from || !cfg.user || !cfg.pass) {
     throw new Error("Email not configured (missing SMTP_* or FEEDBACK_* env vars).");

@@ -13,6 +13,7 @@
 - Set `SMART_HUNT_DATA_DIR=/data` and mount a persistent volume at `/data`
 - Set `PUBLIC_ORIGIN` to your live URL so OAuth callbacks resolve correctly
 - Optional OAuth vars: `GOOGLE_CLIENT_ID`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`
+- For feedback/support email on hosted deploys, prefer `BREVO_API_KEY` with `FEEDBACK_FROM` and `FEEDBACK_TO`
 - After deploy, verify the server with `/api/health`
 
 See `DEPLOY_RAILWAY.md` for the full checklist.
