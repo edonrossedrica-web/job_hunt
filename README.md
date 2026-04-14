@@ -10,12 +10,24 @@
 
 - Recommended host: Railway
 - Copy `.env.example` to your host's environment variables panel
-- Set `SMART_HUNT_DATA_DIR=/data` and mount a persistent volume at `/data`
-- On managed hosts like Render/Railway, the server now fails loudly if that configured data dir is not writable, instead of silently falling back to ephemeral storage
+- For free Render deploys, prefer Supabase storage by setting `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+- If you use local SQLite storage instead, set `SMART_HUNT_DATA_DIR=/data` and mount a persistent volume at `/data`
+- On managed hosts like Render/Railway, the server now fails loudly if that configured local data dir is not writable, instead of silently falling back to ephemeral storage
 - Set `PUBLIC_ORIGIN` to your live URL so OAuth callbacks resolve correctly
 - Optional OAuth vars: `GOOGLE_CLIENT_ID`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`
 - For feedback/support email on hosted deploys, prefer `BREVO_API_KEY` with `FEEDBACK_FROM` and `FEEDBACK_TO`
 - After deploy, verify the server with `/api/health`
+- When using Supabase, create this table first:
+
+```sql
+create table if not exists app_state (
+  id text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+```
+
+- The app stores the full users/jobs/applications database inside the `value` column, so UI-only changes do not affect account data
 
 See `DEPLOY_RAILWAY.md` for the full checklist.
 

@@ -76,6 +76,30 @@ function loadDotEnvIfPresent() {
 
 loadDotEnvIfPresent();
 
+function cleanSupabaseUrl(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  return value.replace(/\/+$/, "");
+}
+
+function getSupabaseConfig() {
+  return {
+    url: cleanSupabaseUrl(process.env.SUPABASE_URL),
+    serviceRoleKey: String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim(),
+    table: String(process.env.SUPABASE_DB_TABLE || "app_state").trim() || "app_state",
+    rowId: String(process.env.SUPABASE_DB_ROW_ID || "smart_hunt_db_v1").trim() || "smart_hunt_db_v1",
+  };
+}
+
+function hasSupabaseConfig() {
+  const cfg = getSupabaseConfig();
+  return Boolean(cfg.url && cfg.serviceRoleKey);
+}
+
+function getStorageProvider() {
+  return hasSupabaseConfig() ? "supabase" : "sqlite";
+}
+
 function resolveDataDir() {
   const raw = String(process.env.SMART_HUNT_DATA_DIR || process.env.DATA_DIR || "").trim();
   if (!raw) return path.join(ROOT_DIR, "server-data");
@@ -103,6 +127,7 @@ let LEGACY_DB_JSON_PATH = path.join(DATA_DIR, "db.json");
 let SQLITE_PATH = path.join(DATA_DIR, "db.sqlite");
 const SQLITE_KV_KEY = "smart_hunt_db_v1";
 let USED_DATA_DIR_FALLBACK = false;
+let hasEnsuredStorage = false;
 
 function setDataDir(nextDir) {
   DATA_DIR = nextDir;
@@ -259,6 +284,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function emptyDbShape() {
+  return { users: [], sessions: [], jobs: [], applications: [] };
+}
+
 function normalizeJobStatus(status) {
   const v = String(status || "").trim().toLowerCase();
   return v === "closed" ? "closed" : "open";
@@ -412,7 +441,102 @@ function syncReadableTables(sqlDb, jsonDb) {
   }
 }
 
-async function ensureDb() {
+async function readLegacyJsonSeed() {
+  try {
+    const rawLegacy = await fsp.readFile(LEGACY_DB_JSON_PATH, "utf8");
+    const parsed = safeJsonParse(rawLegacy);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+    // ignore (no legacy JSON DB)
+  }
+  return null;
+}
+
+async function readLocalSqliteSeed() {
+  try {
+    await ensureDataDirWritable();
+    if (!fs.existsSync(SQLITE_PATH)) return null;
+    const sqlDb = new DatabaseSync(SQLITE_PATH);
+    try {
+      const row = sqlDb.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
+      const parsed = safeJsonParse(row && typeof row.value === "string" ? row.value : "");
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } finally {
+      sqlDb.close();
+    }
+  } catch {
+    return null;
+  }
+}
+
+async function getSeedDb() {
+  const legacy = await readLegacyJsonSeed();
+  if (legacy && typeof legacy === "object") return legacy;
+  const sqlite = await readLocalSqliteSeed();
+  if (sqlite && typeof sqlite === "object") return sqlite;
+  return emptyDbShape();
+}
+
+async function supabaseRequest(method, requestPath, body) {
+  const cfg = getSupabaseConfig();
+  if (!cfg.url || !cfg.serviceRoleKey) {
+    throw new Error("Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+  }
+
+  const headers = {
+    apikey: cfg.serviceRoleKey,
+    Authorization: `Bearer ${cfg.serviceRoleKey}`,
+    Accept: "application/json",
+  };
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const res = await fetch(`${cfg.url}${requestPath}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  const raw = await res.text();
+  const parsed = safeJsonParse(raw);
+  if (!res.ok) {
+    const detail =
+      (parsed && (parsed.message || parsed.error_description || parsed.hint || parsed.details || parsed.error)) ||
+      raw ||
+      `HTTP ${res.status}`;
+    throw new Error(`Supabase request failed (${res.status}): ${detail}`);
+  }
+  return parsed;
+}
+
+async function ensureSupabaseDb() {
+  const cfg = getSupabaseConfig();
+  const encodedRowId = encodeURIComponent(cfg.rowId);
+  const query = `/rest/v1/${encodeURIComponent(cfg.table)}?select=value&id=eq.${encodedRowId}&limit=1`;
+  let rows = null;
+  try {
+    rows = await supabaseRequest("GET", query);
+  } catch (err) {
+    const message = err && err.message ? String(err.message) : "";
+    if (message.includes("relation") || message.includes("does not exist") || message.includes("PGRST")) {
+      throw new Error(
+        `Supabase table "${cfg.table}" is not ready. Create it first, then add a row id column named "id" and a jsonb column named "value".`,
+      );
+    }
+    throw err;
+  }
+
+  if (Array.isArray(rows) && rows.length) return;
+
+  const seed = await getSeedDb();
+  await supabaseRequest("POST", `/rest/v1/${encodeURIComponent(cfg.table)}`, {
+    id: cfg.rowId,
+    value: seed,
+  });
+}
+
+async function ensureLocalDb() {
   await ensureDataDirWritable();
 
   const db = new DatabaseSync(SQLITE_PATH);
@@ -498,37 +622,47 @@ async function ensureDb() {
 
   const row = db.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
   if (!row || typeof row.value !== "string") {
-    let seed = null;
-    try {
-      const rawLegacy = await fsp.readFile(LEGACY_DB_JSON_PATH, "utf8");
-      seed = safeJsonParse(rawLegacy);
-    } catch {
-      // ignore (no legacy DB)
-    }
-
-    if (!seed || typeof seed !== "object") {
-      seed = { users: [], sessions: [], jobs: [], applications: [] };
-    }
-
+    const seed = await getSeedDb();
     const seedJson = JSON.stringify(seed, null, 2);
     db.prepare("INSERT OR IGNORE INTO kv(key, value) VALUES(?, ?)").run(SQLITE_KV_KEY, seedJson);
   }
   db.close();
 }
 
-async function readDb() {
-  await ensureDb();
-  const sqlDb = new DatabaseSync(SQLITE_PATH);
-  const row = sqlDb.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
-  const parsed = safeJsonParse(row && typeof row.value === "string" ? row.value : "");
-  if (!parsed || typeof parsed !== "object") {
-    sqlDb.close();
-    return { users: [], sessions: [], jobs: [], applications: [] };
+async function ensureDb() {
+  if (hasEnsuredStorage) return;
+  if (getStorageProvider() === "supabase") {
+    await ensureSupabaseDb();
+  } else {
+    await ensureLocalDb();
   }
+  hasEnsuredStorage = true;
+}
+
+function normalizeDbShape(parsed) {
+  if (!parsed || typeof parsed !== "object") return emptyDbShape();
   parsed.users = Array.isArray(parsed.users) ? parsed.users : [];
   parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
   parsed.jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
   parsed.applications = Array.isArray(parsed.applications) ? parsed.applications : [];
+  return parsed;
+}
+
+async function readDb() {
+  await ensureDb();
+  if (getStorageProvider() === "supabase") {
+    const cfg = getSupabaseConfig();
+    const rows = await supabaseRequest(
+      "GET",
+      `/rest/v1/${encodeURIComponent(cfg.table)}?select=value&id=eq.${encodeURIComponent(cfg.rowId)}&limit=1`,
+    );
+    const row = Array.isArray(rows) ? rows[0] : null;
+    return normalizeDbShape(row && typeof row === "object" ? row.value : null);
+  }
+
+  const sqlDb = new DatabaseSync(SQLITE_PATH);
+  const row = sqlDb.prepare("SELECT value FROM kv WHERE key = ?").get(SQLITE_KV_KEY);
+  const parsed = normalizeDbShape(safeJsonParse(row && typeof row.value === "string" ? row.value : ""));
 
   if (!hasSyncedReadableTables) {
     try {
@@ -545,7 +679,18 @@ async function readDb() {
 
 async function writeDb(db) {
   await ensureDb();
-  const payload = JSON.stringify(db, null, 2);
+  const normalized = normalizeDbShape(db);
+  if (getStorageProvider() === "supabase") {
+    const cfg = getSupabaseConfig();
+    await supabaseRequest(
+      "PATCH",
+      `/rest/v1/${encodeURIComponent(cfg.table)}?id=eq.${encodeURIComponent(cfg.rowId)}`,
+      { value: normalized },
+    );
+    return;
+  }
+
+  const payload = JSON.stringify(normalized, null, 2);
   const sqlDb = new DatabaseSync(SQLITE_PATH);
   sqlDb
     .prepare(
@@ -555,7 +700,7 @@ async function writeDb(db) {
 
   // Keep the readable mirror tables in sync for easier DB inspection.
   try {
-    syncReadableTables(sqlDb, db);
+    syncReadableTables(sqlDb, normalized);
     hasSyncedReadableTables = true;
   } catch {
     // best-effort; readable tables are optional
@@ -1026,6 +1171,8 @@ async function handleApi(req, res, url) {
       ok: true,
       status: "healthy",
       time: nowIso(),
+      storageProvider: getStorageProvider(),
+      supabaseConfigured: hasSupabaseConfig(),
       dataDir: DATA_DIR,
       usingDataDirFallback: USED_DATA_DIR_FALLBACK,
       dataDirConfigured: Boolean(String(process.env.SMART_HUNT_DATA_DIR || process.env.DATA_DIR || "").trim()),
@@ -1044,6 +1191,8 @@ async function handleApi(req, res, url) {
       ok: true,
       googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim(),
       linkedinClientId: String(process.env.LINKEDIN_CLIENT_ID || "").trim(),
+      storageProvider: getStorageProvider(),
+      supabaseConfigured: hasSupabaseConfig(),
       dataDir: DATA_DIR,
       usingDataDirFallback: USED_DATA_DIR_FALLBACK,
     });
@@ -2218,7 +2367,11 @@ server.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`HireUp data dir: ${DATA_DIR}`);
   // eslint-disable-next-line no-console
+  console.log(`HireUp storage provider: ${getStorageProvider()}`);
+  // eslint-disable-next-line no-console
   console.log(`HireUp managed host: ${isManagedHost() ? "yes" : "no"}`);
+  // eslint-disable-next-line no-console
+  console.log(`HireUp supabase configured: ${hasSupabaseConfig() ? "yes" : "no"}`);
   // eslint-disable-next-line no-console
   console.log(`HireUp data dir fallback: ${USED_DATA_DIR_FALLBACK ? "yes" : "no"}`);
   if (configuredOrigin) {
