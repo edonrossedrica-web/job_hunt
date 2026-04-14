@@ -213,6 +213,85 @@ function scheduleSyncRefresh() {
   }, 250);
 }
 
+function renderConversationThread(thread, msgs) {
+  if (!thread) return;
+  thread.innerHTML = "";
+  if (!Array.isArray(msgs) || !msgs.length) {
+    const empty = document.createElement("div");
+    empty.style.color = "#9aa4b2";
+    empty.style.fontSize = "12px";
+    empty.textContent = "No messages yet.";
+    thread.appendChild(empty);
+    return;
+  }
+  msgs.forEach((msg) => {
+    const bubble = document.createElement("div");
+    const fromRole = String(msg.fromRole || "").toLowerCase();
+    const myRole = String(getLoggedInRole() || "").toLowerCase();
+    const roleClass = fromRole === "seeker" ? "seeker" : "employer";
+    const sideClass = myRole && fromRole === myRole ? "me" : "them";
+    bubble.className = `chat-bubble ${roleClass} ${sideClass}`;
+    bubble.textContent = String(msg.text || "");
+    thread.appendChild(bubble);
+  });
+  thread.scrollTop = thread.scrollHeight;
+}
+
+async function refreshOpenEmployerConversationThreads() {
+  const details = Array.from(document.querySelectorAll(".posted-applicant-detail.show[data-application-id]"));
+  if (!details.length || !hasBackendToken()) return false;
+
+  await Promise.all(
+    details.map(async (detail) => {
+      const applicationId = String(detail.getAttribute("data-application-id") || "").trim();
+      const thread = detail.querySelector("[data-thread]");
+      if (!applicationId || !thread) return;
+      try {
+        const data = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(applicationId)}`, {
+          method: "GET",
+          auth: true,
+        });
+        const msgs = data && data.ok && Array.isArray(data.messages) ? data.messages : [];
+        renderConversationThread(thread, msgs);
+      } catch {
+        // leave the current thread as-is on refresh failures
+      }
+    }),
+  );
+
+  return true;
+}
+
+function scheduleMessageRefresh() {
+  if (syncRefreshTimer) return;
+  syncRefreshTimer = setTimeout(async () => {
+    syncRefreshTimer = null;
+    if (!getLoggedIn()) return;
+
+    const role = getLoggedInRole();
+    if (role === "seeker") {
+      const page = document.getElementById("seekerNotificationsPage");
+      const visible = page && page.style.display !== "none";
+      if (visible) loadAndShowNotifications("seeker").catch(() => {});
+
+      const chat = document.getElementById("seekerChatModal");
+      const appId = chat ? String(chat.getAttribute("data-application-id") || "") : "";
+      if (appId && chat && chat.style.display === "flex") {
+        loadSeekerChatThread(appId).catch(() => {});
+      }
+      loadSeekerConversationsFromBackend().catch(() => {});
+      return;
+    }
+
+    if (role === "employer") {
+      const page = document.getElementById("employerNotifications");
+      const visible = page && page.style.display !== "none";
+      if (visible) loadAndShowNotifications("employer").catch(() => {});
+      refreshOpenEmployerConversationThreads().catch(() => {});
+    }
+  }, 200);
+}
+
 function scheduleLiveRefresh() {
   if (liveRefreshTimer) return;
   liveRefreshTimer = setTimeout(async () => {
@@ -291,7 +370,11 @@ function setupServerEvents() {
     if (type === "jobs_updated") {
       scheduleLiveRefresh();
     }
-    if (type === "jobs_updated" || type === "messages_updated" || type === "applications_updated" || type === "profile_updated") {
+    if (type === "messages_updated") {
+      scheduleMessageRefresh();
+      return;
+    }
+    if (type === "jobs_updated" || type === "applications_updated" || type === "profile_updated") {
       scheduleSyncRefresh();
     }
   };
@@ -1355,34 +1438,11 @@ async function loadApplicantsForJob(jobId, panel) {
           }
 
           const thread = detail.querySelector("[data-thread]");
-          const renderThread = (msgs) => {
-            if (!thread) return;
-            thread.innerHTML = "";
-            if (!msgs.length) {
-              const empty = document.createElement("div");
-              empty.style.color = "#9aa4b2";
-              empty.style.fontSize = "12px";
-              empty.textContent = "No messages yet.";
-              thread.appendChild(empty);
-              return;
-            }
-            msgs.forEach((msg) => {
-              const bubble = document.createElement("div");
-              const fromRole = String(msg.fromRole || "").toLowerCase();
-              const myRole = String(getLoggedInRole() || "").toLowerCase();
-              const roleClass = fromRole === "seeker" ? "seeker" : "employer";
-              const sideClass = myRole && fromRole === myRole ? "me" : "them";
-              bubble.className = `chat-bubble ${roleClass} ${sideClass}`;
-              bubble.textContent = String(msg.text || "");
-              thread.appendChild(bubble);
-            });
-            thread.scrollTop = thread.scrollHeight;
-          };
 
           try {
             const m = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
             const msgs = (m && m.ok && Array.isArray(m.messages)) ? m.messages : [];
-            renderThread(msgs);
+            renderConversationThread(thread, msgs);
           } catch (err) {
             if (thread) {
               thread.innerHTML = `<div style='color:#ffb4b4;font-size:12px;'>${err?.message || "Failed to load messages."}</div>`;
@@ -1399,7 +1459,7 @@ async function loadApplicantsForJob(jobId, panel) {
               if (input) input.value = "";
               const m2 = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
               const msgs2 = (m2 && m2.ok && Array.isArray(m2.messages)) ? m2.messages : [];
-              renderThread(msgs2);
+              renderConversationThread(thread, msgs2);
               emitSyncEvent("messages_updated", { applicationId: a.id, jobId });
             } catch (err) {
               alert(err?.message || "Failed to send message.");
@@ -5104,21 +5164,10 @@ async function loadSeekerChatThread(applicationId) {
   try {
     const data = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(applicationId)}`, { method: "GET", auth: true });
     const msgs = data && data.ok && Array.isArray(data.messages) ? data.messages : [];
+    renderConversationThread(thread, msgs);
     if (!msgs.length) {
       thread.innerHTML = "<div style='color:#9aa4b2;font-size:12px;'>No messages yet. Send the first message below.</div>";
-      return;
     }
-    msgs.forEach((m) => {
-      const bubble = document.createElement("div");
-      const fromRole = String(m.fromRole || "").toLowerCase();
-      const myRole = String(getLoggedInRole() || "").toLowerCase();
-      const roleClass = fromRole === "seeker" ? "seeker" : "employer";
-      const sideClass = myRole && fromRole === myRole ? "me" : "them";
-      bubble.className = `chat-bubble ${roleClass} ${sideClass}`;
-      bubble.textContent = String(m.text || "");
-      thread.appendChild(bubble);
-    });
-    thread.scrollTop = thread.scrollHeight;
   } catch (err) {
     thread.innerHTML = `<div style='color:#ffb4b4;font-size:12px;'>${err?.message || "Failed to load messages."}</div>`;
   }
