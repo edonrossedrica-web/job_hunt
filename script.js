@@ -477,25 +477,15 @@ function unsaveJobById(jobId) {
 function openQuickViewFromSaved(job) {
   const modal = document.getElementById("quickViewModal");
   if (!modal) return;
-  const badgeEl = document.getElementById("quickViewBadge");
-  const titleEl = document.getElementById("quickViewTitle");
-  const companyEl = document.getElementById("quickViewCompany");
-  const salaryEl = document.getElementById("quickViewSalary");
-  const tagsEl = document.getElementById("quickViewTags");
-
-  if (badgeEl) badgeEl.textContent = job.badge || "Saved";
-  if (titleEl) titleEl.textContent = job.title || "Saved Job";
-  if (companyEl) companyEl.textContent = job.companyLine || "Company • Location";
-  if (salaryEl) salaryEl.textContent = job.salary || "Salary negotiable";
-  if (tagsEl) {
-    tagsEl.innerHTML = "";
-    (job.tags || []).slice(0, 6).forEach((t) => {
-      const pill = document.createElement("span");
-      pill.textContent = t;
-      tagsEl.appendChild(pill);
-    });
-  }
-
+  const fullJob = findRenderedJobById(job.id) || {
+    ...job,
+    company: String(job.companyLine || "").replace(/^Company:\s*/i, "").split("•")[0].trim(),
+    location: "",
+    requirements: Array.isArray(job.tags) ? job.tags.join("\n") : "",
+    description: "",
+    createdAt: "",
+  };
+  renderQuickViewDetails(fullJob);
   modal.style.display = "flex";
 }
 
@@ -759,6 +749,16 @@ function formatSeekerJobMeta(job) {
   return `Company: ${company} \u2022 Location: ${location}`;
 }
 
+function formatSeekerJobCompany(job) {
+  const companyRaw = String(job && job.company ? job.company : "").trim();
+  return companyRaw && !isPlaceholderText(companyRaw) ? companyRaw : "Not specified";
+}
+
+function formatSeekerJobLocation(job) {
+  const locationRaw = String(job && job.location ? job.location : "").trim();
+  return locationRaw && !isPlaceholderText(locationRaw) ? locationRaw : "Not specified";
+}
+
 function formatSeekerJobPay(job) {
   const raw = String(job && job.salary ? job.salary : "").trim();
   if (isPlaceholderText(raw)) return "Not specified";
@@ -770,6 +770,27 @@ function getSeekerJobBadge(job) {
   if (!createdMs) return "Open";
   const days = Math.floor((Date.now() - createdMs) / (24 * 60 * 60 * 1000));
   return days <= 7 ? "New" : "Open";
+}
+
+function getSeekerPostedLabel(job) {
+  const createdMs = isoToMs(job && job.createdAt ? job.createdAt : "");
+  if (!createdMs) return "Recently";
+  const diffDays = Math.max(0, Math.floor((Date.now() - createdMs) / (24 * 60 * 60 * 1000)));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "1 day ago";
+  return `${diffDays} days ago`;
+}
+
+function getSeekerJobDescription(job) {
+  const raw = String(job && job.description ? job.description : "").trim();
+  if (!raw || isPlaceholderText(raw)) return "No description provided.";
+  return raw;
+}
+
+function getSeekerJobSummary(job) {
+  const description = getSeekerJobDescription(job);
+  if (description === "No description provided.") return description;
+  return description.length > 140 ? `${description.slice(0, 140).trimEnd()}...` : description;
 }
 
 function getSeekerJobTags(job) {
@@ -784,6 +805,19 @@ function getSeekerJobTags(job) {
     .slice(0, 2);
 
   return cleaned.length ? cleaned : ["No requirements listed"];
+}
+
+function getSeekerJobRequirementList(job) {
+  const rawLines = String(job && job.requirements ? job.requirements : "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[\-\*\u2022]\s*/, "").trim())
+    .filter(Boolean);
+
+  const cleaned = rawLines
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => !isPlaceholderText(line));
+
+  return cleaned.length ? cleaned : ["No requirements listed."];
 }
 
 function isJobOpen(job) {
@@ -818,6 +852,8 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
       </div>
       <h3></h3>
       <p class="job-meta-line"></p>
+      <div class="job-facts"></div>
+      <p class="job-summary"></p>
       <div class="tag-row"></div>
       <div class="job-footer">
         <div class="job-pay">
@@ -834,11 +870,22 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
     const badgeEl = card.querySelector(".job-badge");
     const titleEl = card.querySelector("h3");
     const companyEl = card.querySelector("p");
+    const factsEl = card.querySelector(".job-facts");
+    const summaryEl = card.querySelector(".job-summary");
     const tagRow = card.querySelector(".tag-row");
     const salaryEl = card.querySelector(".job-footer strong");
     if (badgeEl) badgeEl.textContent = badgeText;
     if (titleEl) titleEl.textContent = job.title || "Job";
-    if (companyEl) companyEl.textContent = formatSeekerJobMeta(job);
+    if (companyEl) companyEl.textContent = formatSeekerJobCompany(job);
+    if (factsEl) {
+      factsEl.innerHTML = "";
+      [formatSeekerJobLocation(job), getSeekerPostedLabel(job)].forEach((value) => {
+        const span = document.createElement("span");
+        span.textContent = value;
+        factsEl.appendChild(span);
+      });
+    }
+    if (summaryEl) summaryEl.textContent = getSeekerJobSummary(job);
     if (salaryEl) salaryEl.textContent = pay;
     if (tagRow) {
       tagRow.innerHTML = "";
@@ -860,6 +907,48 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
   const hasMore = list.length > 3;
   if (viewBtn) viewBtn.classList.toggle("is-hidden", !hasMore);
   if (returnBtn) returnBtn.classList.add("is-hidden");
+}
+
+function findRenderedJobById(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id || !Array.isArray(cachedJobs)) return null;
+  return cachedJobs.find((job) => String(job && job.id ? job.id : "") === id) || null;
+}
+
+function renderQuickViewDetails(job) {
+  const badgeEl = document.getElementById("quickViewBadge");
+  const titleEl = document.getElementById("quickViewTitle");
+  const companyEl = document.getElementById("quickViewCompany");
+  const salaryEl = document.getElementById("quickViewSalary");
+  const tagsEl = document.getElementById("quickViewTags");
+  const locationEl = document.getElementById("quickViewLocation");
+  const postedEl = document.getElementById("quickViewPosted");
+  const descriptionEl = document.getElementById("quickViewDescription");
+  const requirementsEl = document.getElementById("quickViewRequirements");
+
+  if (badgeEl) badgeEl.textContent = getSeekerJobBadge(job);
+  if (titleEl) titleEl.textContent = job.title || "Role Overview";
+  if (companyEl) companyEl.textContent = `${formatSeekerJobCompany(job)} • ${formatSeekerJobLocation(job)}`;
+  if (salaryEl) salaryEl.textContent = formatSeekerJobPay(job);
+  if (locationEl) locationEl.textContent = formatSeekerJobLocation(job);
+  if (postedEl) postedEl.textContent = getSeekerPostedLabel(job);
+  if (descriptionEl) descriptionEl.textContent = getSeekerJobDescription(job);
+  if (tagsEl) {
+    tagsEl.innerHTML = "";
+    getSeekerJobTags(job).forEach((tag) => {
+      const pill = document.createElement("span");
+      pill.textContent = tag;
+      tagsEl.appendChild(pill);
+    });
+  }
+  if (requirementsEl) {
+    requirementsEl.innerHTML = "";
+    getSeekerJobRequirementList(job).forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      requirementsEl.appendChild(li);
+    });
+  }
 }
 
 function normalizeSearchText(value) {
@@ -5183,31 +5272,17 @@ function openQuickView(button) {
   if (!card || !modal) {
     return;
   }
-  const badge = card.querySelector(".job-badge");
-  const title = card.querySelector("h3");
-  const company = card.querySelector("p");
-  const salary = card.querySelector(".job-footer strong");
-  const tags = card.querySelectorAll(".tag-row span");
-
-  const badgeEl = document.getElementById("quickViewBadge");
-  const titleEl = document.getElementById("quickViewTitle");
-  const companyEl = document.getElementById("quickViewCompany");
-  const salaryEl = document.getElementById("quickViewSalary");
-  const tagsEl = document.getElementById("quickViewTags");
-
-  if (badgeEl) badgeEl.textContent = badge ? badge.textContent : "Role";
-  if (titleEl) titleEl.textContent = title ? title.textContent : "Role Overview";
-  if (companyEl) companyEl.textContent = company ? company.textContent : "Company • Location";
-  if (salaryEl) salaryEl.textContent = salary ? salary.textContent : "Compensation unavailable";
-  if (tagsEl) {
-    tagsEl.innerHTML = "";
-    tags.forEach((tag) => {
-      const pill = document.createElement("span");
-      pill.textContent = tag.textContent;
-      tagsEl.appendChild(pill);
-    });
-  }
-
+  const job = findRenderedJobById(card.getAttribute("data-job-id")) || {
+    id: card.getAttribute("data-job-id") || "",
+    title: card.querySelector("h3")?.textContent || "",
+    company: card.querySelector("p")?.textContent || "",
+    location: "",
+    salary: card.querySelector(".job-footer strong")?.textContent || "",
+    requirements: Array.from(card.querySelectorAll(".tag-row span")).map((tag) => tag.textContent || "").join("\n"),
+    description: "",
+    createdAt: "",
+  };
+  renderQuickViewDetails(job);
   modal.style.display = "flex";
 }
 

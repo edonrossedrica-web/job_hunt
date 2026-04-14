@@ -273,6 +273,15 @@ function toJsonText(value) {
   }
 }
 
+function getUserCompanyName(user) {
+  if (!user || typeof user !== "object") return "";
+  const profile = user.profile && typeof user.profile === "object" ? user.profile : {};
+  const profileCompany = String(profile.companyName || "").trim();
+  const rawCompany = String(user.company || "").trim();
+  const rawName = String(user.name || "").trim();
+  return profileCompany || rawCompany || rawName || "";
+}
+
 function syncReadableTables(sqlDb, jsonDb) {
   const users = Array.isArray(jsonDb?.users) ? jsonDb.users : [];
   const sessions = Array.isArray(jsonDb?.sessions) ? jsonDb.sessions : [];
@@ -1544,7 +1553,7 @@ async function handleApi(req, res, url) {
         ...job,
         status,
         closedAt: status === "closed" ? String(job.closedAt || "") : "",
-        company: job.company || (employer ? employer.company || employer.name || "" : ""),
+        company: job.company || getUserCompanyName(employer),
         applicantCount,
       };
     });
@@ -1570,7 +1579,7 @@ async function handleApi(req, res, url) {
     const job = {
       id: createId("job"),
       employerId: user.id,
-      company: user.company || user.name || "",
+      company: getUserCompanyName(user),
       title,
       location,
       salary,
