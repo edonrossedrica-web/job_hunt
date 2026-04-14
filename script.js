@@ -4465,6 +4465,145 @@ function handleLinkedInAuth(role, mode) {
   }, 250);
 }
 
+function handleFacebookAuth(role, mode) {
+  const normalizedRole = role === "employer" ? "employer" : "seeker";
+  const proto = window.location && window.location.protocol;
+  const runningServer = proto === "http:" || proto === "https:";
+
+  const finalizeLogin = (user, token) => {
+    if (token) localStorage.setItem(STORAGE_AUTH_TOKEN_KEY, token);
+    isEmployer = normalizedRole === "employer";
+    setAuth(normalizedRole);
+    setCurrentUser(user);
+    closeLogin();
+    closeSignup(normalizedRole);
+
+    if (mode === "signup") {
+      if (normalizedRole === "seeker") {
+        navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
+      } else {
+        navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
+      }
+      updateAuthUI();
+      syncBookmarkButtons(document);
+      return;
+    }
+
+    if (normalizedRole === "seeker") {
+      showHome();
+      openWelcome();
+    } else {
+      showEmployerDashboard();
+      openEmployerWelcome();
+    }
+    updateAuthUI();
+    syncBookmarkButtons(document);
+  };
+
+  const demoFallback = () => {
+    if (runningServer) return;
+    const email = String(prompt("Enter your Facebook email (demo):", "") || "").trim().toLowerCase();
+    if (!email) return;
+
+    const users = getStoredUsers();
+    let user = users.find((u) => String(u.email || "").toLowerCase() === email && u.role === normalizedRole);
+    if (!user) {
+      if (mode !== "signup") {
+        alert("No account found. Please sign up first.");
+        return;
+      }
+      user = createMockUser({
+        role: normalizedRole,
+        email,
+        name: normalizedRole === "seeker" ? "Facebook User" : "",
+        company: normalizedRole === "employer" ? "Facebook Employer" : "",
+        provider: "facebook",
+      });
+      users.push(user);
+      saveStoredUsers(users);
+    }
+    finalizeLogin(user, "");
+  };
+
+  if (!runningServer) {
+    demoFallback();
+    return;
+  }
+
+  const rid = `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const w = 520;
+  const h = 720;
+  const left = Math.max(0, Math.round((window.screenX || 0) + (window.outerWidth - w) / 2));
+  const top = Math.max(0, Math.round((window.screenY || 0) + (window.outerHeight - h) / 2));
+  const features = `popup=yes,width=${w},height=${h},left=${left},top=${top}`;
+  const popup = window.open(
+    `/auth/facebook/start?role=${encodeURIComponent(normalizedRole)}&mode=${encodeURIComponent(mode || "login")}&rid=${encodeURIComponent(rid)}`,
+    "hireup_facebook_oauth",
+    features,
+  );
+
+  if (!popup) {
+    alert("Popup blocked. Please allow popups and try again.");
+    return;
+  }
+
+  let settled = false;
+  const cleanup = () => {
+    window.removeEventListener("message", onMessage);
+    if (timer) clearInterval(timer);
+    try {
+      if (!popup.closed) popup.close();
+    } catch {
+      // ignore
+    }
+  };
+
+  const onMessage = (event) => {
+    if (settled) return;
+    if (!event || event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== "facebook_auth") return;
+    if (String(data.rid || "") !== rid) return;
+
+    settled = true;
+    cleanup();
+
+    if (!data.ok) {
+      const error = String(data.error || "Facebook sign-in failed.");
+      alert(error);
+      return;
+    }
+    if (!data.user) {
+      alert("Facebook sign-in failed (missing user).");
+      return;
+    }
+    finalizeLogin(data.user, String(data.token || ""));
+  };
+
+  window.addEventListener("message", onMessage);
+
+  const startedAt = Date.now();
+  const timer = setInterval(() => {
+    if (settled) return;
+    const elapsed = Date.now() - startedAt;
+    if (elapsed > 2 * 60 * 1000) {
+      settled = true;
+      cleanup();
+      alert("Facebook sign-in timed out. Please try again.");
+      return;
+    }
+    try {
+      if (popup.closed) {
+        settled = true;
+        cleanup();
+        demoFallback();
+      }
+    } catch {
+      // ignore
+    }
+  }, 250);
+}
+
 function openProfile() {
   closeUserMenu();
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";

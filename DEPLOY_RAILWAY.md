@@ -58,23 +58,31 @@ Notes:
 - If email isn’t configured, messages are still saved on the server to `server-data/feedback.jsonl`.
 - When users include an email, the message is sent with `Reply-To` set to that email so you can reply directly.
 
-## 7) OAuth (Google / LinkedIn buttons)
+## 7) OAuth (Google / LinkedIn / Facebook buttons)
 
-If you want the **Google** and **LinkedIn** buttons to perform real OAuth (instead of the demo fallback used for `file://`), set these variables in Railway:
+If you want the **Google**, **LinkedIn**, and **Facebook** buttons to perform real OAuth (instead of the demo fallback used for `file://`), set these variables in Railway:
 
 - `GOOGLE_CLIENT_ID` (Google OAuth Web Client ID)
 - `LINKEDIN_CLIENT_ID`
 - `LINKEDIN_CLIENT_SECRET`
+- `FACEBOOK_APP_ID`
+- `FACEBOOK_APP_SECRET`
 
 For LinkedIn, you also need a redirect URI. You can either:
 
 - Set `LINKEDIN_REDIRECT_URI` explicitly (recommended), or
 - Set `PUBLIC_ORIGIN` (or `PUBLIC_URL` / `BASE_URL`) so the server can build the correct `https://.../auth/linkedin/callback` URL behind Railway’s proxy.
 
+For Facebook, you can either:
+
+- Set `FACEBOOK_REDIRECT_URI` explicitly, or
+- Set `PUBLIC_ORIGIN` (or `PUBLIC_URL` / `BASE_URL`) so the server can build the correct `https://.../auth/facebook/callback` URL.
+
 Notes:
 
 - Make sure your OAuth app settings allow your Railway domain (and `http://localhost:3000` for local dev).
 - LinkedIn redirect URIs must match exactly (including `https` and path).
+- Facebook Login must allow the exact callback URL you use, and the app should request the `email` permission.
 
 ## Notes
 
