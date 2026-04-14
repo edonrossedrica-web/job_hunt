@@ -681,6 +681,9 @@ async function sendFeedbackEmail({ subject, text, replyTo }) {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: { user: cfg.user, pass: cfg.pass },
   });
   const mail = {
@@ -692,7 +695,12 @@ async function sendFeedbackEmail({ subject, text, replyTo }) {
   if (replyTo) {
     mail.replyTo = replyTo;
   }
-  await transporter.sendMail(mail);
+  await Promise.race([
+    transporter.sendMail(mail),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("SMTP send timed out.")), 15000);
+    }),
+  ]);
 }
 
 async function fetchJson(urlString) {
@@ -1037,6 +1045,18 @@ async function handleApi(req, res, url) {
     } catch (err) {
       emailSent = false;
       emailError = String(err?.message || "Email not configured");
+      try {
+        console.error("FEEDBACK EMAIL ERROR", {
+          kind: inferredKind,
+          topic,
+          to: cfg.to || "",
+          from: cfg.from || "",
+          smtpUser: cfg.user || "",
+          message: emailError,
+        });
+      } catch {
+        // ignore logging failures
+      }
     }
 
     const msg = emailSent

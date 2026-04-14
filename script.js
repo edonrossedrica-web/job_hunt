@@ -4831,6 +4831,7 @@ async function submitFeedback(event) {
   const message = String(document.getElementById("feedbackText")?.value || "").trim();
   const ratingRaw = String(document.getElementById("feedbackRating")?.value || "").trim();
   const rating = Math.max(1, Math.min(5, Number.parseInt(ratingRaw || "5", 10) || 5));
+  const submitBtn = event && event.currentTarget ? event.currentTarget : null;
 
   if (!message) {
     alert("Please write your feedback first.");
@@ -4838,6 +4839,10 @@ async function submitFeedback(event) {
   }
 
   try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending...";
+    }
     const res = await apiRequest("/api/feedback", {
       method: "POST",
       body: { kind: "feedback", name, email, message, rating },
@@ -4845,12 +4850,21 @@ async function submitFeedback(event) {
     });
     if (res && res.ok) {
       closeFeedback();
-      showInfoModal("Thank you!", "Thanks for your feedback — we appreciate it.");
+      if (res.emailSent) {
+        showInfoModal("Thank you!", "Thanks for your feedback.");
+      } else {
+        showInfoModal("Saved", res.message || "Your feedback was saved on the server, but email delivery did not complete.");
+      }
       return;
     }
     alert((res && res.error) || "Failed to send feedback.");
   } catch (err) {
     alert(err?.message || "Failed to send feedback.");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Feedback";
+    }
   }
 }
 
@@ -4921,6 +4935,7 @@ async function submitSupportTicket(event) {
   const email = String(document.getElementById("supportEmail")?.value || "").trim();
   const topic = String(document.getElementById("supportTopic")?.value || "Other").trim();
   const text = String(document.getElementById("supportText")?.value || "").trim();
+  const submitBtn = event && event.currentTarget ? event.currentTarget : null;
   if (!email) return alert("Email is required so we can reply.");
   if (!text) return alert("Please describe your issue first.");
 
@@ -4934,6 +4949,10 @@ async function submitSupportTicket(event) {
     `${text}`;
 
   try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending...";
+    }
     const res = await apiRequest("/api/feedback", {
       method: "POST",
       body: { kind: "support", topic, name, email, message: msg, rating: 5 },
@@ -4941,12 +4960,21 @@ async function submitSupportTicket(event) {
     });
     if (res && res.ok) {
       closeChat();
-      showInfoModal("Sent!", "Your support request was sent. We’ll reply to your email soon.");
+      if (res.emailSent) {
+        showInfoModal("Sent!", "Your support request was sent. We’ll reply to your email soon.");
+      } else {
+        showInfoModal("Saved", res.message || "Your support request was saved on the server, but email delivery did not complete.");
+      }
       return;
     }
     alert((res && res.error) || "Failed to send support request.");
   } catch (err) {
     alert(err?.message || "Failed to send support request.");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send to Support";
+    }
   }
 }
 
