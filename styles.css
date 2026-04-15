@@ -2004,12 +2004,41 @@ textarea:-webkit-autofill:focus{
 .detail-message{
   margin:4px 0 12px;
 }
+.detail-message-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
 .detail-message-box{
   background:rgba(12,18,34,0.65);
   border:1px solid rgba(148,163,184,0.18);
   border-radius:14px;
   padding:12px;
   margin:4px 0 12px;
+}
+.detail-message-box.is-expanded{
+  position:fixed;
+  inset:20px;
+  z-index:1300;
+  margin:0;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 24px 64px rgba(0,0,0,0.45);
+  backdrop-filter:blur(14px);
+}
+.detail-message-box.is-expanded .detail-message{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  margin:0 0 10px;
+}
+.detail-message-box.is-expanded .chat-thread{
+  flex:1 1 auto;
+  max-height:none;
 }
 .detail-message-box .detail-message{
   margin:0 0 10px;

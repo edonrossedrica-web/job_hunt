@@ -1676,8 +1676,13 @@ async function loadApplicantsForJob(jobId, panel) {
         </div>
         <p class="detail-note" data-note>Use the message box below to communicate with this applicant.</p>
         <div class="detail-message-box">
-          <div class="detail-message">
+          <div class="detail-message-head">
             <p class="detail-label">Conversation</p>
+            <button class="icon-btn small" type="button" data-action="expand-message" aria-label="Expand message" title="Expand">
+              <i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="detail-message">
             <div class="chat-thread" data-thread></div>
           </div>
           <div class="detail-chat">
@@ -1692,6 +1697,10 @@ async function loadApplicantsForJob(jobId, panel) {
       `;
 
       const detailsBtn = row.querySelector('button[data-action="details"]');
+      const messageBox = detail.querySelector(".detail-message-box");
+      if (messageBox) {
+        setupEmployerMessageExpandUi(messageBox);
+      }
       if (detailsBtn) {
         detailsBtn.addEventListener("click", async () => {
           const willShow = !detail.classList.contains("show");
@@ -5786,6 +5795,38 @@ function setupSeekerChatExpandUi() {
 
   btn.addEventListener("click", () => setSeekerChatExpanded(!seekerChatIsExpanded));
   setSeekerChatExpanded(seekerChatIsExpanded);
+}
+
+function setEmployerMessageExpanded(container, next) {
+  if (!container) return;
+  const expanded = Boolean(next);
+  container.classList.toggle("is-expanded", expanded);
+  const btn = container.querySelector("[data-action='expand-message']");
+  if (btn) {
+    btn.setAttribute("aria-label", expanded ? "Collapse message" : "Expand message");
+    btn.setAttribute("title", expanded ? "Collapse" : "Expand");
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.className = expanded
+        ? "fa-solid fa-down-left-and-up-right-to-center"
+        : "fa-solid fa-up-right-and-down-left-from-center";
+    }
+  }
+}
+
+function setupEmployerMessageExpandUi(container) {
+  if (!container) return;
+  const btn = container.querySelector("[data-action='expand-message']");
+  if (!btn) return;
+  if (btn.dataset.bound === "1") {
+    setEmployerMessageExpanded(container, container.classList.contains("is-expanded"));
+    return;
+  }
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", () => {
+    setEmployerMessageExpanded(container, !container.classList.contains("is-expanded"));
+  });
+  setEmployerMessageExpanded(container, false);
 }
 
 let seekerAppliedJobIds = new Set();
