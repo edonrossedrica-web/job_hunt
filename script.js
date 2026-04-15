@@ -3893,6 +3893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAddJobFormActions();
   setupSeekerSearch();
   setupSeekerChatControls();
+  setupSeekerChatAttachmentUi();
   setupEmployerApplicantsSearch();
   setupEmployerApplicantsJobsSearch();
   setupEmployerApplicantsJobsFilterSort();
@@ -5429,6 +5430,17 @@ function closeSeekerChat() {
     modal.style.display = "none";
     modal.removeAttribute("data-application-id");
   }
+  const input = document.getElementById("seekerChatMessage");
+  if (input) input.value = "";
+  const fileInput = document.getElementById("seekerChatFile");
+  if (fileInput) {
+    fileInput.value = "";
+    try {
+      fileInput.dispatchEvent(new Event("change"));
+    } catch {
+      // ignore
+    }
+  }
 }
 
 function openApplyForm(button) {
@@ -5543,6 +5555,11 @@ function sendSeekerMessage() {
         });
         input.value = "";
         fileInput.value = "";
+        try {
+          fileInput.dispatchEvent(new Event("change"));
+        } catch {
+          // ignore
+        }
         loadSeekerConversationsFromBackend();
         emitSyncEvent("messages_updated", { applicationId });
         return;
@@ -5559,12 +5576,47 @@ function sendSeekerMessage() {
     appendConversationBubble(thread, { text, attachment }, "seeker");
     input.value = "";
     fileInput.value = "";
+    try {
+      fileInput.dispatchEvent(new Event("change"));
+    } catch {
+      // ignore
+    }
     thread.scrollTop = thread.scrollHeight;
   };
 
   sendText().catch((err) => {
     alert(err?.message || "Failed to send message.");
   });
+}
+
+function setupSeekerChatAttachmentUi() {
+  const fileInput = document.getElementById("seekerChatFile");
+  const chip = document.getElementById("seekerChatAttachChip");
+  const nameEl = document.getElementById("seekerChatAttachName");
+  const removeBtn = document.getElementById("seekerChatAttachRemove");
+  const messageInput = document.getElementById("seekerChatMessage");
+  if (!fileInput || !chip || !nameEl || !removeBtn) return;
+  if (fileInput.dataset.bound === "1") return;
+  fileInput.dataset.bound = "1";
+
+  const refresh = () => {
+    const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+    if (!file) {
+      chip.style.display = "none";
+      nameEl.textContent = "Attachment";
+      return;
+    }
+    chip.style.display = "inline-flex";
+    nameEl.textContent = String(file.name || "Attachment");
+  };
+
+  fileInput.addEventListener("change", refresh);
+  removeBtn.addEventListener("click", () => {
+    fileInput.value = "";
+    refresh();
+    if (messageInput) messageInput.focus();
+  });
+  refresh();
 }
 
 function openQuickView(button) {

@@ -1018,9 +1018,43 @@ body.page-loading{
   background:var(--bg);
   color:#cbd5ff;
   cursor:pointer;
+  position:relative;
 }
 .chat-attach input{
-  display:none;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  opacity:0;
+  cursor:pointer;
+}
+.chat-attach-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(15,23,42,0.55);
+  border:1px solid rgba(148,163,184,0.22);
+  color:var(--text);
+  font-size:11px;
+  max-width:100%;
+}
+.chat-attach-chip__name{
+  max-width:180px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.chat-attach-chip__remove{
+  border:none;
+  background:transparent;
+  padding:2px 4px;
+  cursor:pointer;
+  color:var(--muted);
+}
+.chat-attach-chip__remove:hover{
+  color:#7aa2ff;
 }
 .chat-attachment{
   margin-top:8px;
@@ -2849,6 +2883,9 @@ textarea:-webkit-autofill:focus{
   }
   .chat-input input,
   .detail-chat input{
+    grid-column:1 / -1;
+  }
+  .chat-attach-chip{
     grid-column:1 / -1;
   }
   .chat-input .pill-btn,

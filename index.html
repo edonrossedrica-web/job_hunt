@@ -1398,9 +1398,15 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
   </div>
   <div class="chat-input">
     <input type="text" id="seekerChatMessage" placeholder="Type your message...">
+    <div class="chat-attach-chip" id="seekerChatAttachChip" style="display:none;">
+      <span class="chat-attach-chip__name" id="seekerChatAttachName">Attachment</span>
+      <button class="chat-attach-chip__remove" id="seekerChatAttachRemove" type="button" aria-label="Remove attachment">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
     <label class="chat-attach" aria-label="Attach file">
       <input type="file" id="seekerChatFile" accept="image/*,.pdf,.doc,.docx">
-      <i class="fa-regular fa-square-xmark"></i>
+      <i class="fa-solid fa-paperclip"></i>
     </label>
     <button class="pill-btn" onclick="sendSeekerMessage()">Send</button>
   </div>
