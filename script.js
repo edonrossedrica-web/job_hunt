@@ -1116,7 +1116,6 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
     card.className = "job-card" + (index >= 3 ? " hidden-reco" : "");
     card.setAttribute("data-job-id", job.id);
 
-    const tags = getSeekerJobTags(job);
     const pay = formatSeekerJobPay(job);
     const badgeText = getSeekerJobBadge(job);
 
@@ -1128,8 +1127,6 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
       <h3></h3>
       <p class="job-meta-line"></p>
       <div class="job-facts"></div>
-      <p class="job-summary"></p>
-      <div class="tag-row"></div>
       <div class="job-footer">
         <div class="job-pay">
           <span class="job-pay-label">Pay</span>
@@ -1146,8 +1143,6 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
     const titleEl = card.querySelector("h3");
     const companyEl = card.querySelector("p");
     const factsEl = card.querySelector(".job-facts");
-    const summaryEl = card.querySelector(".job-summary");
-    const tagRow = card.querySelector(".tag-row");
     const salaryEl = card.querySelector(".job-footer strong");
     if (badgeEl) badgeEl.textContent = badgeText;
     if (titleEl) titleEl.textContent = job.title || "Job";
@@ -1160,16 +1155,7 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
         factsEl.appendChild(span);
       });
     }
-    if (summaryEl) summaryEl.textContent = getSeekerJobSummary(job);
     if (salaryEl) salaryEl.textContent = pay;
-    if (tagRow) {
-      tagRow.innerHTML = "";
-      tags.forEach((t) => {
-        const span = document.createElement("span");
-        span.textContent = t;
-        tagRow.appendChild(span);
-      });
-    }
 
     grid.appendChild(card);
   });
@@ -6153,13 +6139,27 @@ function setupSeekerChatAttachmentUi() {
   refresh();
 }
 
-function openQuickView(button) {
+async function openQuickView(button) {
   const card = button.closest(".job-card");
   const modal = document.getElementById("quickViewModal");
   if (!card || !modal) {
     return;
   }
-  const job = findRenderedJobById(card.getAttribute("data-job-id")) || {
+
+  const jobId = String(card.getAttribute("data-job-id") || "").trim();
+  let job = findRenderedJobById(jobId);
+  if (!job && jobId) {
+    try {
+      const jobs = await getJobsSnapshot();
+      if (Array.isArray(jobs)) {
+        job = jobs.find((j) => String(j && j.id ? j.id : "") === jobId) || null;
+      }
+    } catch {
+      job = null;
+    }
+  }
+
+  const fallback = {
     id: card.getAttribute("data-job-id") || "",
     title: card.querySelector("h3")?.textContent || "",
     company: card.querySelector("p")?.textContent || "",
@@ -6169,6 +6169,8 @@ function openQuickView(button) {
     description: card.querySelector(".job-summary")?.textContent || "",
     createdAt: "",
   };
+
+  if (!job) job = fallback;
   renderQuickViewDetails(job);
   try {
     modal.setAttribute("data-job-id", String(job.id || ""));
