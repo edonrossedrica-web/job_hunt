@@ -2641,20 +2641,42 @@ textarea:-webkit-autofill:focus{
 }
 
 @media (max-width: 640px){
-  .navbar{padding:14px 20px 8px;}
-  .seeker-home{padding-top:130px;}
-  .nav-top{align-items:flex-start;}
-  .nav-actions{gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .navbar{
+    padding:12px 16px 10px;
+    background:rgba(7,11,21,0.96);
+  }
+  .seeker-home{padding-top:142px;}
+  .nav-top{align-items:center;}
+  .nav-actions{gap:8px;flex-wrap:nowrap;justify-content:flex-end;flex:0 0 auto;}
   .nav-links{
     justify-content:flex-start;
-    gap:12px 16px;
+    gap:10px;
     margin-top:12px;
+    padding-top:10px;
+    border-top:1px solid rgba(148,163,184,0.08);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .nav-links::-webkit-scrollbar{
+    display:none;
+  }
+  .nav-links a,
+  .nav-links .dropdown > a{
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+    padding:8px 10px;
+    border-radius:999px;
+    background:rgba(15,23,42,0.7);
+    border:1px solid rgba(148,163,184,0.12);
+    font-size:11px;
+    letter-spacing:.08em;
   }
   .logo-section{height:auto;min-height:34px;}
   .logo-section img.brand-logo{
     transform:none;
-    height:34px;
-    max-width:200px;
+    height:42px;
+    max-width:160px;
   }
   .container{width:min(100%,calc(100% - 24px));}
   .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{
@@ -2693,6 +2715,49 @@ textarea:-webkit-autofill:focus{
   .detail-chat .employer-text-btn{
     flex:0 0 auto;
   }
+  .hero{
+    min-height:auto;
+    align-items:flex-end;
+    padding:170px 16px 56px;
+    background:
+      linear-gradient(180deg, rgba(7,11,21,0.82) 0%, rgba(7,11,21,0.96) 48%, rgba(7,11,21,1) 100%),
+      url('jobhunt.jfif') center top/cover no-repeat;
+  }
+  .hero-content{
+    width:min(100%, 420px);
+    margin:0 auto;
+    padding:22px 18px 18px;
+    border-radius:24px;
+    background:linear-gradient(180deg, rgba(15,23,42,0.82), rgba(11,17,32,0.92));
+    border:1px solid rgba(148,163,184,0.14);
+    box-shadow:0 24px 48px rgba(0,0,0,0.28);
+  }
+  .hero h1,
+  .hero-text h1{
+    font-size:34px;
+    line-height:1.02;
+    margin-bottom:14px;
+    letter-spacing:-0.03em;
+  }
+  .hero p{
+    font-size:15px;
+    line-height:1.6;
+    margin-bottom:22px;
+  }
+  .cta-section{
+    width:100%;
+    gap:14px;
+  }
+  .btn-primary,
+  .btn-secondary{
+    width:100%;
+    padding:15px 16px;
+    font-size:14px;
+  }
+  .login-text{
+    margin-top:2px;
+    font-size:13px;
+  }
   .section-head{flex-direction:column;align-items:flex-start;}
   .job-footer{flex-direction:column;align-items:flex-start;}
   .saved-search{flex-direction:column;align-items:flex-start;}
@@ -2729,15 +2794,26 @@ textarea:-webkit-autofill:focus{
 
 @media (max-width: 420px){
   .navbar{padding:12px 14px 8px;}
-  .seeker-home{padding-top:138px;}
+  .seeker-home{padding-top:148px;}
   .hero-text h1,.hero h1,.employer-hero h1,.add-job-hero h1,.history-hero h1,.applicants-hero h1{
-    font-size:24px;
-    line-height:1.15;
+    font-size:30px;
+    line-height:1.04;
   }
   .page-hero,
   .history-hero,
   .modal-content{
     padding:16px;
+  }
+  .hero{
+    padding:164px 12px 44px;
+  }
+  .hero-content{
+    padding:18px 14px 16px;
+    border-radius:20px;
+  }
+  .hero p{
+    font-size:14px;
+    margin-bottom:18px;
   }
   .icon-btn,
   .hamburger-btn{
@@ -2758,5 +2834,10 @@ textarea:-webkit-autofill:focus{
   .profile-item,
   .detail-grid > div{
     min-width:0;
+  }
+  .nav-links a,
+  .nav-links .dropdown > a{
+    padding:7px 9px;
+    font-size:10px;
   }
 }
