@@ -2878,8 +2878,9 @@ textarea[data-autogrow="1"]{
   .logo-section img.brand-logo{
     height:48px;
     max-width:160px;
-    transform:scale(1.45);
+    transform:scale(1.7);
     transform-origin:left center;
+    will-change:transform;
   }
   .container{width:min(100%,calc(100% - 16px));}
   .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{
