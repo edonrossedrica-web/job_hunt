@@ -434,7 +434,7 @@ body.page-loading{
 
 .status-item-top .status-item-actions{flex:0 0 auto;}
 @media (max-width: 540px){
-  .status-item-top{flex-direction:column;align-items:stretch;}
+  .status-item-top{flex-direction:column;align-items:stretch;justify-content:flex-start;}
   .status-item-actions{justify-content:flex-start;}
 }
 
