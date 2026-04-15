@@ -1869,13 +1869,23 @@ async function loadAndShowNotifications(role) {
 
 async function loadSeekerHistoryFromBackend() {
   if (!getLoggedIn() || getLoggedInRole() !== "seeker") return;
+  const currentUserId = String(localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "").trim();
   let data;
   try {
     data = await apiRequest("/api/applications?mine=1", { method: "GET", auth: true });
   } catch {
     return;
   }
-  const apps = data && data.ok && Array.isArray(data.applications) ? data.applications : [];
+  const rawApps = data && data.ok && Array.isArray(data.applications) ? data.applications : [];
+  const apps = rawApps.filter((a) => {
+    if (!a || typeof a !== "object") return false;
+    const appId = String(a.id || "").trim();
+    const jobId = String(a.jobId || "").trim();
+    const seekerId = String(a.seekerId || "").trim();
+    if (!appId || !jobId) return false;
+    if (currentUserId && seekerId && seekerId !== currentUserId) return false;
+    return true;
+  });
   const byStatus = { pending: [], passed: [], rejected: [], applied: [] };
   apps.forEach((a) => {
     const status = String(a.status || "applied").toLowerCase();
