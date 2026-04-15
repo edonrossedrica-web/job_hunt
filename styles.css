@@ -690,7 +690,10 @@ body.page-loading{
   display:block;
   line-height:1.1;
 }
-.job-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-end;}
+.job-actions{display:flex;gap:8px;flex-wrap:nowrap;justify-content:flex-end;align-items:flex-end;flex-shrink:0;}
+.job-actions .pill-btn{
+  white-space:nowrap;
+}
 .pill-btn{
   padding:8px 14px;
   border-radius:999px;
