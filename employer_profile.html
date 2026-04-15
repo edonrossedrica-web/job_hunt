@@ -318,6 +318,7 @@ body.page-loading{
   background:#0c1117;
   padding:15px;
   border-radius:10px;
+  min-width:0;
 }
 
 .info-label{
@@ -329,6 +330,8 @@ body.page-loading{
 .info-value{
   font-weight:600;
   color:#fff;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 
 /* CONTACT */
@@ -347,6 +350,8 @@ body.page-loading{
 
 .contact-item span{
   flex:1;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 
 /* EDITABLE INPUT */
@@ -425,7 +430,7 @@ body.page-loading{
 #infoWebsite:empty::before{content:"—";opacity:.7;}
 #contactEmail:empty::before{content:"—";opacity:.7;}
 #contactPhone:empty::before{content:"—";opacity:.7;}
-#contactLinkedin:empty::before{content:"—";opacity:.7;}
+#contactFacebook:empty::before{content:"—";opacity:.7;}
 
 </style>
 </head>
@@ -529,8 +534,8 @@ body.page-loading{
     </div>
 
     <div class="contact-item">
-      <i class="fa-brands fa-linkedin"></i>
-      <span id="contactLinkedin"></span>
+      <i class="fa-brands fa-facebook"></i>
+      <span id="contactFacebook"></span>
     </div>
 
   </div>
@@ -858,7 +863,8 @@ function collectEmployerProfile(){
     contact: {
       email: getText("contactEmail"),
       phone: getText("contactPhone"),
-      linkedin: getText("contactLinkedin"),
+      facebook: getText("contactFacebook"),
+      linkedin: getText("contactFacebook"),
     },
     logoSrc: document.getElementById("companyLogo")?.src || "",
   };
@@ -914,7 +920,7 @@ function applyEmployerProfile(profile){
   const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
   setText("contactEmail", contact.email || "");
   setText("contactPhone", contact.phone || "");
-  setText("contactLinkedin", contact.linkedin || "");
+  setText("contactFacebook", contact.facebook || contact.linkedin || "");
 
   if (typeof profile.logoSrc === "string" && profile.logoSrc) {
     const logo = document.getElementById("companyLogo");
@@ -1020,7 +1026,7 @@ function editField(sectionId) {
       section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="infoSection" onclick="saveField('infoSection')">Save All</button>`);
     }
   } else if(sectionId === 'contactSection'){
-    const ids = ['contactEmail','contactPhone','contactLinkedin'];
+    const ids = ['contactEmail','contactPhone','contactFacebook'];
     const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -1097,7 +1103,7 @@ function saveField(sectionId){
     });
     document.getElementById('infoSection')?.querySelectorAll('button[data-save-all="infoSection"]').forEach((b) => b.remove());
   } else if(sectionId === 'contactSection'){
-    const ids = ['contactEmail','contactPhone','contactLinkedin'];
+    const ids = ['contactEmail','contactPhone','contactFacebook'];
     ids.forEach((id) => {
       const input = document.getElementById(id + 'Input');
       const el = document.getElementById(id);
