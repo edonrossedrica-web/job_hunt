@@ -30,6 +30,11 @@ let employerApplicantsDirty = true;
 const EMPLOYER_APPLICANTS_REFRESH_MS = 20000;
 const EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS = 30000;
 const employerJobApplicantsCache = new Map(); // jobId -> { apps, fetchedAt }
+let notificationsDirty = { seeker: true, employer: true };
+const NOTIFICATIONS_REFRESH_MS = 20000;
+const notificationsCache = new Map(); // `${role}:${userId}` -> { notes, fetchedAt }
+const USER_PROFILE_CACHE_TTL_MS = 2 * 60 * 1000;
+const userProfileCache = new Map(); // userId -> { payload, fetchedAt }
 let seekerChatSuppressRefreshUntil = 0;
 let seekerChatSearchTerm = "";
 let seekerChatFilterMode = "all";
@@ -98,11 +103,23 @@ async function withPageLoader(task, { message = "Loading...", minDuration = 320 
   }
 }
 
-function navigateWithLoader(url, { message = "Loading page...", delay = 260 } = {}) {
-  showPageLoader(message);
+function navigateWithLoader(url, { message = "Loading page...", delay = 0 } = {}) {
+  const to = String(url || "").trim();
+  if (!to) return;
+  const navDelay = Math.max(0, Number(delay || 0));
+
+  // Show the loader only if the navigation doesn't happen instantly.
+  const showTimer = window.setTimeout(() => {
+    showPageLoader(message);
+  }, 140);
+
   window.setTimeout(() => {
-    window.location.href = url;
-  }, Math.max(0, Number(delay || 0)));
+    try {
+      window.location.href = to;
+    } finally {
+      window.clearTimeout(showTimer);
+    }
+  }, navDelay);
 }
 
 function finishInitialRender() {
@@ -203,7 +220,10 @@ function scheduleSyncRefresh() {
     if (role === "seeker") {
       const page = document.getElementById("seekerNotificationsPage");
       const visible = page && page.style.display !== "none";
-      if (visible) loadAndShowNotifications("seeker").catch(() => {});
+      if (visible) {
+        notificationsDirty.seeker = true;
+        loadAndShowNotifications("seeker", { quiet: true }).catch(() => {});
+      }
       const chat = document.getElementById("seekerChatModal");
       const appId = chat ? String(chat.getAttribute("data-application-id") || "") : "";
       if (appId && chat && chat.style.display === "flex") {
@@ -213,7 +233,10 @@ function scheduleSyncRefresh() {
     } else if (role === "employer") {
       const page = document.getElementById("employerNotifications");
       const visible = page && page.style.display !== "none";
-      if (visible) loadAndShowNotifications("employer").catch(() => {});
+      if (visible) {
+        notificationsDirty.employer = true;
+        loadAndShowNotifications("employer", { quiet: true }).catch(() => {});
+      }
       const applicants = document.getElementById("employerApplicants");
       const appsVisible = applicants && applicants.style.display !== "none";
       if (appsVisible) {
@@ -2078,11 +2101,38 @@ function renderNotificationsList(role, notices) {
   });
 }
 
-async function loadAndShowNotifications(role) {
+async function loadAndShowNotifications(role, options = {}) {
   const userId = localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "";
   const list = getNoticeListEl(role);
-  if (list) list.innerHTML = "<div class='empty-state-card'>Loading notifications...</div>";
+  const force = Boolean(options && options.force);
+  const quiet = Boolean(options && options.quiet);
+
+  const key = userId ? `${role}:${userId}` : "";
+  const cached = key ? notificationsCache.get(key) : null;
+  const now = Date.now();
+  const cachedAge = cached ? now - (Number(cached.fetchedAt) || 0) : Number.POSITIVE_INFINITY;
+  const cachedFresh = Boolean(cached && cachedAge < NOTIFICATIONS_REFRESH_MS && !notificationsDirty[role]);
+
+  const hasExistingContent = Boolean(list && String(list.innerHTML || "").trim());
+  if (list && !hasExistingContent && cached && Array.isArray(cached.notes)) {
+    renderNotificationsList(role, cached.notes);
+  }
+
+  if (!force && cachedFresh && cached && Array.isArray(cached.notes)) {
+    renderNotificationsList(role, cached.notes);
+    if (userId) setNotificationsLastSeen(role, userId);
+    return;
+  }
+
+  if (list && (!quiet || !hasExistingContent)) {
+    list.innerHTML = "<div class='empty-state-card'>Loading notifications...</div>";
+  }
+
   const notes = await fetchNotifications();
+  if (key) {
+    notificationsCache.set(key, { notes, fetchedAt: Date.now() });
+  }
+  notificationsDirty[role] = false;
   renderNotificationsList(role, notes);
   if (userId) setNotificationsLastSeen(role, userId);
 }
@@ -3555,103 +3605,117 @@ function goToSeekerProfileReview(userId) {
   const openTagEl = document.getElementById("seekerProfileOpenTag");
   const fileBtn = document.getElementById("seekerProfileFileBtn");
 
-  setText(nameEl, "Loading...");
-  setText(titleEl, "");
-  setText(emailEl, "");
-  setText(phoneEl, "");
-  setText(locEl, "");
-  setLink(fbEl, "");
-  setLink(ghEl, "");
-  setText(aboutEl, "");
-  if (avatarEl) avatarEl.classList.remove("has-photo");
-  if (avatarImgEl) {
-    avatarImgEl.removeAttribute("src");
-    avatarImgEl.style.display = "none";
-  }
-  if (avatarInitialsEl) {
-    avatarInitialsEl.textContent = "...";
-  } else if (avatarEl) {
-    avatarEl.textContent = "...";
-  }
-  if (openTagEl) {
-    openTagEl.textContent = "—";
-    openTagEl.classList.remove("success");
-  }
-  if (skillsEl) skillsEl.innerHTML = "";
-  if (fileBtn) fileBtn.style.display = "none";
+  const applyPayload = (u) => {
+    const user = u && u.user && typeof u.user === "object" ? u.user : {};
+    const profile = u && u.profile && typeof u.profile === "object" ? u.profile : {};
+    const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
 
-  modal.style.display = "flex";
+    const displayName = String(profile.name || user.name || "Applicant").trim() || "Applicant";
+    setText(nameEl, displayName);
+    setText(titleEl, profile.title || profile.headline || "—");
+    setText(emailEl, contact.email || user.email || "—");
+    setText(phoneEl, contact.phone || "—");
+    setText(locEl, contact.location || profile.location || "—");
+    setLink(fbEl, contact.facebook || "");
+    setLink(ghEl, contact.github || "");
+
+    const about = String(profile.aboutText || profile.about || "").trim();
+    setText(aboutEl, about || "—");
+
+    const parts = displayName.split(/\s+/).filter(Boolean);
+    const initials = parts.slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+    if (avatarInitialsEl) {
+      avatarInitialsEl.textContent = initials || "A";
+    } else if (avatarEl) {
+      avatarEl.textContent = initials || "A";
+    }
+
+    const rawAvatar = String(profile.avatarDataUrl || profile.avatar || profile.photo || "").trim();
+    const hasAvatar = rawAvatar && (/^data:image\//i.test(rawAvatar) || /^https?:\/\//i.test(rawAvatar));
+    if (avatarEl) avatarEl.classList.toggle("has-photo", Boolean(hasAvatar));
+    if (avatarImgEl) {
+      if (hasAvatar) {
+        avatarImgEl.src = rawAvatar;
+        avatarImgEl.style.display = "block";
+      } else {
+        avatarImgEl.removeAttribute("src");
+        avatarImgEl.style.display = "none";
+      }
+    }
+
+    if (openTagEl) {
+      const openToWork = typeof profile.openToWork === "boolean" ? profile.openToWork : true;
+      openTagEl.textContent = openToWork ? "Open to Work" : "Not Looking";
+      openTagEl.classList.toggle("success", openToWork);
+    }
+
+    if (skillsEl) {
+      skillsEl.innerHTML = "";
+      const skills = Array.isArray(profile.skills) ? profile.skills : [];
+      const clean = skills.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 12);
+      const list = clean.length ? clean : ["No skills listed"];
+      list.forEach((s) => {
+        const pill = document.createElement("span");
+        pill.textContent = s;
+        skillsEl.appendChild(pill);
+      });
+    }
+
+    const hasFile =
+      (Array.isArray(profile.resumes) && profile.resumes.some((r) => r && typeof r.dataUrl === "string" && r.dataUrl)) ||
+      (profile.resume && typeof profile.resume === "object" && typeof profile.resume.dataUrl === "string" && profile.resume.dataUrl);
+    if (fileBtn) {
+      fileBtn.style.display = hasFile ? "inline-flex" : "none";
+      fileBtn.onclick = () => {
+        const files = extractUploadedFilesFromProfile(profile);
+        openFilePicker(files, { title: "Choose a file", sub: "Select a seeker-uploaded file to open." });
+      };
+    }
+  };
+
+  const cached = userProfileCache.get(id);
+  const cachedPayload = cached && cached.payload ? cached.payload : null;
+  const cachedFresh = Boolean(cached && (Date.now() - (Number(cached.fetchedAt) || 0) < USER_PROFILE_CACHE_TTL_MS));
+
+  if (cachedPayload) {
+    modal.style.display = "flex";
+    applyPayload(cachedPayload);
+    if (cachedFresh) return;
+  } else {
+    setText(nameEl, "Loading...");
+    setText(titleEl, "");
+    setText(emailEl, "");
+    setText(phoneEl, "");
+    setText(locEl, "");
+    setLink(fbEl, "");
+    setLink(ghEl, "");
+    setText(aboutEl, "");
+    if (avatarEl) avatarEl.classList.remove("has-photo");
+    if (avatarImgEl) {
+      avatarImgEl.removeAttribute("src");
+      avatarImgEl.style.display = "none";
+    }
+    if (avatarInitialsEl) {
+      avatarInitialsEl.textContent = "...";
+    } else if (avatarEl) {
+      avatarEl.textContent = "...";
+    }
+    if (openTagEl) {
+      openTagEl.textContent = "—";
+      openTagEl.classList.remove("success");
+    }
+    if (skillsEl) skillsEl.innerHTML = "";
+    if (fileBtn) fileBtn.style.display = "none";
+    modal.style.display = "flex";
+  }
 
   apiRequest(`/api/users/${encodeURIComponent(id)}`, { method: "GET", auth: true })
     .then((u) => {
       if (!u || !u.ok) {
         throw new Error((u && u.error) || "Failed to load profile.");
       }
-      const user = u.user && typeof u.user === "object" ? u.user : {};
-      const profile = u.profile && typeof u.profile === "object" ? u.profile : {};
-      const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
-
-      const displayName = String(profile.name || user.name || "Applicant").trim() || "Applicant";
-      setText(nameEl, displayName);
-      setText(titleEl, profile.title || profile.headline || "—");
-      setText(emailEl, contact.email || user.email || "—");
-      setText(phoneEl, contact.phone || "—");
-      setText(locEl, contact.location || profile.location || "—");
-      setLink(fbEl, contact.facebook || "");
-      setLink(ghEl, contact.github || "");
-
-      const about = String(profile.aboutText || profile.about || "").trim();
-      setText(aboutEl, about || "—");
-
-      const parts = displayName.split(/\s+/).filter(Boolean);
-      const initials = parts.slice(0, 2).map((p) => p[0]).join("").toUpperCase();
-      if (avatarInitialsEl) {
-        avatarInitialsEl.textContent = initials || "A";
-      } else if (avatarEl) {
-        avatarEl.textContent = initials || "A";
-      }
-
-      const rawAvatar = String(profile.avatarDataUrl || profile.avatar || profile.photo || "").trim();
-      const hasAvatar = rawAvatar && (/^data:image\//i.test(rawAvatar) || /^https?:\/\//i.test(rawAvatar));
-      if (avatarEl) avatarEl.classList.toggle("has-photo", Boolean(hasAvatar));
-      if (avatarImgEl) {
-        if (hasAvatar) {
-          avatarImgEl.src = rawAvatar;
-          avatarImgEl.style.display = "block";
-        } else {
-          avatarImgEl.removeAttribute("src");
-          avatarImgEl.style.display = "none";
-        }
-      }
-
-      if (openTagEl) {
-        const openToWork = typeof profile.openToWork === "boolean" ? profile.openToWork : true;
-        openTagEl.textContent = openToWork ? "Open to Work" : "Not Looking";
-        openTagEl.classList.toggle("success", openToWork);
-      }
-
-      if (skillsEl) {
-        skillsEl.innerHTML = "";
-        const skills = Array.isArray(profile.skills) ? profile.skills : [];
-        const clean = skills.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 12);
-        const list = clean.length ? clean : ["No skills listed"];
-        list.forEach((s) => {
-          const pill = document.createElement("span");
-          pill.textContent = s;
-          skillsEl.appendChild(pill);
-        });
-      }
-
-      const hasFile =
-        (Array.isArray(profile.resumes) && profile.resumes.some((r) => r && typeof r.dataUrl === "string" && r.dataUrl)) ||
-        (profile.resume && typeof profile.resume === "object" && typeof profile.resume.dataUrl === "string" && profile.resume.dataUrl);
-      if (fileBtn) {
-        fileBtn.style.display = hasFile ? "inline-flex" : "none";
-        fileBtn.onclick = () => {
-          const files = extractUploadedFilesFromProfile(profile);
-          openFilePicker(files, { title: "Choose a file", sub: "Select a seeker-uploaded file to open." });
-        };
-      }
+      userProfileCache.set(id, { payload: u, fetchedAt: Date.now() });
+      applyPayload(u);
     })
     .catch((err) => {
       setText(nameEl, "Could not load profile");
@@ -4530,7 +4594,7 @@ function showSeekerNotifications() {
   setSeekerView("seekerNotificationsPage");
   window.scrollTo(0, 0);
   if (getLoggedIn() && getLoggedInRole() === "seeker") {
-    loadAndShowNotifications("seeker").catch(() => renderNotificationsList("seeker", []));
+    loadAndShowNotifications("seeker", { quiet: true }).catch(() => renderNotificationsList("seeker", []));
   } else {
     renderNotificationsList("seeker", []);
   }
@@ -4663,7 +4727,7 @@ function showEmployerNotifications() {
   document.getElementById("employerNotifications").style.display = "flex";
   window.scrollTo(0, 0);
   if (getLoggedIn() && getLoggedInRole() === "employer") {
-    loadAndShowNotifications("employer").catch(() => renderNotificationsList("employer", []));
+    loadAndShowNotifications("employer", { quiet: true }).catch(() => renderNotificationsList("employer", []));
   } else {
     renderNotificationsList("employer", []);
   }
