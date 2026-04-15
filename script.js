@@ -23,6 +23,7 @@ let employerApplicantsSearchTimer = null;
 let employerApplicantsJobsSearchTimer = null;
 let employerApplicantsSelectedJobId = "";
 let employerApplicantsSelectedJob = null;
+let employerPostedJobsShowAll = false;
 let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
 let employerApplicantsLastLoadedAt = 0;
@@ -1417,6 +1418,15 @@ function captureEmployerPostedApplicantsUIState(container) {
   return state;
 }
 
+function getEmployerPostedJobsPageSize() {
+  try {
+    const isMobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+    return isMobile ? 3 : 6;
+  } catch {
+    return 6;
+  }
+}
+
 function renderEmployerPostedJobs(jobs) {
   const container = ensureEmployerPostedContainer();
   const uiState = captureEmployerPostedApplicantsUIState(container);
@@ -1425,6 +1435,9 @@ function renderEmployerPostedJobs(jobs) {
   container.innerHTML = "";
 
   const list = Array.isArray(jobs) ? jobs.filter(isJobOpen) : [];
+  const pageSize = getEmployerPostedJobsPageSize();
+  const canToggle = list.length > pageSize;
+  const visibleList = !canToggle || employerPostedJobsShowAll ? list : list.slice(0, pageSize);
 
   const kpiCards = document.querySelectorAll("#employeePage .kpi-card .kpi-value");
   if (kpiCards.length >= 2) {
@@ -1442,7 +1455,31 @@ function renderEmployerPostedJobs(jobs) {
     return;
   }
 
-  list.forEach((job) => {
+  if (canToggle) {
+    const toolbar = document.createElement("div");
+    toolbar.className = "posted-jobs-toolbar";
+    toolbar.innerHTML = `
+      <div class="posted-jobs-toolbar__text"></div>
+      <button class="employer-text-btn posted-jobs-toolbar__btn" type="button"></button>
+    `;
+    const text = toolbar.querySelector(".posted-jobs-toolbar__text");
+    const btn = toolbar.querySelector("button");
+    if (text) {
+      const showing = employerPostedJobsShowAll ? list.length : visibleList.length;
+      text.textContent = `Showing ${showing} of ${list.length} posted jobs`;
+    }
+    if (btn) {
+      btn.textContent = employerPostedJobsShowAll ? "Show less" : "View all";
+      btn.addEventListener("click", () => {
+        employerPostedJobsShowAll = !employerPostedJobsShowAll;
+        renderEmployerPostedJobs(jobs);
+        window.scrollTo(0, 0);
+      });
+    }
+    container.appendChild(toolbar);
+  }
+
+  visibleList.forEach((job) => {
     const block = document.createElement("div");
     block.className = "posted-job-block";
 

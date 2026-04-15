@@ -1834,6 +1834,18 @@ textarea:-webkit-autofill:focus{
 #postedJobsList{
   margin-top:12px;
 }
+.posted-jobs-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:6px 2px 10px;
+}
+.posted-jobs-toolbar__text{
+  font-size:12px;
+  color:var(--muted);
+}
+.posted-jobs-toolbar__btn{white-space:nowrap;}
 .posted-job-block + .posted-job-block{
   margin-top:12px;
 }
