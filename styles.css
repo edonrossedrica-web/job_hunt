@@ -436,6 +436,16 @@ body.page-loading{
 @media (max-width: 540px){
   .status-item-top{flex-direction:column;align-items:stretch;justify-content:flex-start;}
   .status-item-actions{justify-content:flex-start;}
+  .status-panel[data-employer-status] .status-item-top{
+    flex-direction:row;
+    align-items:flex-start;
+    justify-content:space-between;
+  }
+  .status-panel[data-employer-status] .status-item-actions{
+    width:auto;
+    margin-left:auto;
+    justify-content:flex-end;
+  }
   #seekerHistoryPage .status-item--history .status-item-top{
     flex-direction:row;
     align-items:flex-start;
@@ -3068,10 +3078,19 @@ textarea[data-autogrow="1"]{
     gap:8px;
     align-items:center;
   }
+  .status-panel[data-employer-status] .status-item-actions{
+    width:auto;
+    margin-left:auto;
+    margin-top:0;
+    justify-content:flex-end;
+  }
   .status-item-actions .ghost-btn.small-btn{
     flex:1 1 0;
     justify-content:center;
     min-width:0;
+  }
+  .status-panel[data-employer-status] .status-item-actions .ghost-btn.small-btn{
+    flex:0 0 auto;
   }
   .employee-page{
     padding-left:16px;
