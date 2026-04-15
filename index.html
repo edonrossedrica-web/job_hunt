@@ -1282,7 +1282,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div class="login-form">
 <div class="input-group"><i class="fa-solid fa-user"></i><input id="feedbackName" type="text" placeholder="Your Name" autocomplete="name"></div>
 <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="feedbackEmail" type="email" placeholder="Your Email" autocomplete="email"></div>
-<div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="feedbackText" placeholder="Write your feedback here..." rows="4"></textarea></div>
+<div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="feedbackText" data-autogrow="1" placeholder="Write your feedback here..." rows="4"></textarea></div>
 <button class="login-btn" type="button" onclick="submitFeedback(event)">Submit Feedback</button>
 </div>
 <button class="close-btn" onclick="closeFeedback()">Close</button>
@@ -1367,7 +1367,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
           </select>
           <i class="fa-solid fa-chevron-down select-caret" aria-hidden="true"></i>
         </div>
-        <div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="supportText" placeholder="Describe what happened, what you expected, and any error text..." rows="5"></textarea></div>
+        <div class="input-group textarea-group"><i class="fa-solid fa-pen"></i><textarea id="supportText" data-autogrow="1" placeholder="Describe what happened, what you expected, and any error text..." rows="5"></textarea></div>
         <button class="login-btn" type="button" onclick="submitSupportTicket(event)">Send to Support</button>
         <p class="support-note">Tip: include your role (Hunter/Employer) and the page you were on. Avoid passwords or sensitive info.</p>
       </div>
@@ -1432,7 +1432,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
     <p>Your profile details and saved requirements will be sent automatically.</p>
     <div style="margin-top:12px;">
       <label class="detail-label" for="applyMessage">Message (optional)</label>
-      <textarea id="applyMessage" rows="3" style="width:100%;margin-top:6px;background:rgba(7,12,22,0.9);border:1px solid rgba(148,163,184,0.2);border-radius:14px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;" placeholder="Add a short message to the employer..."></textarea>
+      <textarea id="applyMessage" data-autogrow="1" rows="3" style="width:100%;margin-top:6px;background:rgba(7,12,22,0.9);border:1px solid rgba(148,163,184,0.2);border-radius:14px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;" placeholder="Add a short message to the employer..."></textarea>
     </div>
     <div class="applicant-actions">
       <button class="applicant-btn secondary" onclick="closeApplyForm()">Cancel</button>

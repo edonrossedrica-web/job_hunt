@@ -2702,6 +2702,11 @@ textarea:-webkit-autofill:focus{
   resize:none;
   overflow-y:hidden;
 }
+.autogrow-textarea,
+textarea[data-autogrow="1"]{
+  resize:none;
+  overflow-y:hidden;
+}
 .add-job-textarea:focus{
   border-color:rgba(148,163,184,0.35);
   box-shadow:none;

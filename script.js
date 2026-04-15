@@ -2939,10 +2939,60 @@ function setupAddJobTextareaAutogrow() {
     const handler = () => grow(el);
     el.addEventListener("input", handler);
     el.addEventListener("change", handler);
+    el.addEventListener("focus", handler);
+    el.addEventListener("click", handler);
     grow(el);
   });
 
   const key = "__addJobAutogrowResizeWired";
+  if (document.body && document.body.dataset && document.body.dataset[key] !== "1") {
+    document.body.dataset[key] = "1";
+    window.addEventListener("resize", () => textareas.forEach(grow));
+  }
+}
+
+function setupUniversalTextareaAutogrow() {
+  const selector = [
+    "textarea[data-autogrow=\"1\"]",
+    "textarea.autogrow-textarea",
+  ].join(",");
+  const textareas = Array.from(document.querySelectorAll(selector)).filter((el) => !el.classList.contains("add-job-textarea"));
+  if (!textareas.length) return;
+
+  const grow = (el) => {
+    if (!el) return;
+    const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    const lineHeight = style ? Number.parseFloat(style.lineHeight) : 0;
+    const min = Math.max(44, Number.isFinite(lineHeight) && lineHeight > 0 ? Math.round(lineHeight * 3) : 0);
+    const max = Math.round(Math.min((window.innerHeight || 900) * 0.6, 520));
+
+    el.style.height = "auto";
+    const next = Math.max(min, el.scrollHeight || 0);
+    if (next > max) {
+      el.style.height = `${max}px`;
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = `${next}px`;
+      el.style.overflowY = "hidden";
+    }
+  };
+
+  textareas.forEach((el) => {
+    if (!el || !el.dataset) return;
+    if (el.dataset.universalAutogrowWired === "1") {
+      grow(el);
+      return;
+    }
+    el.dataset.universalAutogrowWired = "1";
+    const handler = () => grow(el);
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
+    el.addEventListener("focus", handler);
+    el.addEventListener("click", handler);
+    grow(el);
+  });
+
+  const key = "__universalAutogrowResizeWired";
   if (document.body && document.body.dataset && document.body.dataset[key] !== "1") {
     document.body.dataset[key] = "1";
     window.addEventListener("resize", () => textareas.forEach(grow));
@@ -3907,6 +3957,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupSeekerChatControls();
   setupSeekerChatAttachmentUi();
   setupSeekerChatExpandUi();
+  setupUniversalTextareaAutogrow();
   setupEmployerApplicantsSearch();
   setupEmployerApplicantsJobsSearch();
   setupEmployerApplicantsJobsFilterSort();
@@ -5243,6 +5294,14 @@ function openFeedback() {
     if (nameEl) nameEl.value = loggedIn ? storedName : "";
     if (emailEl) emailEl.value = loggedIn ? storedEmail : "";
     if (textEl) textEl.value = "";
+    setupUniversalTextareaAutogrow();
+    if (textEl) {
+      try {
+        textEl.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch {
+        // ignore
+      }
+    }
   } catch {
     // ignore
   }
@@ -5353,6 +5412,14 @@ function openChat() {
     if (emailEl) emailEl.value = loggedIn ? storedEmail : "";
     if (topicEl) topicEl.value = "Other";
     if (textEl) textEl.value = "";
+    setupUniversalTextareaAutogrow();
+    if (textEl) {
+      try {
+        textEl.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch {
+        // ignore
+      }
+    }
   } catch {
     // ignore
   }
@@ -5369,6 +5436,12 @@ function setSupportTemplate(text) {
     const textEl = document.getElementById("supportText");
     if (textEl) {
       textEl.value = String(text || "");
+      try {
+        setupUniversalTextareaAutogrow();
+        textEl.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch {
+        // ignore
+      }
       textEl.focus();
       textEl.selectionStart = textEl.value.length;
       textEl.selectionEnd = textEl.value.length;
@@ -5548,6 +5621,13 @@ function openApplyForm(button) {
     modal.setAttribute("data-job-id", jobId);
   } else {
     modal.removeAttribute("data-job-id");
+  }
+  try {
+    setupUniversalTextareaAutogrow();
+    const msg = document.getElementById("applyMessage");
+    if (msg) msg.dispatchEvent(new Event("input", { bubbles: true }));
+  } catch {
+    // ignore
   }
   modal.style.display = "flex";
 }

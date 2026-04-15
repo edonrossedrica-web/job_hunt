@@ -591,8 +591,31 @@ function escapeAttr(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"
 function escapeText(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function autoGrowTextarea(el){
   if(!el||!el.style) return;
+  const max = Math.round(Math.min((window.innerHeight || 900) * 0.6, 520));
+  const min = 44;
   el.style.height="auto";
-  el.style.height=Math.min(el.scrollHeight||0, 240)+"px";
+  const next = Math.max(min, el.scrollHeight || 0);
+  if(next > max){
+    el.style.height = max + "px";
+    el.style.overflowY = "auto";
+  }else{
+    el.style.height = next + "px";
+    el.style.overflowY = "hidden";
+  }
+}
+function wireAutoGrowTextarea(el){
+  if(!el) return;
+  if(el.dataset && el.dataset.autogrowWired==="1"){
+    autoGrowTextarea(el);
+    return;
+  }
+  if(el.dataset) el.dataset.autogrowWired="1";
+  const handler=()=>autoGrowTextarea(el);
+  el.addEventListener("input", handler);
+  el.addEventListener("change", handler);
+  el.addEventListener("focus", handler);
+  el.addEventListener("click", handler);
+  handler();
 }
 
 function showPageLoader(message){
@@ -957,10 +980,10 @@ function editField(sectionId) {
     let current = el.innerText;
     el.dataset.originalText = current;
     el.dataset.editing = "1";
-    el.innerHTML = `<textarea class="edit-input" id="companyNameInput" rows="1">${escapeText(current)}</textarea>
+    el.innerHTML = `<textarea class="edit-input" id="companyNameInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyName')">Save</button>`;
     const input = document.getElementById("companyNameInput");
-    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
+    if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'companyIndustry'){
     let el = document.getElementById('companyIndustry');
     if (!el) return;
@@ -973,10 +996,10 @@ function editField(sectionId) {
     let current = el.innerText;
     el.dataset.originalText = current;
     el.dataset.editing = "1";
-    el.innerHTML = `<textarea class="edit-input" id="companyIndustryInput" rows="1">${escapeText(current)}</textarea>
+    el.innerHTML = `<textarea class="edit-input" id="companyIndustryInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyIndustry')">Save</button>`;
     const input = document.getElementById("companyIndustryInput");
-    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
+    if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'aboutText'){
     let para = document.getElementById('aboutText');
     if (!para) return;
@@ -989,10 +1012,10 @@ function editField(sectionId) {
     let current = para.innerText;
     para.dataset.originalText = current;
     para.dataset.editing = "1";
-    para.innerHTML = `<textarea class="edit-input" id="aboutInput" rows="1">${escapeText(current)}</textarea>
+    para.innerHTML = `<textarea class="edit-input" id="aboutInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('aboutText')">Save</button>`;
     const input = document.getElementById("aboutInput");
-    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
+    if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'companyLocation'){
     let span = document.getElementById('companyLocation');
     if (!span) return;
@@ -1005,10 +1028,10 @@ function editField(sectionId) {
     let current = span.innerText;
     span.dataset.originalText = current;
     span.dataset.editing = "1";
-    span.innerHTML = `<textarea class="edit-input" id="locationInput" rows="1">${escapeText(current)}</textarea>
+    span.innerHTML = `<textarea class="edit-input" id="locationInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('companyLocation')">Save</button>`;
     const input = document.getElementById("locationInput");
-    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
+    if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'infoSection'){
     const ids = ['infoIndustry','infoSize','infoFounded','infoWebsite'];
     const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
@@ -1033,9 +1056,9 @@ function editField(sectionId) {
       const current = el.innerText;
       el.dataset.originalText = current;
       el.dataset.editing = "1";
-      el.innerHTML = `<textarea class="edit-input" id="${id}Input" rows="1">${escapeText(current)}</textarea>`;
+      el.innerHTML = `<textarea class="edit-input" id="${id}Input" data-autogrow="1" rows="1">${escapeText(current)}</textarea>`;
       const input = document.getElementById(id + "Input");
-      if (input) { autoGrowTextarea(input); input.addEventListener("input", () => autoGrowTextarea(input)); }
+      if (input) { wireAutoGrowTextarea(input); }
     });
     const firstInfo = document.getElementById(ids[0] + "Input");
     if (firstInfo) firstInfo.focus?.();
@@ -1067,9 +1090,9 @@ function editField(sectionId) {
       const current = el.innerText;
       el.dataset.originalText = current;
       el.dataset.editing = "1";
-      el.innerHTML = `<textarea class="edit-input" id="${id}Input" rows="1">${escapeText(current)}</textarea>`;
+      el.innerHTML = `<textarea class="edit-input" id="${id}Input" data-autogrow="1" rows="1">${escapeText(current)}</textarea>`;
       const input = document.getElementById(id + "Input");
-      if (input) { autoGrowTextarea(input); input.addEventListener("input", () => autoGrowTextarea(input)); }
+      if (input) { wireAutoGrowTextarea(input); }
     });
     const firstContact = document.getElementById(ids[0] + "Input");
     if (firstContact) firstContact.focus?.();

@@ -577,12 +577,14 @@
         const cur=String(el.innerText||"");
         const base=(cur.trim().toLowerCase()==="add a short bio about you")?"":cur;
         el.dataset.originalText=base; el.dataset.editing="1";
-        el.innerHTML=`<textarea class="edit-input" id="aboutInput" placeholder="Add a short bio about you">${escapeText(base)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        el.innerHTML=`<textarea class="edit-input" id="aboutInput" data-autogrow="1" placeholder="Add a short bio about you">${escapeText(base)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
         const input=document.getElementById("aboutInput");
         if(input){
           const grow=()=>{try{input.style.height="auto";input.style.height=input.scrollHeight+"px";}catch{}};
           grow();
           input.addEventListener("input",grow);
+          input.addEventListener("focus",grow);
+          input.addEventListener("click",grow);
           setTimeout(()=>{try{input.focus()}catch{}},0);
         }
         return;
