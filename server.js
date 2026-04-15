@@ -1533,10 +1533,12 @@ async function handleApi(req, res, url) {
     }
 
     let user = db.users.find((u) => u.email === info.email && u.role === role);
-    let recoveredAccount = false;
+    const normalizedMode = mode === "signup" ? "signup" : "login";
     if (!user) {
+      if (normalizedMode === "login") {
+        return json(res, 404, { ok: false, error: "No account found. Please sign up first before you log in." });
+      }
       const employerCompany = role === "employer" ? String(body.company || "").trim() : "";
-      recoveredAccount = mode === "login";
       user = {
         id: createId("user"),
         role,
@@ -1577,6 +1579,9 @@ async function handleApi(req, res, url) {
       };
       db.users.push(user);
     } else {
+      if (normalizedMode === "signup") {
+        return json(res, 409, { ok: false, error: "You already have an account." });
+      }
       // Backfill missing profile basics for older accounts.
       if (role === "seeker" && !user.name && info.name) user.name = info.name;
       if (role === "employer" && !user.company) user.company = "";
@@ -1592,7 +1597,7 @@ async function handleApi(req, res, url) {
       expiresAt: Date.now() + SESSION_TTL_MS,
     });
     await writeDb(db);
-    return json(res, 200, { ok: true, token, user: sanitizeUser(user), recoveredAccount });
+    return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
   }
 
   if (pathname === "/api/logout" && req.method === "POST") {

@@ -4387,7 +4387,7 @@ async function handleGoogleAuth(role, mode) {
     let user = users.find((u) => String(u.email || "").toLowerCase() === email && u.role === normalizedRole);
     if (!user) {
       if (mode !== "signup") {
-        alert("No account found. Please sign up first.");
+        alert("No account found. Please sign up first before you log in.");
         return;
       }
       user = createMockUser({
@@ -4399,6 +4399,9 @@ async function handleGoogleAuth(role, mode) {
       });
       users.push(user);
       saveStoredUsers(users);
+    } else if (mode === "signup") {
+      alert("You already have an account.");
+      return;
     }
     finalizeLogin(user, "");
   };
@@ -4490,6 +4493,10 @@ async function handleGoogleAuth(role, mode) {
   const users = getStoredUsers();
   let user = users.find((u) => String(u.email || "").toLowerCase() === email && u.role === normalizedRole);
   if (!user) {
+    if (mode !== "signup") {
+      alert("No account found. Please sign up first before you log in.");
+      return;
+    }
     user = createMockUser({
       role: normalizedRole,
       email,
@@ -4499,6 +4506,9 @@ async function handleGoogleAuth(role, mode) {
     });
     users.push(user);
     saveStoredUsers(users);
+  } else if (mode === "signup") {
+    alert("You already have an account.");
+    return;
   }
 
   finalizeLogin(user, "");
