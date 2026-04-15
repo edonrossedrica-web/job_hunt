@@ -1243,6 +1243,20 @@ function setupSeekerSearch() {
     const location = String(locationEl.value || "");
     seekerSearchState = { keywords, location };
     renderSeekerJobsWithSearch(jobs);
+    if (window.matchMedia && window.matchMedia("(max-width: 640px)").matches) {
+      const target =
+        document.getElementById("recommendedJobsBox") ||
+        document.getElementById("recommendedJobsGrid");
+      if (target && typeof target.scrollIntoView === "function") {
+        setTimeout(() => {
+          try {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          } catch {
+            target.scrollIntoView();
+          }
+        }, 60);
+      }
+    }
   };
 
   btn.addEventListener("click", () => run());
@@ -4035,26 +4049,28 @@ async function loadSeekerConversationsFromBackend() {
       const preview = String(a.message || "").trim() || "No messages yet. Say hi to start the conversation.";
 
       const card = document.createElement("div");
-      card.className = "applicant-card wide";
+      card.className = "conversation-card";
       card.innerHTML = `
-        <div class="applicant-head">
-          <div class="applicant-avatar">${initials || "E"}</div>
-          <div>
-            <h3>${company}</h3>
-            <p>Applied for <span>${String(a.jobTitle || "a role")}</span></p>
-            <div class="applicant-meta">
-              <span class="status-tag ${statusClass}">${statusLabel}</span>
-              <span>${formatRelative(a.createdAt)}</span>
+        <div class="conversation-card__header">
+          <div class="conversation-card__identity">
+            <div class="applicant-avatar">${initials || "E"}</div>
+            <div class="conversation-card__copy">
+              <h3>${company}</h3>
+              <p>Applied for <span>${String(a.jobTitle || "a role")}</span></p>
             </div>
           </div>
+          <button class="applicant-btn primary conversation-card__action" type="button">Open Chat</button>
         </div>
-        <div class="applicant-tags">
-          <span class="tag-pill">${String(a.jobTitle || "Role")}</span>
+        <div class="conversation-card__meta">
+          <div class="applicant-meta">
+              <span class="status-tag ${statusClass}">${statusLabel}</span>
+              <span>${formatRelative(a.createdAt)}</span>
+          </div>
+          <div class="applicant-tags">
+            <span class="tag-pill">${String(a.jobTitle || "Role")}</span>
+          </div>
         </div>
-        <p class="applicant-note">${preview}</p>
-        <div class="applicant-actions">
-          <button class="applicant-btn primary" type="button">Open Chat</button>
-        </div>
+        <p class="conversation-card__note">${preview}</p>
       `;
       const btn = card.querySelector("button");
       if (btn) {

@@ -307,7 +307,7 @@ body.page-loading{
   cursor:pointer;
   transition:0.3s;
 }
-.ghost-btn:hover{border-color:var(--accent);color:var(--accent);}
+.ghost-btn:hover{border-color:rgba(148,163,184,0.32);color:var(--text);background:rgba(148,163,184,0.08);}
 .ghost-btn.small-btn{
   padding:6px 12px;
   font-size:11px;
@@ -399,7 +399,7 @@ body.page-loading{
 .status-panel-head .ghost-btn.small-btn{flex:0 0 auto;white-space:nowrap;}
 .status-panel h3{font-size:16px;margin-bottom:4px;}
 .status-panel p{color:var(--muted);font-size:12px;}
-.status-list{display:flex;flex-direction:column;gap:10px;}
+.status-list{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
 .status-item{
   display:flex;
   gap:10px;
@@ -2277,6 +2277,61 @@ textarea:-webkit-autofill:focus{
   margin-bottom:16px;
 }
 .applicant-list{display:flex;flex-direction:column;gap:14px;}
+.conversation-card{
+  background:rgba(11,17,32,0.88);
+  border:1px solid rgba(148,163,184,0.16);
+  border-radius:18px;
+  padding:16px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,0.24);
+}
+.conversation-card__header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.conversation-card__identity{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-width:0;
+  flex:1 1 auto;
+}
+.conversation-card__copy{
+  min-width:0;
+  flex:1 1 auto;
+}
+.conversation-card__copy h3{
+  font-size:16px;
+  margin-bottom:3px;
+  line-height:1.25;
+}
+.conversation-card__copy p{
+  color:var(--muted);
+  font-size:12px;
+  margin:0;
+}
+.conversation-card__copy p span{color:#9db7ff;}
+.conversation-card__meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.conversation-card__note{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+  margin:0;
+  word-break:break-word;
+}
+.conversation-card__action{
+  flex:0 0 auto;
+}
 .empty-state-card{
   background:rgba(11,17,32,0.65);
   border:1px solid rgba(148,163,184,0.18);
@@ -2791,6 +2846,15 @@ textarea:-webkit-autofill:focus{
   .chat-bubble{
     max-width:100%;
   }
+  .status-panel{
+    gap:14px;
+  }
+  .status-panel-head .ghost-btn.small-btn{
+    margin-top:4px;
+  }
+  .status-list{
+    margin-top:12px;
+  }
   #seekerChatPage{
     padding-bottom:120px;
   }
@@ -2819,6 +2883,29 @@ textarea:-webkit-autofill:focus{
   }
   .applicants-hero{
     padding:0 2px;
+  }
+  .conversation-card{
+    padding:14px;
+    gap:10px;
+  }
+  .conversation-card__header{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .conversation-card__identity{
+    align-items:center;
+  }
+  .conversation-card__copy h3{
+    font-size:15px;
+  }
+  .conversation-card__meta{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .conversation-card__action{
+    width:100%;
+    justify-content:center;
   }
   .applicant-card,
   .applicant-card.wide{
@@ -2930,6 +3017,13 @@ textarea:-webkit-autofill:focus{
   .applicants-hero p{
     font-size:13px;
     line-height:1.6;
+  }
+  .conversation-card{
+    padding:12px;
+    border-radius:16px;
+  }
+  .conversation-card__copy h3{
+    font-size:14px;
   }
   .applicant-card,
   .applicant-card.wide{

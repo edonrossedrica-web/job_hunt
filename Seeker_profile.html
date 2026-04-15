@@ -53,11 +53,25 @@
     .ub{background:#2b8be6;border:none;color:#fff;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:10px}
     .ub:hover{background:#3aa0ff}
     .rlist{margin-top:14px;display:flex;flex-direction:column;gap:10px}
-    .ritem{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(12,17,23,.45);border:1px solid rgba(255,255,255,.06)}
-    .rname{font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-    .ra{display:flex;gap:10px;flex:0 0 auto}
-    .lb{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .ritem{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(12,17,23,.45);border:1px solid rgba(255,255,255,.06)}
+    .rname{flex:1 1 auto;font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .ra{display:flex;gap:10px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+    .lb{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px}
     .lb:hover{border-color:rgba(58,160,255,.45);color:#fff}
+    @media (max-width: 640px){
+      .section{padding:18px}
+      .resume-box{padding:16px}
+      .resume-box .hint{flex-basis:100%}
+      .ub{width:100%;justify-content:center}
+      .ritem{flex-direction:column;align-items:stretch;gap:10px}
+      .rname{white-space:normal;overflow:visible;text-overflow:unset;word-break:break-word}
+      .ra{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .lb{width:100%;padding:9px 8px;font-size:11px;gap:6px}
+    }
+    @media (max-width: 420px){
+      .ra{grid-template-columns:1fr}
+      .lb{font-size:12px}
+    }
     .skills{display:flex;flex-wrap:wrap;gap:10px}
     .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(12,17,23,.40);color:#e2e8f0;font-size:12px;font-weight:800;letter-spacing:.2px}
     .empty{color:#bbb;line-height:1.6}
