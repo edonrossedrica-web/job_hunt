@@ -2287,6 +2287,10 @@ textarea:-webkit-autofill:focus{
   gap:12px;
   box-shadow:0 12px 30px rgba(0,0,0,0.24);
 }
+.conversation-card.unread{
+  border-color:rgba(96,165,250,0.45);
+  box-shadow:0 12px 30px rgba(0,0,0,0.24), 0 0 0 1px rgba(96,165,250,0.18);
+}
 .conversation-card__header{
   display:flex;
   align-items:flex-start;
@@ -2328,6 +2332,17 @@ textarea:-webkit-autofill:focus{
   line-height:1.6;
   margin:0;
   word-break:break-word;
+}
+.conversation-card__note-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.conversation-card__time{
+  color:var(--muted);
+  font-size:11px;
+  white-space:nowrap;
 }
 .conversation-card__action{
   flex:0 0 auto;

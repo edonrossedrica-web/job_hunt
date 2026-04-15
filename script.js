@@ -26,6 +26,8 @@ let employerApplicantsSelectedJob = null;
 let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
 let seekerChatSuppressRefreshUntil = 0;
+let seekerChatSearchTerm = "";
+let seekerChatFilterMode = "all";
 let addJobDraftAutosaveTimer = null;
 let notificationsReturnState = null;
 let pageLoaderDepth = 0;
@@ -1713,6 +1715,43 @@ function getLastConversationMessage(application) {
     text: legacyText,
     createdAt: application.createdAt || "",
   };
+}
+
+function getLastInboundConversationMessage(application, role = getLoggedInRole()) {
+  if (!application || typeof application !== "object") return null;
+  const msgs = Array.isArray(application.messages) ? application.messages : [];
+  const normalizedRole = String(role || "").toLowerCase();
+  const inbound = msgs
+    .filter((msg) => msg && typeof msg === "object" && String(msg.fromRole || "").toLowerCase() && String(msg.fromRole || "").toLowerCase() !== normalizedRole)
+    .slice()
+    .sort((a, b) => isoToMs(b.createdAt || "") - isoToMs(a.createdAt || ""));
+  return inbound[0] || null;
+}
+
+function isConversationUnread(application, role = getLoggedInRole()) {
+  const userId = localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "";
+  const appId = String(application && application.id ? application.id : "").trim();
+  if (!userId || !appId) return false;
+  const lastInbound = getLastInboundConversationMessage(application, role);
+  const inboundMs = isoToMs(lastInbound && lastInbound.createdAt ? lastInbound.createdAt : "");
+  if (!inboundMs) return false;
+  const seenMs = Number.parseInt(localStorage.getItem(getNotifSeenMsgKey(role, userId, appId)) || "0", 10) || 0;
+  return inboundMs > seenMs;
+}
+
+function formatConversationTimestamp(createdAt) {
+  const t = Date.parse(String(createdAt || ""));
+  if (!Number.isFinite(t)) return "";
+  const date = new Date(t);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - t) / (24 * 60 * 60 * 1000));
+  if (diffDays <= 0) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: "short" });
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 function isoToMs(iso) {
@@ -3781,6 +3820,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAddJobDraftAutosave();
   setupAddJobFormActions();
   setupSeekerSearch();
+  setupSeekerChatControls();
   setupEmployerApplicantsSearch();
   setupEmployerApplicantsJobsSearch();
   setupEmployerApplicantsJobsFilterSort();
@@ -4066,6 +4106,35 @@ function showSeekerChat() {
   loadSeekerConversationsFromBackend();
 }
 
+function setupSeekerChatControls() {
+  const searchInput = document.getElementById("seekerChatSearchInput");
+  const allBtn = document.getElementById("seekerChatFilterAll");
+  const unreadBtn = document.getElementById("seekerChatFilterUnread");
+  if (!searchInput || !allBtn || !unreadBtn) return;
+  if (searchInput.dataset.bound === "1") return;
+
+  searchInput.dataset.bound = "1";
+
+  searchInput.addEventListener("input", () => {
+    seekerChatSearchTerm = String(searchInput.value || "").trim().toLowerCase();
+    loadSeekerConversationsFromBackend().catch(() => {});
+  });
+
+  allBtn.addEventListener("click", () => {
+    seekerChatFilterMode = "all";
+    allBtn.classList.add("active");
+    unreadBtn.classList.remove("active");
+    loadSeekerConversationsFromBackend().catch(() => {});
+  });
+
+  unreadBtn.addEventListener("click", () => {
+    seekerChatFilterMode = "unread";
+    unreadBtn.classList.add("active");
+    allBtn.classList.remove("active");
+    loadSeekerConversationsFromBackend().catch(() => {});
+  });
+}
+
 async function loadSeekerConversationsFromBackend() {
   const list = document.getElementById("seekerChatList");
   if (!list) return;
@@ -4087,21 +4156,46 @@ async function loadSeekerConversationsFromBackend() {
       return;
     }
 
+    const filteredApps = apps.filter((a) => {
+      const company = String(a.company || "Employer").trim();
+      const jobTitle = String(a.jobTitle || "").trim();
+      const lastMessage = getLastConversationMessage(a);
+      const preview = String(lastMessage && lastMessage.text ? lastMessage.text : "").trim();
+      const haystack = `${company} ${jobTitle} ${preview}`.toLowerCase();
+      const matchesSearch = !seekerChatSearchTerm || haystack.includes(seekerChatSearchTerm);
+      const matchesUnread = seekerChatFilterMode !== "unread" || isConversationUnread(a, "seeker");
+      return matchesSearch && matchesUnread;
+    });
+
+    if (!filteredApps.length) {
+      list.innerHTML = `<div class="empty-state-card">No conversations match your current search or filter.</div>`;
+      return;
+    }
+
     list.innerHTML = "";
-    apps.forEach((a) => {
+    filteredApps.forEach((a) => {
       const company = String(a.company || "Employer").trim() || "Employer";
       const initials = company.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
       const status = String(a.status || "applied").toLowerCase();
       const statusClass = status === "rejected" ? "rejected" : status === "passed" ? "shortlist" : status === "pending" ? "interview" : "new";
       const statusLabel = status === "rejected" ? "Closed" : status === "passed" ? "Passed" : status === "pending" ? "Pending" : "Applied";
       const lastMessage = getLastConversationMessage(a);
+      const unread = isConversationUnread(a, "seeker");
       const preview = lastMessage
         ? (String(lastMessage.text || "").trim() || (lastMessage.attachment ? "Attachment sent." : ""))
         : "";
-      const noteMarkup = preview ? `<p class="conversation-card__note">${preview}</p>` : "";
+      const noteTime = lastMessage ? formatConversationTimestamp(lastMessage.createdAt || "") : "";
+      const noteMarkup = preview
+        ? `
+        <div class="conversation-card__note-row">
+          <p class="conversation-card__note">${preview}</p>
+          ${noteTime ? `<span class="conversation-card__time">${noteTime}</span>` : ""}
+        </div>`
+        : "";
 
       const card = document.createElement("div");
       card.className = "conversation-card";
+      if (unread) card.classList.add("unread");
       card.innerHTML = `
         <div class="conversation-card__header">
           <div class="conversation-card__identity">
@@ -4116,7 +4210,7 @@ async function loadSeekerConversationsFromBackend() {
         <div class="conversation-card__meta">
           <div class="applicant-meta">
               <span class="status-tag ${statusClass}">${statusLabel}</span>
-              <span>Applied ${formatRelative(a.createdAt)}</span>
+              ${unread ? '<span class="notice-tag">Unread</span>' : ""}
           </div>
         </div>
         ${noteMarkup}

@@ -229,11 +229,11 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       <header class="applicants-topbar">
         <div class="applicants-search">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" placeholder="Search employers or roles" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <input id="seekerChatSearchInput" type="text" placeholder="Search employers or roles" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div class="applicants-top-actions">
-          <button class="filter-pill active">All Messages</button>
-          <button class="filter-pill">Unread</button>
+          <button class="filter-pill active" id="seekerChatFilterAll" type="button">All Messages</button>
+          <button class="filter-pill" id="seekerChatFilterUnread" type="button">Unread</button>
         </div>
       </header>
 
