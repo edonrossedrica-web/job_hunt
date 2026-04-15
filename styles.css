@@ -2869,11 +2869,17 @@ textarea[data-autogrow="1"]{
     font-size:11px;
     letter-spacing:.08em;
   }
-  .logo-section{height:auto;min-height:56px;}
+  /* Mobile: make the logo bigger without changing navbar/nav-link layout */
+  .logo-section{
+    height:48px;
+    min-height:48px;
+    overflow:visible;
+  }
   .logo-section img.brand-logo{
-    transform:none;
-    height:66px;
-    max-width:280px;
+    height:48px;
+    max-width:160px;
+    transform:scale(1.45);
+    transform-origin:left center;
   }
   .container{width:min(100%,calc(100% - 16px));}
   .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{
