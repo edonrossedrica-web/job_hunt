@@ -2869,11 +2869,11 @@ textarea[data-autogrow="1"]{
     font-size:11px;
     letter-spacing:.08em;
   }
-  .logo-section{height:auto;min-height:44px;}
+  .logo-section{height:auto;min-height:56px;}
   .logo-section img.brand-logo{
     transform:none;
-    height:54px;
-    max-width:220px;
+    height:66px;
+    max-width:280px;
   }
   .container{width:min(100%,calc(100% - 16px));}
   .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{
