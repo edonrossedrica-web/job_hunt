@@ -436,6 +436,15 @@ body.page-loading{
 @media (max-width: 540px){
   .status-item-top{flex-direction:column;align-items:stretch;justify-content:flex-start;}
   .status-item-actions{justify-content:flex-start;}
+  #seekerHistoryPage .status-item--history .status-item-top{
+    flex-direction:row;
+    align-items:flex-start;
+    justify-content:space-between;
+  }
+  #seekerHistoryPage .status-item--history .status-item-actions{
+    justify-content:flex-end;
+    margin-left:auto;
+  }
 }
 
 .snapshot-grid{

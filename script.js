@@ -2063,7 +2063,7 @@ async function loadSeekerHistoryFromBackend() {
     }
     items.slice(0, 6).forEach((a) => {
       const item = document.createElement("div");
-      item.className = "status-item";
+      item.className = "status-item status-item--history";
       item.innerHTML = `
         <span class="status-dot ${status}"></span>
         <div class="status-item-content">
