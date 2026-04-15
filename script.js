@@ -2256,9 +2256,9 @@ async function loadEmployerApplicantsFromBackend() {
           <p class="history-date"><i class="fa-regular fa-calendar"></i> Posted ${date}</p>
           <p class="history-date" style="margin-top:6px;color:#9aa4b2;">${companyLine}</p>
           <div class="history-meta">
-            <div>
+            <div class="history-meta-count">
               <p class="meta-value">${count}</p>
-              <p class="meta-label">Applicants</p>
+              <p class="meta-label meta-label-inline">${count === 1 ? "applicant" : "applicants"}</p>
             </div>
             <div class="history-meta-actions">
               <button class="history-cta-btn" type="button" data-action="view">

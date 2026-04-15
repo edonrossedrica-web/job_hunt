@@ -2129,8 +2129,18 @@ textarea:-webkit-autofill:focus{
   align-items:center;
   gap:12px;
 }
+.history-meta-count{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+}
 .meta-value{font-size:22px;font-weight:700;}
 .meta-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.meta-label-inline{
+  font-size:11px;
+  text-transform:none;
+  letter-spacing:0;
+}
 .history-cta-btn{
   border:none;
   border-radius:999px;
@@ -2832,9 +2842,83 @@ textarea:-webkit-autofill:focus{
   .section-head{flex-direction:column;align-items:flex-start;}
   .job-footer{flex-direction:column;align-items:flex-start;}
   .saved-search{flex-direction:column;align-items:flex-start;}
-  .employee-page{padding-left:20px;padding-right:20px;}
+  .employee-page{
+    padding-left:16px;
+    padding-right:16px;
+    padding-top:122px;
+    padding-bottom:118px;
+  }
   .employer-topbar{flex-wrap:wrap;gap:10px;}
-  .employer-hero h1{font-size:32px;}
+  .employer-hero{
+    padding:18px 16px;
+    border-radius:18px;
+  }
+  .employer-hero h1{font-size:30px;line-height:1.05;}
+  .employer-hero p{font-size:13px;line-height:1.6;}
+  .employer-kpis{gap:10px;}
+  .kpi-card{
+    padding:15px 14px;
+    border-radius:16px;
+  }
+  .match-section{
+    padding:15px 12px;
+    border-radius:16px;
+  }
+  .match-header{margin-bottom:10px;}
+  .posted-search{
+    padding:10px 12px;
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+  #postedJobsList{margin-top:8px;}
+  .posted-job-block + .posted-job-block{margin-top:10px;}
+  .posted-job-card{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:12px;
+    border-radius:16px;
+  }
+  .posted-job-card .employer-text-btn{
+    width:100%;
+    justify-content:center;
+    min-height:40px;
+  }
+  .posted-applicants{
+    margin:8px 0 0;
+    padding:8px 10px;
+    border-radius:12px;
+  }
+  .posted-applicants-row{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+    padding:10px 0;
+  }
+  .posted-applicant-left{width:100%;}
+  .posted-applicants-row h4{line-height:1.3;}
+  .posted-applicants-row p{
+    line-height:1.5;
+    word-break:break-word;
+  }
+  .posted-applicants-actions{
+    width:100%;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .posted-applicants-actions .status-tag{flex:0 0 auto;}
+  .posted-applicants-actions .employer-text-btn{
+    flex:1 1 calc(50% - 4px);
+    min-width:0;
+    justify-content:center;
+    min-height:38px;
+    padding-left:10px;
+    padding-right:10px;
+  }
+  .posted-applicant-detail{
+    margin:2px 0 8px;
+    padding:10px 9px;
+  }
   .fab-new-job{align-self:stretch;text-align:center;right:20px;left:20px;bottom:88px;}
   .employer-bottom-nav{left:16px;right:16px;bottom:14px;}
   .seeker-bottom-nav{left:16px;right:16px;bottom:14px;}
