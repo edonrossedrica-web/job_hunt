@@ -304,8 +304,7 @@
     }
     function getFacebookContactFallback(contact){
       const c=contact&&typeof contact==="object"?contact:{};
-      if(String(c.facebook||"").trim()) return String(c.facebook||"").trim();
-      return isSyntheticAuthEmail(c.email) ? "Connected with Facebook" : "";
+      return String(c.facebook||"").trim();
     }
     function render(){
       profile=ensureShape(profile);
@@ -383,9 +382,6 @@
             const backendEmail=String(data.user.email||"").trim();
             profile.contact.email=isSyntheticAuthEmail(backendEmail) ? "" : backendEmail;
           }
-          if(!profile.contact.facebook.trim()&&isSyntheticAuthEmail(String(data.user.email||""))){
-            profile.contact.facebook="Connected with Facebook";
-          }
         }
         // If backend profile was empty, persist the seeded name/email so the page won't show placeholders on refresh.
         if(data&&data.ok&&!hadBackendProfile&&(profile.name.trim()||profile.contact.email.trim())){
@@ -396,7 +392,6 @@
       if(!profile.contact.email.trim()){
         const storedEmail=String(localStorage.getItem("currentUserEmail")||"").trim();
         profile.contact.email=isSyntheticAuthEmail(storedEmail) ? "" : storedEmail;
-        if(!profile.contact.facebook.trim()&&isSyntheticAuthEmail(storedEmail)) profile.contact.facebook="Connected with Facebook";
       }
       writeCache(profile);
     }
