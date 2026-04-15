@@ -45,6 +45,7 @@
     .eb:hover{color:#3aa0ff}
     .about{color:#bbb;line-height:1.6;white-space:pre-wrap}
     #aboutText:empty::before{content:"Add a short bio about you";opacity:.65;}
+    textarea.edit-input{resize:none;overflow:hidden;}
     .edit-input{margin-top:10px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff;outline:none}
     .save-btn{margin-top:10px;background:#2b8be6;border:none;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:10px}
     .save-btn:hover{background:#3aa0ff}
@@ -577,6 +578,13 @@
         const base=(cur.trim().toLowerCase()==="add a short bio about you")?"":cur;
         el.dataset.originalText=base; el.dataset.editing="1";
         el.innerHTML=`<textarea class="edit-input" id="aboutInput" placeholder="Add a short bio about you">${escapeText(base)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        const input=document.getElementById("aboutInput");
+        if(input){
+          const grow=()=>{try{input.style.height="auto";input.style.height=input.scrollHeight+"px";}catch{}};
+          grow();
+          input.addEventListener("input",grow);
+          setTimeout(()=>{try{input.focus()}catch{}},0);
+        }
         return;
       }
       if(kind==="skills"){

@@ -363,6 +363,8 @@ body.page-loading{
   border: 1px solid #3aa0ff;
   background:#0c1117;
   color:white;
+  resize:none;
+  overflow:hidden;
 }
 
 /* SAVE BUTTON */
@@ -405,16 +407,8 @@ body.page-loading{
   width:100%;
 }
 
-/* Keep header edit controls compact + centered (avoid full-width inputs) */
-.company-header .edit-input{
-  width:min(520px, 72vw);
-}
-.company-header .save-btn{
-  margin-top:0;
-}
-.company-meta .edit-input{
-  width:min(360px, 70vw);
-}
+/* Let textboxes size naturally (no fixed widths). */
+.company-header .save-btn,
 .company-meta .save-btn{
   margin-top:0;
 }
@@ -588,6 +582,14 @@ let cacheQuotaWarned = false;
 let backendSaveWarned = false;
 let backendLoadWarned = false;
 let pageLoaderDepth = 0;
+
+function escapeAttr(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
+function escapeText(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function autoGrowTextarea(el){
+  if(!el||!el.style) return;
+  el.style.height="auto";
+  el.style.height=Math.min(el.scrollHeight||0, 240)+"px";
+}
 
 function showPageLoader(message){
   const loader = document.getElementById("pageLoader");
@@ -951,8 +953,10 @@ function editField(sectionId) {
     let current = el.innerText;
     el.dataset.originalText = current;
     el.dataset.editing = "1";
-    el.innerHTML = `<input type="text" class="edit-input" id="companyNameInput" value="${current}">
+    el.innerHTML = `<textarea class="edit-input" id="companyNameInput" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyName')">Save</button>`;
+    const input = document.getElementById("companyNameInput");
+    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
   } else if(sectionId === 'companyIndustry'){
     let el = document.getElementById('companyIndustry');
     if (!el) return;
@@ -965,8 +969,10 @@ function editField(sectionId) {
     let current = el.innerText;
     el.dataset.originalText = current;
     el.dataset.editing = "1";
-    el.innerHTML = `<input type="text" class="edit-input" id="companyIndustryInput" value="${current}">
+    el.innerHTML = `<textarea class="edit-input" id="companyIndustryInput" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyIndustry')">Save</button>`;
+    const input = document.getElementById("companyIndustryInput");
+    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
   } else if(sectionId === 'aboutText'){
     let para = document.getElementById('aboutText');
     if (!para) return;
@@ -979,8 +985,10 @@ function editField(sectionId) {
     let current = para.innerText;
     para.dataset.originalText = current;
     para.dataset.editing = "1";
-    para.innerHTML = `<textarea class="edit-input" id="aboutInput">${current}</textarea>
+    para.innerHTML = `<textarea class="edit-input" id="aboutInput" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('aboutText')">Save</button>`;
+    const input = document.getElementById("aboutInput");
+    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
   } else if(sectionId === 'companyLocation'){
     let span = document.getElementById('companyLocation');
     if (!span) return;
@@ -993,8 +1001,10 @@ function editField(sectionId) {
     let current = span.innerText;
     span.dataset.originalText = current;
     span.dataset.editing = "1";
-    span.innerHTML = `<input type="text" class="edit-input" id="locationInput" value="${current}">
+    span.innerHTML = `<textarea class="edit-input" id="locationInput" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('companyLocation')">Save</button>`;
+    const input = document.getElementById("locationInput");
+    if (input) { autoGrowTextarea(input); input.focus?.(); input.addEventListener("input", () => autoGrowTextarea(input)); }
   } else if(sectionId === 'infoSection'){
     const ids = ['infoIndustry','infoSize','infoFounded','infoWebsite'];
     const anyEditing = ids.some((id) => document.getElementById(id)?.dataset.editing === "1");
@@ -1019,8 +1029,12 @@ function editField(sectionId) {
       const current = el.innerText;
       el.dataset.originalText = current;
       el.dataset.editing = "1";
-      el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">`;
+      el.innerHTML = `<textarea class="edit-input" id="${id}Input" rows="1">${escapeText(current)}</textarea>`;
+      const input = document.getElementById(id + "Input");
+      if (input) { autoGrowTextarea(input); input.addEventListener("input", () => autoGrowTextarea(input)); }
     });
+    const firstInfo = document.getElementById(ids[0] + "Input");
+    if (firstInfo) firstInfo.focus?.();
 
     if (!section.querySelector('button[data-save-all="infoSection"]')) {
       section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="infoSection" onclick="saveField('infoSection')">Save All</button>`);
@@ -1049,8 +1063,12 @@ function editField(sectionId) {
       const current = el.innerText;
       el.dataset.originalText = current;
       el.dataset.editing = "1";
-      el.innerHTML = `<input type="text" class="edit-input" id="${id}Input" value="${current}">`;
+      el.innerHTML = `<textarea class="edit-input" id="${id}Input" rows="1">${escapeText(current)}</textarea>`;
+      const input = document.getElementById(id + "Input");
+      if (input) { autoGrowTextarea(input); input.addEventListener("input", () => autoGrowTextarea(input)); }
     });
+    const firstContact = document.getElementById(ids[0] + "Input");
+    if (firstContact) firstContact.focus?.();
 
     if (!section.querySelector('button[data-save-all="contactSection"]')) {
       section.insertAdjacentHTML('beforeend', `<button class="save-btn" data-save-all="contactSection" onclick="saveField('contactSection')">Save All</button>`);
