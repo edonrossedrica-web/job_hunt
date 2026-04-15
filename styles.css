@@ -2871,6 +2871,36 @@ textarea:-webkit-autofill:focus{
   .section-head{flex-direction:column;align-items:flex-start;}
   .job-footer{flex-direction:column;align-items:flex-start;}
   .saved-search{flex-direction:column;align-items:flex-start;}
+  .jobs-grid{
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  .job-card{
+    padding:14px;
+    border-radius:16px;
+    gap:10px;
+  }
+  .job-badge{
+    font-size:10px;
+    padding:3px 9px;
+  }
+  .job-card p{font-size:11px;}
+  .job-facts{margin:6px 0 8px;}
+  .job-facts span{
+    padding:4px 8px;
+    font-size:10px;
+  }
+  .job-summary{
+    font-size:11px;
+    line-height:1.5;
+    margin-bottom:10px;
+  }
+  .job-pay-label{font-size:9px;}
+  .tag-row span{font-size:10px;padding:3px 7px;}
+  .pill-btn{
+    padding:7px 12px;
+    font-size:12px;
+  }
   .status-panels{
     grid-template-columns:1fr;
     gap:14px;
@@ -3174,6 +3204,12 @@ textarea:-webkit-autofill:focus{
     padding:7px 9px;
     font-size:10px;
   }
+  .job-card{
+    padding:12px;
+    border-radius:14px;
+  }
+  .job-badge{font-size:9px;padding:3px 8px;}
+  .pill-btn{padding:7px 10px;font-size:11px;}
   .applicants-hero h1{
     font-size:26px;
     line-height:1.08;
