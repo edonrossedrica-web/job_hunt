@@ -5554,7 +5554,7 @@ function openQuickView(button) {
     location: "",
     salary: card.querySelector(".job-footer strong")?.textContent || "",
     requirements: Array.from(card.querySelectorAll(".tag-row span")).map((tag) => tag.textContent || "").join("\n"),
-    description: "",
+    description: card.querySelector(".job-summary")?.textContent || "",
     createdAt: "",
   };
   renderQuickViewDetails(job);
