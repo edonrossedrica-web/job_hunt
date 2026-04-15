@@ -294,6 +294,19 @@
       if(el.dataset&&el.dataset.editing==="1") return;
       el.textContent=val;
     }
+    function isSyntheticAuthEmail(value){
+      const email=String(value||"").trim().toLowerCase();
+      return email.endsWith("@users.hireup.local");
+    }
+    function getVisibleContactEmail(value){
+      const email=String(value||"").trim();
+      return isSyntheticAuthEmail(email) ? "" : email;
+    }
+    function getFacebookContactFallback(contact){
+      const c=contact&&typeof contact==="object"?contact:{};
+      if(String(c.facebook||"").trim()) return String(c.facebook||"").trim();
+      return isSyntheticAuthEmail(c.email) ? "Connected with Facebook" : "";
+    }
     function render(){
       profile=ensureShape(profile);
       setTxt("nameText",profile.name.trim()||"Your name");
@@ -320,9 +333,9 @@
 
       const c=profile.contact||{};
       const dash="\u2014";
-      setTxt("cEmail",c.email.trim()||dash);
+      setTxt("cEmail",getVisibleContactEmail(c.email)||dash);
       setTxt("cPhone",c.phone.trim()||dash);
-      setTxt("cFacebook",c.facebook.trim()||dash);
+      setTxt("cFacebook",getFacebookContactFallback(c)||dash);
       setTxt("cGithub",c.github.trim()||dash);
       setTxt("headerLocation",c.location.trim()||"Add your location");
 
@@ -366,7 +379,13 @@
         if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
         if(data&&data.ok&&data.user){
           if(!profile.name.trim()) profile.name=String(data.user.name||"");
-          if(!profile.contact.email.trim()) profile.contact.email=String(data.user.email||"");
+          if(!profile.contact.email.trim()){
+            const backendEmail=String(data.user.email||"").trim();
+            profile.contact.email=isSyntheticAuthEmail(backendEmail) ? "" : backendEmail;
+          }
+          if(!profile.contact.facebook.trim()&&isSyntheticAuthEmail(String(data.user.email||""))){
+            profile.contact.facebook="Connected with Facebook";
+          }
         }
         // If backend profile was empty, persist the seeded name/email so the page won't show placeholders on refresh.
         if(data&&data.ok&&!hadBackendProfile&&(profile.name.trim()||profile.contact.email.trim())){
@@ -374,7 +393,11 @@
         }
       }catch{}
       if(!profile.name.trim()) profile.name=String(localStorage.getItem("currentUserName")||"").trim();
-      if(!profile.contact.email.trim()) profile.contact.email=String(localStorage.getItem("currentUserEmail")||"").trim();
+      if(!profile.contact.email.trim()){
+        const storedEmail=String(localStorage.getItem("currentUserEmail")||"").trim();
+        profile.contact.email=isSyntheticAuthEmail(storedEmail) ? "" : storedEmail;
+        if(!profile.contact.facebook.trim()&&isSyntheticAuthEmail(storedEmail)) profile.contact.facebook="Connected with Facebook";
+      }
       writeCache(profile);
     }
     function requireSeeker(){
