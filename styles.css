@@ -19,6 +19,7 @@ body{
     linear-gradient(180deg, #0b1120 0%, #070b15 100%);
   color:var(--text);
   min-height:100vh;
+  overflow-x:hidden;
 }
 body.app-booting{
   visibility:hidden;
@@ -247,7 +248,7 @@ body.page-loading{
 .seeker-view > .section.split + .section{
   margin-top:36px;
 }
-.container{width:min(1200px,90%);margin:0 auto;display:flex;flex-direction:column;gap:36px;}
+.container{width:min(1200px,calc(100% - 32px));margin:0 auto;display:flex;flex-direction:column;gap:36px;}
 .page-hero{
   background:linear-gradient(140deg, rgba(15,23,42,0.9), rgba(11,17,32,0.8));
   border:1px solid var(--line);
@@ -843,6 +844,8 @@ body.page-loading{
   border-radius:16px;
   max-width:500px;
   width:90%;
+  max-height:min(88vh, 900px);
+  overflow:auto;
   text-align:center;
   border:1px solid var(--line);
 }
@@ -961,11 +964,13 @@ body.page-loading{
 }
 .chat-input{
   display:flex;
+  align-items:center;
   gap:10px;
   margin-top:12px;
 }
 .chat-input input{
   flex:1;
+  min-width:0;
   background:var(--bg);
   border:1px solid var(--line);
   border-radius:10px;
@@ -1888,10 +1893,13 @@ textarea:-webkit-autofill:focus{
 }
 .detail-chat{
   display:flex;
+  align-items:center;
+  flex-wrap:wrap;
   gap:10px;
 }
 .detail-chat input{
   flex:1;
+  min-width:0;
   background:rgba(7,12,22,0.9);
   border:1px solid rgba(148,163,184,0.2);
   border-radius:999px;
@@ -2609,6 +2617,11 @@ textarea:-webkit-autofill:focus{
 @keyframes fadeIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);} }
 
 @media (max-width: 900px){
+  .navbar{padding:14px 24px 10px;}
+  .logo-section img.brand-logo{
+    transform:translateY(6px) scale(2.2);
+    max-width:320px;
+  }
   .nav-links{gap:18px;flex-wrap:wrap;}
   .page-hero{padding:28px;}
   .hero-text h1{font-size:32px;}
@@ -2623,11 +2636,63 @@ textarea:-webkit-autofill:focus{
   .applicant-card{grid-template-columns:1fr;}
   .applicant-head,.applicant-tags,.applicant-note,.applicant-actions{grid-column:1;}
   .applicant-note,.applicant-tags{align-self:stretch;}
+  .detail-grid{grid-template-columns:1fr;}
+  .profile-review-grid{grid-template-columns:1fr;}
 }
 
 @media (max-width: 640px){
   .navbar{padding:14px 20px 8px;}
   .seeker-home{padding-top:130px;}
+  .nav-top{align-items:flex-start;}
+  .nav-actions{gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .nav-links{
+    justify-content:flex-start;
+    gap:12px 16px;
+    margin-top:12px;
+  }
+  .logo-section{height:auto;min-height:34px;}
+  .logo-section img.brand-logo{
+    transform:none;
+    height:34px;
+    max-width:200px;
+  }
+  .container{width:min(100%,calc(100% - 24px));}
+  .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{
+    border-radius:18px;
+  }
+  .page-hero{padding:22px;}
+  .hero-text h1,.hero h1{font-size:28px;}
+  .hero p,.lead{margin-bottom:24px;}
+  .modal-content{
+    width:min(100% - 20px, 560px);
+    padding:20px;
+    border-radius:14px;
+  }
+  .chat-modal,.quick-view-content,.profile-review-content,.support-modal{
+    width:min(100% - 20px, 760px);
+  }
+  .chat-head,
+  .profile-review-head,
+  .section-head,
+  .status-panel-head{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .chat-input,
+  .detail-chat,
+  .confirm-actions{
+    flex-wrap:wrap;
+  }
+  .chat-input input,
+  .detail-chat input{
+    width:100%;
+    flex:1 1 100%;
+  }
+  .chat-attach,
+  .chat-input .pill-btn,
+  .detail-chat .employer-text-btn{
+    flex:0 0 auto;
+  }
   .section-head{flex-direction:column;align-items:flex-start;}
   .job-footer{flex-direction:column;align-items:flex-start;}
   .saved-search{flex-direction:column;align-items:flex-start;}
@@ -2641,4 +2706,57 @@ textarea:-webkit-autofill:focus{
   .add-job-grid{grid-template-columns:1fr;}
   .section-number{width:28px;height:28px;}
   .quick-view-grid{grid-template-columns:1fr;}
+  .detail-actions,
+  .status-item-actions,
+  .history-actions,
+  .section-controls{
+    width:100%;
+  }
+  .detail-actions > *,
+  .history-actions > *,
+  .section-controls > *{
+    flex:1 1 auto;
+    justify-content:center;
+  }
+  .detail-message-box,
+  .chat-thread{
+    padding:10px;
+  }
+  .chat-bubble{
+    max-width:100%;
+  }
+}
+
+@media (max-width: 420px){
+  .navbar{padding:12px 14px 8px;}
+  .seeker-home{padding-top:138px;}
+  .hero-text h1,.hero h1,.employer-hero h1,.add-job-hero h1,.history-hero h1,.applicants-hero h1{
+    font-size:24px;
+    line-height:1.15;
+  }
+  .page-hero,
+  .history-hero,
+  .modal-content{
+    padding:16px;
+  }
+  .icon-btn,
+  .hamburger-btn{
+    width:36px;
+    height:36px;
+  }
+  .chat-attach{
+    width:40px;
+    height:40px;
+  }
+  .login-btn,
+  .social-btn,
+  .pill-btn,
+  .employer-text-btn{
+    width:100%;
+    justify-content:center;
+  }
+  .profile-item,
+  .detail-grid > div{
+    min-width:0;
+  }
 }
