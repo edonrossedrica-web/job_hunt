@@ -3325,6 +3325,8 @@ function goToSeekerProfileReview(userId) {
   const aboutEl = document.getElementById("seekerProfileAbout");
   const skillsEl = document.getElementById("seekerProfileSkills");
   const avatarEl = document.getElementById("seekerProfileAvatar");
+  const avatarImgEl = document.getElementById("seekerProfileAvatarImg");
+  const avatarInitialsEl = document.getElementById("seekerProfileAvatarInitials");
   const openTagEl = document.getElementById("seekerProfileOpenTag");
   const fileBtn = document.getElementById("seekerProfileFileBtn");
 
@@ -3336,7 +3338,16 @@ function goToSeekerProfileReview(userId) {
   setLink(fbEl, "");
   setLink(ghEl, "");
   setText(aboutEl, "");
-  setText(avatarEl, "…");
+  if (avatarEl) avatarEl.classList.remove("has-photo");
+  if (avatarImgEl) {
+    avatarImgEl.removeAttribute("src");
+    avatarImgEl.style.display = "none";
+  }
+  if (avatarInitialsEl) {
+    avatarInitialsEl.textContent = "...";
+  } else if (avatarEl) {
+    avatarEl.textContent = "...";
+  }
   if (openTagEl) {
     openTagEl.textContent = "—";
     openTagEl.classList.remove("success");
@@ -3367,10 +3378,25 @@ function goToSeekerProfileReview(userId) {
       const about = String(profile.aboutText || profile.about || "").trim();
       setText(aboutEl, about || "—");
 
-      if (avatarEl) {
-        const parts = displayName.split(/\s+/).filter(Boolean);
-        const initials = parts.slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+      const parts = displayName.split(/\s+/).filter(Boolean);
+      const initials = parts.slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+      if (avatarInitialsEl) {
+        avatarInitialsEl.textContent = initials || "A";
+      } else if (avatarEl) {
         avatarEl.textContent = initials || "A";
+      }
+
+      const rawAvatar = String(profile.avatarDataUrl || profile.avatar || profile.photo || "").trim();
+      const hasAvatar = rawAvatar && (/^data:image\//i.test(rawAvatar) || /^https?:\/\//i.test(rawAvatar));
+      if (avatarEl) avatarEl.classList.toggle("has-photo", Boolean(hasAvatar));
+      if (avatarImgEl) {
+        if (hasAvatar) {
+          avatarImgEl.src = rawAvatar;
+          avatarImgEl.style.display = "block";
+        } else {
+          avatarImgEl.removeAttribute("src");
+          avatarImgEl.style.display = "none";
+        }
       }
 
       if (openTagEl) {
