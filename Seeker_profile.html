@@ -44,6 +44,7 @@
     .eb{position:absolute;top:20px;right:20px;background:none;border:none;color:#2b8be6;cursor:pointer;font-size:16px}
     .eb:hover{color:#3aa0ff}
     .about{color:#bbb;line-height:1.6;white-space:pre-wrap}
+    #aboutText:empty::before{content:"Add a short bio about you";opacity:.65;}
     .edit-input{margin-top:10px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff;outline:none}
     .save-btn{margin-top:10px;background:#2b8be6;border:none;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:10px}
     .save-btn:hover{background:#3aa0ff}
@@ -181,7 +182,7 @@
     <div class="section" id="aboutSection">
       <div class="st"><div class="l"><i class="fa-solid fa-user"></i> About Me</div></div>
       <button class="eb" type="button" id="editAbout"><i class="fa-solid fa-pen-to-square"></i></button>
-      <p class="about" id="aboutText">Add a short bio about you</p>
+      <p class="about" id="aboutText"></p>
     </div>
 
     <div class="section" id="resumeSection">
@@ -302,6 +303,7 @@
       o.title=String(o.title||"");
       if(o.title.trim().toLowerCase()==="add your title") o.title="";
       o.about=String(o.about||"");
+      if(o.about.trim().toLowerCase()==="add a short bio about you") o.about="";
       o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
       o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
       return o;
@@ -359,7 +361,7 @@
       profile=ensureShape(profile);
       setTxt("nameText",profile.name.trim()||"Your name");
       setTxt("titleText",profile.title.trim()||"");
-      setTxt("aboutText",profile.about.trim()||"Add a short bio about you");
+      setTxt("aboutText",profile.about.trim()||"");
 
       const pill=document.getElementById("openBtn");
       pill.classList.toggle("off",!profile.openToWork);
@@ -572,8 +574,9 @@
         const el=document.getElementById("aboutText"); if(!el) return;
         if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
         const cur=String(el.innerText||"");
-        el.dataset.originalText=cur; el.dataset.editing="1";
-        el.innerHTML=`<textarea class="edit-input" id="aboutInput">${escapeText(cur)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        const base=(cur.trim().toLowerCase()==="add a short bio about you")?"":cur;
+        el.dataset.originalText=base; el.dataset.editing="1";
+        el.innerHTML=`<textarea class="edit-input" id="aboutInput" placeholder="Add a short bio about you">${escapeText(base)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
         return;
       }
       if(kind==="skills"){
