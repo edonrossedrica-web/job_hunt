@@ -26,6 +26,7 @@
     .name-row{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:10px}
     .name{font-size:32px;font-weight:800}
     .title-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;color:#3aa0ff;font-weight:600}
+    #titleText:empty::before{content:"Add your title";opacity:.65;}
     .location-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:10px;color:#cbd5e1;font-size:13px}
     .location-row i{color:#3aa0ff}
     .location-row .edit{color:#2b8be6}
@@ -162,7 +163,7 @@
         <i class="fa-solid fa-pen-to-square edit" id="editName" title="Edit"></i>
       </div>
       <div class="title-row">
-        <span id="titleText">Add your title</span>
+        <span id="titleText"></span>
         <i class="fa-solid fa-pen-to-square edit" id="editTitle" title="Edit"></i>
       </div>
       <div class="location-row" id="locationRow">
@@ -297,7 +298,10 @@
         github:String(o.contact.github||"")
       };
       if(typeof o.openToWork!=="boolean") o.openToWork=true;
-      o.name=String(o.name||"");o.title=String(o.title||"");o.about=String(o.about||"");
+      o.name=String(o.name||"");
+      o.title=String(o.title||"");
+      if(o.title.trim().toLowerCase()==="add your title") o.title="";
+      o.about=String(o.about||"");
       o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
       o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
       return o;
@@ -354,7 +358,7 @@
     function render(){
       profile=ensureShape(profile);
       setTxt("nameText",profile.name.trim()||"Your name");
-      setTxt("titleText",profile.title.trim()||"Add your title");
+      setTxt("titleText",profile.title.trim()||"");
       setTxt("aboutText",profile.about.trim()||"Add a short bio about you");
 
       const pill=document.getElementById("openBtn");
@@ -559,8 +563,9 @@
         const el=document.getElementById("titleText"); if(!el) return;
         if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
         const cur=String(el.innerText||"");
-        el.dataset.originalText=cur; el.dataset.editing="1";
-        el.innerHTML=`<input type="text" class="edit-input" id="titleInput" value="${escapeAttr(cur)}"><button type="button" class="save-btn" onclick="saveField('title')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        const base=(cur.trim().toLowerCase()==="add your title")?"":cur;
+        el.dataset.originalText=base; el.dataset.editing="1";
+        el.innerHTML=`<input type="text" class="edit-input" id="titleInput" value="${escapeAttr(base)}" placeholder="Your title"><button type="button" class="save-btn" onclick="saveField('title')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
         return;
       }
       if(kind==="about"){
