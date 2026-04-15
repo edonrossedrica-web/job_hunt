@@ -2856,11 +2856,11 @@ textarea[data-autogrow="1"]{
     font-size:11px;
     letter-spacing:.08em;
   }
-  .logo-section{height:auto;min-height:34px;}
+  .logo-section{height:auto;min-height:44px;}
   .logo-section img.brand-logo{
     transform:none;
-    height:42px;
-    max-width:160px;
+    height:54px;
+    max-width:220px;
   }
   .container{width:min(100%,calc(100% - 16px));}
   .page-hero,.history-hero,.section,.snapshot-card,.status-panel,.match-card{

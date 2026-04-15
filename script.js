@@ -1152,6 +1152,32 @@ function findRenderedJobById(jobId) {
   return cachedJobs.find((job) => String(job && job.id ? job.id : "") === id) || null;
 }
 
+async function openQuickViewForJobId(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return;
+  const modal = document.getElementById("quickViewModal");
+  if (!modal) return;
+
+  let job = findRenderedJobById(id);
+  if (!job) {
+    try {
+      const jobs = await getJobsSnapshot();
+      if (Array.isArray(jobs)) {
+        job = jobs.find((j) => String(j && j.id ? j.id : "") === id) || null;
+      }
+    } catch {
+      job = null;
+    }
+  }
+
+  if (!job) {
+    alert("Job not found.");
+    return;
+  }
+  renderQuickViewDetails(job);
+  modal.style.display = "flex";
+}
+
 function renderQuickViewDetails(job) {
   const badgeEl = document.getElementById("quickViewBadge");
   const titleEl = document.getElementById("quickViewTitle");
@@ -2040,9 +2066,18 @@ async function loadSeekerHistoryFromBackend() {
       item.className = "status-item";
       item.innerHTML = `
         <span class="status-dot ${status}"></span>
-        <div>
-          <h4></h4>
-          <p></p>
+        <div class="status-item-content">
+          <div class="status-item-top">
+            <div class="status-item-main">
+              <div class="status-item-text">
+                <h4></h4>
+                <p></p>
+              </div>
+            </div>
+            <div class="status-item-actions">
+              <button class="ghost-btn small-btn" type="button" data-action="view-job">View</button>
+            </div>
+          </div>
         </div>
       `;
       const h4 = item.querySelector("h4");
@@ -2050,6 +2085,16 @@ async function loadSeekerHistoryFromBackend() {
       if (h4) h4.textContent = a.jobTitle || "Application";
       const company = a.company ? `${a.company} - ` : "";
       if (p) p.textContent = `${company}${formatRelative(a.createdAt)}`;
+
+      const jobId = String(a.jobId || "").trim();
+      const viewBtn = item.querySelector('button[data-action="view-job"]');
+      if (viewBtn) {
+        viewBtn.addEventListener("click", (ev) => {
+          if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+          openQuickViewForJobId(jobId);
+        });
+      }
+      item.addEventListener("click", () => openQuickViewForJobId(jobId));
       list.appendChild(item);
     });
   });
