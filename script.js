@@ -2888,6 +2888,46 @@ function setupAddJobFormActions() {
   }
 
   loadDraftToForm();
+  setupAddJobTextareaAutogrow();
+}
+
+function setupAddJobTextareaAutogrow() {
+  const textareas = Array.from(document.querySelectorAll("textarea.add-job-textarea.autogrow"));
+  if (!textareas.length) return;
+
+  const grow = (el) => {
+    if (!el) return;
+    const max = Math.round(Math.min((window.innerHeight || 900) * 0.55, 560));
+    const min = 120;
+
+    el.style.height = "auto";
+    const next = Math.max(min, el.scrollHeight || 0);
+    if (next > max) {
+      el.style.height = `${max}px`;
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = `${next}px`;
+      el.style.overflowY = "hidden";
+    }
+  };
+
+  textareas.forEach((el) => {
+    if (el.dataset && el.dataset.autogrowWired === "1") {
+      grow(el);
+      return;
+    }
+    el.dataset.autogrowWired = "1";
+    const handler = () => grow(el);
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
+    grow(el);
+  });
+
+  const key = "__addJobAutogrowResizeWired";
+  if (document.body && document.body.dataset && document.body.dataset[key] !== "1") {
+    document.body.dataset[key] = "1";
+    window.addEventListener("resize", () => textareas.forEach(grow));
+  }
 }
 
 async function refreshDataViews() {

@@ -2610,6 +2610,10 @@ textarea:-webkit-autofill:focus{
   transition:0.25s ease;
   min-height:120px;
 }
+.add-job-textarea.autogrow{
+  resize:none;
+  overflow-y:hidden;
+}
 .add-job-textarea:focus{
   border-color:rgba(148,163,184,0.35);
   box-shadow:none;
