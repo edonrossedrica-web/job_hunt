@@ -971,7 +971,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
     </header>
 
     <div class="add-job-hero">
-      <button class="add-job-pill" id="newListingBtn" type="button" title="Start a new listing (clears the form)"><i class="fa-solid fa-plus"></i> New Listing</button>
+      <button class="add-job-pill" id="newListingBtn" type="button" title="Start a new listing (clears the form)" onclick="clearAddJobFormAndDraft()"><i class="fa-solid fa-plus"></i> New Listing</button>
       <h1>Create Opportunity.</h1>
       <p>Define the role and find the perfect talent for your team's next chapter.</p>
     </div>
@@ -1044,7 +1044,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
     </div>
 
     <div class="add-job-actions">
-      <button class="add-job-btn ghost" id="saveJobDraftBtn" type="button">Save Draft</button>
+      <button class="add-job-btn ghost" id="saveJobDraftBtn" type="button" onclick="saveDraftFromForm()">Save Draft</button>
       <button class="add-job-btn primary" id="publishJobBtn" type="button">Publish Job</button>
     </div>
 

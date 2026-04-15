@@ -2830,6 +2830,13 @@ function clearAddJobFormAndDraft() {
     const el = document.getElementById(id);
     if (!el) return;
     el.value = id === "addJobSalaryCurrency" ? "PHP" : "";
+    // Keep autogrow textareas and any listeners in sync with programmatic changes.
+    try {
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch {
+      // ignore
+    }
   });
   try {
     localStorage.removeItem("jobDraft");
