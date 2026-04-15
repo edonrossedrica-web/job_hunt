@@ -2836,6 +2836,9 @@ textarea:-webkit-autofill:focus{
   .nav-links::-webkit-scrollbar{
     display:none;
   }
+  .dropdown-menu{
+    max-width:calc(100vw - 32px);
+  }
   .nav-links a,
   .nav-links .dropdown > a{
     display:inline-flex;

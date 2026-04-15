@@ -5180,7 +5180,43 @@ async function logoutAndReturn() {
 // Contact dropdown toggle
 function toggleDropdown() {
   const dropdown = document.getElementById("contactDropdown");
-  dropdown.classList.toggle("active");
+  if (!dropdown) return;
+  const isOpen = dropdown.classList.toggle("active");
+  const menu = dropdown.querySelector(".dropdown-menu");
+  if (!menu) return;
+
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+  if (!isOpen || !isMobile) {
+    // Reset any mobile positioning overrides.
+    menu.style.position = "";
+    menu.style.left = "";
+    menu.style.right = "";
+    menu.style.top = "";
+    menu.style.bottom = "";
+    menu.style.width = "";
+    return;
+  }
+
+  // On mobile, the nav is horizontally scrollable which can clip absolute dropdowns
+  // in some browsers. Use fixed positioning and anchor it under the Contact pill.
+  const link = document.getElementById("contactLink");
+  const place = () => {
+    try {
+      const rect = link ? link.getBoundingClientRect() : null;
+      const top = rect ? Math.round(rect.bottom + 8) : 112;
+      menu.style.position = "fixed";
+      menu.style.left = "16px";
+      menu.style.right = "16px";
+      menu.style.top = `${top}px`;
+      menu.style.bottom = "";
+      menu.style.width = "auto";
+    } catch {
+      // ignore
+    }
+  };
+
+  // Defer so display:block has applied and the layout is stable.
+  setTimeout(place, 0);
 }
 
 // Close dropdown if click outside
