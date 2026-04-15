@@ -720,6 +720,12 @@ function openQuickViewFromSaved(job) {
     createdAt: "",
   };
   renderQuickViewDetails(fullJob);
+  try {
+    modal.setAttribute("data-job-id", String(fullJob.id || job.id || ""));
+  } catch {
+    // ignore
+  }
+  syncSeekerApplyButtons(document);
   modal.style.display = "flex";
 }
 
@@ -1138,6 +1144,8 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
 
   // Update bookmark state after rendering.
   syncBookmarkButtons(grid);
+  // Lock "Apply" buttons for jobs the hunter already applied to.
+  syncSeekerApplyButtons(grid);
 
   const viewBtn = document.getElementById("recoViewAllBtn");
   const returnBtn = document.getElementById("recoReturnBtn");
@@ -1175,6 +1183,12 @@ async function openQuickViewForJobId(jobId) {
     return;
   }
   renderQuickViewDetails(job);
+  try {
+    modal.setAttribute("data-job-id", String(job.id || id));
+  } catch {
+    // ignore
+  }
+  syncSeekerApplyButtons(document);
   modal.style.display = "flex";
 }
 
@@ -2046,6 +2060,18 @@ async function loadSeekerHistoryFromBackend() {
     if (label === "rejected") value.textContent = String(byStatus.rejected.length);
     if (label === "applied") value.textContent = String(byStatus.applied.length);
   });
+
+  // Track which jobs the seeker already applied to, so we can lock Apply buttons elsewhere.
+  try {
+    seekerAppliedJobIds = new Set(
+      apps
+        .map((a) => String(a && a.jobId ? a.jobId : "").trim())
+        .filter(Boolean),
+    );
+  } catch {
+    seekerAppliedJobIds = new Set();
+  }
+  syncSeekerApplyButtons(document);
 
   Object.keys(byStatus).forEach((status) => {
     const panel = root.querySelector(`.status-panel[data-history-section=\"${status}\"]`);
@@ -5578,6 +5604,54 @@ function setupSeekerChatExpandUi() {
   setSeekerChatExpanded(seekerChatIsExpanded);
 }
 
+let seekerAppliedJobIds = new Set();
+
+function isSeekerAppliedToJob(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return false;
+  return seekerAppliedJobIds.has(id);
+}
+
+function setApplyButtonUi(btn, applied) {
+  if (!btn) return;
+  const next = Boolean(applied);
+  if (next) {
+    if (!btn.dataset) return;
+    if (btn.dataset.originalText == null) btn.dataset.originalText = String(btn.textContent || "").trim() || "Apply";
+    btn.disabled = true;
+    btn.textContent = "Applied";
+    btn.setAttribute("aria-disabled", "true");
+    return;
+  }
+  if (btn.dataset && btn.dataset.originalText) {
+    btn.textContent = btn.dataset.originalText;
+  } else {
+    btn.textContent = "Apply";
+  }
+  btn.disabled = false;
+  btn.removeAttribute("aria-disabled");
+}
+
+function syncSeekerApplyButtons(root = document) {
+  const scope = root || document;
+  try {
+    scope.querySelectorAll(".job-card[data-job-id]").forEach((card) => {
+      const jobId = card.getAttribute("data-job-id") || "";
+      const applyBtn = card.querySelector('.job-actions button.pill-btn:not(.secondary)');
+      setApplyButtonUi(applyBtn, isSeekerAppliedToJob(jobId));
+    });
+  } catch {
+    // ignore
+  }
+
+  const quickViewModal = document.getElementById("quickViewModal");
+  const quickApplyBtn = document.getElementById("quickViewApplyBtn");
+  if (quickViewModal && quickApplyBtn) {
+    const jobId = String(quickViewModal.getAttribute("data-job-id") || "").trim();
+    setApplyButtonUi(quickApplyBtn, isSeekerAppliedToJob(jobId));
+  }
+}
+
 function openSeekerChat(button) {
   const modal = document.getElementById("seekerChatModal");
   if (!modal) {
@@ -5654,8 +5728,13 @@ function openApplyForm(button) {
   if (quickViewModal) {
     quickViewModal.style.display = "none";
   }
-  const card = button.closest(".featured-card, .job-card");
-  const jobId = card ? card.getAttribute("data-job-id") : "";
+  const card = button && button.closest ? button.closest(".featured-card, .job-card") : null;
+  let jobId = card ? card.getAttribute("data-job-id") : "";
+  if (!jobId) {
+    const quickViewModal = document.getElementById("quickViewModal");
+    const qid = quickViewModal ? String(quickViewModal.getAttribute("data-job-id") || "").trim() : "";
+    if (qid) jobId = qid;
+  }
   const title = card ? card.querySelector("h3, h4") : null;
   const company = card ? card.querySelector("p") : null;
   const titleEl = document.getElementById("applyJobTitle");
@@ -5665,6 +5744,10 @@ function openApplyForm(button) {
   }
   if (companyEl) {
     companyEl.textContent = company ? company.textContent : "Complete the requirements below.";
+  }
+  if (jobId && isSeekerAppliedToJob(jobId)) {
+    showInfoModal("Applied", "You already applied to this job.");
+    return;
   }
   if (jobId) {
     modal.setAttribute("data-job-id", jobId);
@@ -5716,15 +5799,35 @@ async function submitApplication(event) {
     alert("Missing job reference. Please try again from a job card.");
     return;
   }
+  if (isSeekerAppliedToJob(jobId)) {
+    showInfoModal("Applied", "You already applied to this job.");
+    return;
+  }
   const message = (document.getElementById("applyMessage")?.value || "").trim();
   try {
     await apiRequest("/api/applications", { method: "POST", auth: true, body: { jobId, message } });
     const msgEl = document.getElementById("applyMessage");
     if (msgEl) msgEl.value = "";
+    try {
+      seekerAppliedJobIds.add(String(jobId || "").trim());
+    } catch {
+      // ignore
+    }
+    syncSeekerApplyButtons(document);
     await refreshDataViews();
     emitSyncEvent("applications_updated", { jobId });
     alert("Application submitted!");
   } catch (err) {
+    if (err && err.status === 409) {
+      try {
+        seekerAppliedJobIds.add(String(jobId || "").trim());
+      } catch {
+        // ignore
+      }
+      syncSeekerApplyButtons(document);
+      showInfoModal("Applied", "You already applied to this job.");
+      return;
+    }
     if (err && err.status === 401) {
       alert("Session expired. Please log in again.");
       handleNotAuthenticated("seeker");
@@ -5869,6 +5972,12 @@ function openQuickView(button) {
     createdAt: "",
   };
   renderQuickViewDetails(job);
+  try {
+    modal.setAttribute("data-job-id", String(job.id || ""));
+  } catch {
+    // ignore
+  }
+  syncSeekerApplyButtons(document);
   modal.style.display = "flex";
 }
 
@@ -5876,6 +5985,11 @@ function closeQuickView() {
   const modal = document.getElementById("quickViewModal");
   if (modal) {
     modal.style.display = "none";
+    try {
+      modal.removeAttribute("data-job-id");
+    } catch {
+      // ignore
+    }
   }
 }
 
