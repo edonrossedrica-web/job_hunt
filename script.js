@@ -1525,10 +1525,21 @@ function renderEmployerPostedJobs(jobs) {
           loadApplicantsForJob(pendingJobId, panel)
             .then(() => {
               if (!pendingAppId) return;
+              const row = panel.querySelector(`.posted-applicants-row[data-application-id="${pendingAppId}"]`);
+              if (row && typeof row.scrollIntoView === "function") {
+                row.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
               const detailsBtn = panel.querySelector(
                 `.posted-applicants-row[data-application-id="${pendingAppId}"] button[data-action="details"]`,
               );
               if (detailsBtn) detailsBtn.click();
+              // After expanding details, keep the opened applicant in view (especially on mobile).
+              window.setTimeout(() => {
+                const detail = panel.querySelector(`.posted-applicant-detail[data-application-id="${pendingAppId}"]`);
+                if (detail && typeof detail.scrollIntoView === "function") {
+                  detail.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }, 90);
             })
             .finally(() => {
               sessionStorage.removeItem("pendingEmployerOpenApp");
