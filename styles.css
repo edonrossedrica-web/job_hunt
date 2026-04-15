@@ -2625,7 +2625,8 @@ textarea:-webkit-autofill:focus{
   .nav-links{gap:18px;flex-wrap:wrap;}
   .page-hero{padding:28px;}
   .hero-text h1{font-size:32px;}
-  .profile-pill{display:none;}
+  .nav-actions > .profile-pill{display:none;}
+  .user-menu .profile-pill{display:flex;}
   .support-body{grid-template-columns:1fr;}
   .employer-hero h1{font-size:38px;}
   .add-job-hero h1{font-size:34px;}
@@ -2790,6 +2791,88 @@ textarea:-webkit-autofill:focus{
   .chat-bubble{
     max-width:100%;
   }
+  #seekerChatPage{
+    padding-bottom:120px;
+  }
+  .applicants-topbar{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:10px;
+  }
+  .applicants-search{
+    width:100%;
+    padding:10px 12px;
+  }
+  .applicants-top-actions{
+    width:100%;
+    overflow-x:auto;
+    scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .applicants-top-actions::-webkit-scrollbar{
+    display:none;
+  }
+  .filter-pill{
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
+  .applicants-hero{
+    padding:0 2px;
+  }
+  .applicant-card,
+  .applicant-card.wide{
+    grid-template-columns:1fr;
+    grid-template-rows:auto;
+    padding:14px;
+    min-height:auto;
+    row-gap:12px;
+    align-items:start;
+  }
+  .applicant-head{
+    grid-column:1;
+    grid-row:auto;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .applicant-head > div{
+    min-width:0;
+    flex:1 1 auto;
+  }
+  .applicant-head h3{
+    font-size:15px;
+    line-height:1.25;
+    word-break:break-word;
+  }
+  .applicant-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+  .applicant-tags,
+  .applicant-note,
+  .applicant-actions{
+    grid-column:1;
+    width:100%;
+    min-width:0;
+  }
+  .applicant-tags{
+    align-self:flex-start;
+  }
+  .applicant-note{
+    margin:0;
+    font-size:12px;
+    line-height:1.55;
+    word-break:break-word;
+  }
+  .applicant-actions{
+    justify-content:flex-start;
+  }
+  .applicant-actions .applicant-btn{
+    width:100%;
+    justify-content:center;
+  }
 }
 
 @media (max-width: 420px){
@@ -2839,5 +2922,22 @@ textarea:-webkit-autofill:focus{
   .nav-links .dropdown > a{
     padding:7px 9px;
     font-size:10px;
+  }
+  .applicants-hero h1{
+    font-size:26px;
+    line-height:1.08;
+  }
+  .applicants-hero p{
+    font-size:13px;
+    line-height:1.6;
+  }
+  .applicant-card,
+  .applicant-card.wide{
+    padding:12px;
+    border-radius:16px;
+  }
+  .applicant-avatar{
+    width:42px;
+    height:42px;
   }
 }
