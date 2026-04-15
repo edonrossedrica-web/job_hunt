@@ -31,6 +31,7 @@ let employerApplicantsDirty = true;
 const EMPLOYER_APPLICANTS_REFRESH_MS = 20000;
 const EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS = 30000;
 const employerJobApplicantsCache = new Map(); // jobId -> { apps, fetchedAt }
+let employerApplicantsSelectedJobApps = [];
 let notificationsDirty = { seeker: true, employer: true };
 const NOTIFICATIONS_REFRESH_MS = 20000;
 const notificationsCache = new Map(); // `${role}:${userId}` -> { notes, fetchedAt }
@@ -2347,6 +2348,181 @@ function normalizeEmployerPipelineStatus(status) {
   return "pending";
 }
 
+function renderEmployerApplicantsPipeline(apps, { searchRaw = "" } = {}) {
+  const root = document.getElementById("employerApplicants");
+  if (!root) return;
+
+  const filtered = searchRaw
+    ? apps.filter((a) => {
+        const hay = `${a.seekerName || ""} ${a.seekerEmail || ""} ${a.jobTitle || ""} ${a.company || ""}`.toLowerCase();
+        return hay.includes(searchRaw);
+      })
+    : apps;
+
+  const byStatus = { pending: [], passed: [], rejected: [] };
+  filtered.forEach((a) => {
+    const status = normalizeEmployerPipelineStatus(a.status);
+    byStatus[status].push(a);
+  });
+
+  const sortByNewest = (a, b) => {
+    const aTs = isoToMs(a.updatedAt || a.createdAt);
+    const bTs = isoToMs(b.updatedAt || b.createdAt);
+    return bTs - aTs;
+  };
+  Object.keys(byStatus).forEach((k) => byStatus[k].sort(sortByNewest));
+
+  const setCount = (status, n) => {
+    const card = root.querySelector(`[data-status-card="${status}"] .status-value`);
+    if (card) card.textContent = String(n);
+  };
+  setCount("pending", byStatus.pending.length);
+  setCount("passed", byStatus.passed.length);
+  setCount("rejected", byStatus.rejected.length);
+
+  const renderList = (status) => {
+    const panel = root.querySelector(`.status-panel[data-employer-status="${status}"]`);
+    const list = panel ? panel.querySelector(".status-list") : null;
+    if (!list) return;
+    list.innerHTML = "";
+    const items = byStatus[status] || [];
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.style.padding = "10px 4px";
+      empty.style.color = "#9aa4b2";
+      empty.textContent = searchRaw ? "No matches." : "No items yet.";
+      list.appendChild(empty);
+      return;
+    }
+
+    items.slice(0, 30).forEach((a) => {
+      const current = normalizeEmployerPipelineStatus(a.status);
+      const name = String(a.seekerName || "").trim() || String(a.seekerEmail || "").trim() || "Hunter";
+      const email = String(a.seekerEmail || "").trim();
+      const jobTitle = String(a.jobTitle || "Application").trim();
+      const tagClass = current === "rejected" ? "rejected" : current === "passed" ? "shortlist" : "interview";
+      const tagLabel = statusLabel(current);
+      const when = formatRelative(a.updatedAt || a.createdAt);
+
+      const item = document.createElement("div");
+      item.className = "status-item";
+      item.innerHTML = `
+        <span class="status-dot ${status}"></span>
+        <div class="status-item-content">
+          <div class="status-item-top">
+            <div class="status-item-main">
+              <div class="status-item-text">
+                <h4></h4>
+              <div class="status-item-meta">
+                <span class="status-tag ${tagClass}">${tagLabel}</span>
+                <span class="meta-sep">•</span>
+                <span data-meta="job"></span>
+                ${email ? `<span class="meta-sep">•</span><span data-meta="email"></span>` : ""}
+                <span class="meta-sep">•</span>
+                <span data-meta="when"></span>
+              </div>
+              </div>
+            </div>
+            <div class="status-item-actions"></div>
+          </div>
+        </div>
+      `;
+      const h4 = item.querySelector("h4");
+      const actions = item.querySelector(".status-item-actions");
+      if (h4) h4.textContent = name;
+      const jobEl = item.querySelector('[data-meta="job"]');
+      const emailEl = item.querySelector('[data-meta="email"]');
+      const whenEl = item.querySelector('[data-meta="when"]');
+      if (jobEl) jobEl.textContent = jobTitle;
+      if (emailEl) emailEl.textContent = email;
+      if (whenEl) whenEl.textContent = when;
+
+      const mkBtn = (label, attrs = {}) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ghost-btn small-btn";
+        btn.textContent = label;
+        Object.keys(attrs).forEach((k) => btn.setAttribute(k, attrs[k]));
+        return btn;
+      };
+
+      const openBtn = mkBtn("Open", { "data-action": "open" });
+      openBtn.addEventListener("click", () => {
+        try {
+          sessionStorage.setItem(
+            "pendingEmployerOpenApp",
+            JSON.stringify({ jobId: String(a.jobId || ""), applicationId: String(a.id || "") }),
+          );
+        } catch {
+          // ignore
+        }
+        showEmployerOverview();
+      });
+      if (actions) actions.appendChild(openBtn);
+
+      const targets = ["pending", "passed", "rejected"].filter((t) => t !== current);
+      targets.forEach((t) => {
+        const label = t === "passed" ? "Pass" : t === "rejected" ? "Reject" : "Pending";
+        const btn = mkBtn(label, { "data-status": t });
+        btn.addEventListener("click", async () => {
+          if (btn.disabled) return;
+          const allActionBtns = item.querySelectorAll("button[data-status]");
+          allActionBtns.forEach((actionBtn) => {
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = "0.65";
+            actionBtn.style.cursor = "default";
+          });
+          try {
+            await apiRequest(`/api/applications/${encodeURIComponent(a.id)}`, {
+              method: "PATCH",
+              auth: true,
+              body: { status: t },
+            });
+            a.status = t;
+            a.updatedAt = new Date().toISOString();
+            try {
+              const key = String(employerApplicantsSelectedJobId || a.jobId || "").trim();
+              const cached = key ? employerJobApplicantsCache.get(key) : null;
+              if (cached && Array.isArray(cached.apps)) {
+                const found = cached.apps.find((x) => x && String(x.id || "") === String(a.id || ""));
+                if (found) {
+                  found.status = t;
+                  found.updatedAt = a.updatedAt;
+                }
+                cached.fetchedAt = Date.now();
+              }
+            } catch {
+              // ignore
+            }
+            employerApplicantsDirty = true;
+            renderEmployerApplicantsPipeline(employerApplicantsSelectedJobApps, {
+              searchRaw: String(document.getElementById("employerApplicantsSearch")?.value || "").trim().toLowerCase(),
+            });
+            emitSyncEvent("applications_updated", { applicationId: a.id, jobId: a.jobId });
+          } catch (err) {
+            allActionBtns.forEach((actionBtn) => {
+              actionBtn.disabled = false;
+              actionBtn.style.opacity = "";
+              actionBtn.style.cursor = "";
+            });
+            alert(err?.message || "Failed to update status.");
+          }
+        });
+        if (actions) actions.appendChild(btn);
+      });
+
+      list.appendChild(item);
+    });
+  };
+
+  renderList("pending");
+  renderList("passed");
+  renderList("rejected");
+
+  employerApplicantsLastLoadedAt = Date.now();
+  employerApplicantsDirty = false;
+}
+
 function setEmployerApplicantsView(mode) {
   const jobsView = document.getElementById("employerApplicantsJobsView");
   const detailView = document.getElementById("employerApplicantsDetailView");
@@ -2404,6 +2580,7 @@ function openEmployerApplicantsJob(job) {
 function closeEmployerApplicantsJob() {
   employerApplicantsSelectedJobId = "";
   employerApplicantsSelectedJob = null;
+  employerApplicantsSelectedJobApps = [];
   const input = document.getElementById("employerApplicantsSearch");
   if (input) input.value = "";
   resetEmployerApplicantsPanelView();
@@ -2676,6 +2853,10 @@ async function loadEmployerApplicantsFromBackend(options = {}) {
       const lastActivityLabel = lastActivityIso ? ` \u2022 Last activity ${formatRelative(lastActivityIso)}` : "";
       metaEl.textContent = `${companyLine} \u2022 Posted ${posted} \u2022 Applicants ${apps.length}${lastActivityLabel}`;
     }
+
+    employerApplicantsSelectedJobApps = apps;
+    renderEmployerApplicantsPipeline(employerApplicantsSelectedJobApps, { searchRaw });
+    return;
 
     const filtered = searchRaw
       ? apps.filter((a) => {
