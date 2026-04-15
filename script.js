@@ -25,6 +25,11 @@ let employerApplicantsSelectedJobId = "";
 let employerApplicantsSelectedJob = null;
 let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
+let employerApplicantsLastLoadedAt = 0;
+let employerApplicantsDirty = true;
+const EMPLOYER_APPLICANTS_REFRESH_MS = 20000;
+const EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS = 30000;
+const employerJobApplicantsCache = new Map(); // jobId -> { apps, fetchedAt }
 let seekerChatSuppressRefreshUntil = 0;
 let seekerChatSearchTerm = "";
 let seekerChatFilterMode = "all";
@@ -211,7 +216,10 @@ function scheduleSyncRefresh() {
       if (visible) loadAndShowNotifications("employer").catch(() => {});
       const applicants = document.getElementById("employerApplicants");
       const appsVisible = applicants && applicants.style.display !== "none";
-      if (appsVisible) loadEmployerApplicantsFromBackend().catch(() => {});
+      if (appsVisible) {
+        employerApplicantsDirty = true;
+        maybeRefreshEmployerApplicants({ quiet: true }).catch(() => {});
+      }
     }
   }, 250);
 }
@@ -1516,10 +1524,33 @@ function renderEmployerPostedJobs(jobs) {
 
 async function loadApplicantsForJob(jobId, panel) {
   if (!panel) return;
-  panel.innerHTML = "<div style='padding:14px;color:#bbb;'>Loading applicants...</div>";
+
+  const options = (arguments && arguments.length >= 3 && arguments[2] && typeof arguments[2] === "object") ? arguments[2] : {};
+  const quiet = Boolean(options && options.quiet);
+  const force = Boolean(options && options.force);
+  const cacheKey = String(jobId || "").trim();
+
+  // If we already rendered this same job recently, don't show a loading state again.
+  if (!force && cacheKey) {
+    const loadedFor = String(panel.getAttribute("data-loaded-job-id") || "");
+    const loadedAt = Number(panel.getAttribute("data-loaded-at") || 0) || 0;
+    const fresh = loadedFor === cacheKey && loadedAt && Date.now() - loadedAt < EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS;
+    if (fresh && panel.children && panel.children.length) {
+      return;
+    }
+  }
+
+  if (!quiet) {
+    panel.innerHTML = "<div style='padding:14px;color:#bbb;'>Loading applicants...</div>";
+  }
   try {
     const data = await apiRequest(`/api/applications?jobId=${encodeURIComponent(jobId)}`, { method: "GET", auth: true });
     const apps = data && data.ok && Array.isArray(data.applications) ? data.applications : [];
+    if (cacheKey) {
+      employerJobApplicantsCache.set(cacheKey, { apps, fetchedAt: Date.now() });
+      panel.setAttribute("data-loaded-job-id", cacheKey);
+      panel.setAttribute("data-loaded-at", String(Date.now()));
+    }
     if (!apps.length) {
       panel.innerHTML = "<div style='padding:14px;color:#bbb;'>No applicants yet.</div>";
       return;
@@ -1542,7 +1573,7 @@ async function loadApplicantsForJob(jobId, panel) {
           </div>
         </div>
         <div class="posted-applicants-actions">
-          <span class="status-tag ${statusClass}">${statusLabel}</span>
+          <span class="status-tag ${statusClass}" data-role="statusTag">${statusLabel}</span>
           <button class="employer-text-btn" type="button" data-action="details">Details</button>
           <button class="employer-text-btn" type="button" data-status="pending">Pending</button>
         </div>
@@ -1722,13 +1753,46 @@ async function loadApplicantsForJob(jobId, panel) {
         btn.addEventListener("click", async () => {
           if (btn.disabled) return;
           try {
+            const next = String(btn.getAttribute("data-status") || "").trim().toLowerCase();
             await apiRequest(`/api/applications/${encodeURIComponent(a.id)}`, {
               method: "PATCH",
               auth: true,
-              body: { status: btn.getAttribute("data-status") },
+              body: { status: next },
             });
-            await loadApplicantsForJob(jobId, panel);
-            await loadSeekerHistoryFromBackend();
+
+            // Update UI in-place (avoid reloading/closing the whole list).
+            a.status = next;
+            const statusClass = next === "rejected" ? "rejected" : next === "passed" ? "shortlist" : next === "pending" ? "interview" : "new";
+            const statusLabel = next === "rejected" ? "Rejected" : next === "passed" ? "Passed" : next === "pending" ? "Pending" : "Applied";
+            const tag = row.querySelector('[data-role="statusTag"]');
+            if (tag) {
+              tag.className = `status-tag ${statusClass}`;
+              tag.textContent = statusLabel;
+            }
+            if (pendingBtn) {
+              const shouldDisable = next === "pending";
+              pendingBtn.disabled = shouldDisable;
+              pendingBtn.style.opacity = shouldDisable ? "0.65" : "";
+              pendingBtn.style.cursor = shouldDisable ? "default" : "";
+              pendingBtn.title = shouldDisable ? "Already pending." : "";
+            }
+            try {
+              const key = String(jobId || "").trim();
+              const cached = key ? employerJobApplicantsCache.get(key) : null;
+              if (cached && Array.isArray(cached.apps)) {
+                const found = cached.apps.find((x) => x && String(x.id || "") === String(a.id || ""));
+                if (found) found.status = next;
+                cached.fetchedAt = Date.now();
+              }
+              if (key) {
+                panel.setAttribute("data-loaded-job-id", key);
+                panel.setAttribute("data-loaded-at", String(Date.now()));
+              }
+            } catch {
+              // ignore
+            }
+
+            employerApplicantsDirty = true;
             emitSyncEvent("applications_updated", { applicationId: a.id, jobId });
           } catch (err) {
             alert(err?.message || "Failed to update status.");
@@ -2197,6 +2261,21 @@ function setEmployerApplicantsView(mode) {
   if (detailView) detailView.style.display = mode === "detail" ? "" : "none";
 }
 
+async function maybeRefreshEmployerApplicants({ force = false, quiet = false } = {}) {
+  const applicants = document.getElementById("employerApplicants");
+  const visible = applicants && applicants.style.display !== "none";
+  if (!visible) return;
+  const now = Date.now();
+  const due =
+    force ||
+    employerApplicantsDirty ||
+    !employerApplicantsLastLoadedAt ||
+    now - employerApplicantsLastLoadedAt > EMPLOYER_APPLICANTS_REFRESH_MS;
+  if (!due) return;
+
+  await loadEmployerApplicantsFromBackend({ quiet });
+}
+
 function formatPostedDate(iso) {
   if (!iso) return "Recently";
   try {
@@ -2238,9 +2317,10 @@ function closeEmployerApplicantsJob() {
   setEmployerApplicantsView("jobs");
 }
 
-async function loadEmployerApplicantsFromBackend() {
+async function loadEmployerApplicantsFromBackend(options = {}) {
   const root = document.getElementById("employerApplicants");
   if (!root) return;
+  const quiet = Boolean(options && options.quiet);
   updateEmployerApplicantsJobsControls();
 
   const jobsList = document.getElementById("employerApplicantsJobsList");
@@ -2274,7 +2354,7 @@ async function loadEmployerApplicantsFromBackend() {
   // No job selected: show job list first.
   if (!employerApplicantsSelectedJobId) {
     setEmployerApplicantsView("jobs");
-    if (jobsList) {
+    if (jobsList && !quiet) {
       jobsList.innerHTML = "<div style='padding:10px 4px;color:#9aa4b2;'>Loading...</div>";
     }
 
@@ -2427,6 +2507,9 @@ async function loadEmployerApplicantsFromBackend() {
 
         jobsList.appendChild(card);
       });
+
+      employerApplicantsLastLoadedAt = Date.now();
+      employerApplicantsDirty = false;
     } catch (err) {
       if (jobsList) {
         jobsList.innerHTML = `<div class="empty-state-box" style="margin-top:18px;">${err?.message || "Failed to load jobs."}</div>`;
@@ -2440,9 +2523,11 @@ async function loadEmployerApplicantsFromBackend() {
   const searchRaw = (document.getElementById("employerApplicantsSearch")?.value || "").trim().toLowerCase();
 
   // Loading state
-  root.querySelectorAll(".status-panel .status-list").forEach((list) => {
-    list.innerHTML = "<div style='padding:10px 4px;color:#9aa4b2;'>Loading...</div>";
-  });
+  if (!quiet) {
+    root.querySelectorAll(".status-panel .status-list").forEach((list) => {
+      list.innerHTML = "<div style='padding:10px 4px;color:#9aa4b2;'>Loading...</div>";
+    });
+  }
 
   try {
     let job = employerApplicantsSelectedJob && String(employerApplicantsSelectedJob.id) === employerApplicantsSelectedJobId
@@ -2637,6 +2722,9 @@ async function loadEmployerApplicantsFromBackend() {
     renderList("pending");
     renderList("passed");
     renderList("rejected");
+
+    employerApplicantsLastLoadedAt = Date.now();
+    employerApplicantsDirty = false;
   } catch (err) {
     root.querySelectorAll(".status-panel .status-list").forEach((list) => {
       list.innerHTML = `<div class="empty-state-card">${err?.message || "Failed to load applicants."}</div>`;
@@ -4553,8 +4641,7 @@ function showEmployerHistory() {
   document.getElementById("employerNotifications").style.display = "none";
   setEmployerNavActive(1);
   window.scrollTo(0, 0);
-  closeEmployerApplicantsJob();
-  loadEmployerApplicantsFromBackend().catch(() => {});
+  maybeRefreshEmployerApplicants({ quiet: true }).catch(() => {});
 }
 
 function showEmployerApplicants() {
@@ -4565,8 +4652,7 @@ function showEmployerApplicants() {
   document.getElementById("employerNotifications").style.display = "none";
   setEmployerNavActive(1);
   window.scrollTo(0, 0);
-  closeEmployerApplicantsJob();
-  loadEmployerApplicantsFromBackend().catch(() => {});
+  maybeRefreshEmployerApplicants({ quiet: true }).catch(() => {});
 }
 
 function showEmployerNotifications() {
