@@ -1633,6 +1633,16 @@ async function loadApplicantsForJob(jobId, panel) {
             const file = fileInput?.files && fileInput.files[0] ? fileInput.files[0] : null;
             let attachment = null;
             if (!text && !file) return;
+            let restoreSendBtn = null;
+            if (sendBtn && !sendBtn.disabled) {
+              const originalText = sendBtn.textContent;
+              sendBtn.disabled = true;
+              sendBtn.textContent = "Sending...";
+              restoreSendBtn = () => {
+                sendBtn.disabled = false;
+                sendBtn.textContent = originalText || "Send";
+              };
+            }
             try {
               if (file) attachment = await buildConversationAttachment(file);
               await apiRequest("/api/messages", {
@@ -1648,6 +1658,8 @@ async function loadApplicantsForJob(jobId, panel) {
               emitSyncEvent("messages_updated", { applicationId: a.id, jobId });
             } catch (err) {
               alert(err?.message || "Failed to send message.");
+            } finally {
+              if (restoreSendBtn) restoreSendBtn();
             }
           };
           if (sendBtn) sendBtn.onclick = send;
@@ -5532,27 +5544,47 @@ function sendSeekerMessage() {
   if (!thread || !input || !fileInput) {
     return;
   }
+  const modal = document.getElementById("seekerChatModal");
+  const sendBtn = modal ? modal.querySelector(".chat-input .pill-btn") : null;
   const text = input.value.trim();
   const file = fileInput.files && fileInput.files[0];
   if (!text && !file) {
     return;
   }
-  const modal = document.getElementById("seekerChatModal");
   const applicationId = modal ? (modal.getAttribute("data-application-id") || "") : "";
 
   const sendText = async () => {
+    let restoreBtn = null;
+    if (sendBtn && !sendBtn.disabled) {
+      const originalText = sendBtn.textContent;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending...";
+      restoreBtn = () => {
+        sendBtn.disabled = false;
+        sendBtn.textContent = originalText || "Send";
+      };
+    }
     let attachment = null;
-    if (file) attachment = await buildConversationAttachment(file);
-    // If connected to backend, persist the message so employer can see it.
-    if (applicationId && hasBackendToken()) {
-      const optimisticBubble = appendConversationBubble(thread, { text, attachment }, "seeker");
-      seekerChatSuppressRefreshUntil = Date.now() + 1200;
-      try {
-        await apiRequest("/api/messages", {
-          method: "POST",
-          auth: true,
-          body: { applicationId, text, ...(attachment ? { attachment } : {}) },
-        });
+    try {
+      if (file) attachment = await buildConversationAttachment(file);
+
+      // If connected to backend, persist the message so employer can see it.
+      if (applicationId && hasBackendToken()) {
+        const optimisticBubble = appendConversationBubble(thread, { text, attachment }, "seeker");
+        seekerChatSuppressRefreshUntil = Date.now() + 1200;
+        try {
+          await apiRequest("/api/messages", {
+            method: "POST",
+            auth: true,
+            body: { applicationId, text, ...(attachment ? { attachment } : {}) },
+          });
+        } catch (err) {
+          if (optimisticBubble && optimisticBubble.parentNode) {
+            optimisticBubble.parentNode.removeChild(optimisticBubble);
+          }
+          throw err;
+        }
+
         input.value = "";
         fileInput.value = "";
         try {
@@ -5563,28 +5595,32 @@ function sendSeekerMessage() {
         loadSeekerConversationsFromBackend();
         emitSyncEvent("messages_updated", { applicationId });
         return;
-      } catch (err) {
-        if (optimisticBubble && optimisticBubble.parentNode) {
-          optimisticBubble.parentNode.removeChild(optimisticBubble);
-        }
-        alert(err?.message || "Failed to send message.");
-        return;
       }
-    }
 
-    // Fallback (file:// demo)
-    appendConversationBubble(thread, { text, attachment }, "seeker");
-    input.value = "";
-    fileInput.value = "";
-    try {
-      fileInput.dispatchEvent(new Event("change"));
-    } catch {
-      // ignore
+      // Fallback (file:// demo)
+      appendConversationBubble(thread, { text, attachment }, "seeker");
+      input.value = "";
+      fileInput.value = "";
+      try {
+        fileInput.dispatchEvent(new Event("change"));
+      } catch {
+        // ignore
+      }
+      thread.scrollTop = thread.scrollHeight;
+    } finally {
+      if (restoreBtn) restoreBtn();
     }
-    thread.scrollTop = thread.scrollHeight;
   };
 
   sendText().catch((err) => {
+    if (sendBtn) {
+      try {
+        sendBtn.disabled = false;
+        if (String(sendBtn.textContent || "").trim().toLowerCase() === "sending...") sendBtn.textContent = "Send";
+      } catch {
+        // ignore
+      }
+    }
     alert(err?.message || "Failed to send message.");
   });
 }
