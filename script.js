@@ -1603,7 +1603,6 @@ async function loadApplicantsForJob(jobId, panel) {
           const profileBtn = detail.querySelector('button[data-action="profile"]');
           if (profileBtn) {
             profileBtn.onclick = () => {
-              profileBtn.classList.add("is-active");
               const resumeBtnLocal = detail.querySelector('button[data-action="resume"]');
               if (resumeBtnLocal) resumeBtnLocal.classList.remove("is-active");
               if (!a.seekerId) {

@@ -1155,12 +1155,13 @@ body.page-loading{
 .seeker-profile-avatar{
   width:84px;
   height:84px;
-  border-radius:18px;
-  border:3px solid rgba(59,130,246,0.45);
-  background:rgba(59,130,246,0.14);
-  color:#cbd5ff;
+  border-radius:50%;
+  border:1px solid rgba(148,163,184,0.22);
+  background:linear-gradient(135deg, var(--accent), #60a5fa);
+  color:#081225;
   font-weight:800;
   font-size:28px;
+  box-shadow:0 16px 34px rgba(59,130,246,0.18), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 .profile-review-section{margin-top:14px;}
 .profile-review-grid{margin:14px 0 10px;}
@@ -2796,6 +2797,21 @@ textarea:-webkit-autofill:focus{
   .detail-chat .employer-text-btn{
     flex:0 0 auto;
   }
+  .chat-input,
+  .detail-chat{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:center;
+  }
+  .chat-input input,
+  .detail-chat input{
+    grid-column:1 / -1;
+  }
+  .chat-input .pill-btn,
+  .detail-chat .employer-text-btn{
+    width:100%;
+    min-width:0;
+  }
   .hero{
     min-height:auto;
     align-items:flex-end;
@@ -2855,8 +2871,10 @@ textarea:-webkit-autofill:focus{
   .status-item-actions{
     width:100%;
     margin-left:0;
-    justify-content:space-between;
+    margin-top:4px;
+    justify-content:flex-start;
     gap:8px;
+    align-items:center;
   }
   .status-item-actions .ghost-btn.small-btn{
     flex:1 1 0;
@@ -3113,6 +3131,10 @@ textarea:-webkit-autofill:focus{
   .chat-attach{
     width:40px;
     height:40px;
+  }
+  .chat-input .pill-btn,
+  .detail-chat .employer-text-btn{
+    width:auto;
   }
   .login-btn,
   .social-btn,
