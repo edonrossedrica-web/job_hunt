@@ -2877,13 +2877,13 @@ textarea:-webkit-autofill:focus{
   .job-footer{flex-direction:column;align-items:flex-start;}
   .saved-search{flex-direction:column;align-items:flex-start;}
   .jobs-grid{
-    grid-template-columns:1fr;
-    gap:14px;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
   }
   .job-card{
-    padding:14px;
-    border-radius:16px;
-    gap:10px;
+    padding:10px;
+    border-radius:14px;
+    gap:8px;
   }
   .job-badge{
     font-size:10px;
@@ -3210,8 +3210,8 @@ textarea:-webkit-autofill:focus{
     font-size:10px;
   }
   .job-card{
-    padding:12px;
-    border-radius:14px;
+    padding:9px;
+    border-radius:13px;
   }
   .job-badge{font-size:9px;padding:3px 8px;}
   .pill-btn{padding:7px 10px;font-size:11px;}
