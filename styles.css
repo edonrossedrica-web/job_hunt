@@ -925,6 +925,11 @@ body.page-loading{
   gap:12px;
   margin-bottom:14px;
 }
+.chat-head-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
 .chat-sub{
   color:var(--muted);
   font-size:12px;
@@ -939,6 +944,17 @@ body.page-loading{
   padding:14px;
   max-height:260px;
   overflow:auto;
+}
+.chat-modal.is-expanded{
+  max-width:none;
+  width:min(96vw, 1100px);
+  height:92vh;
+  display:flex;
+  flex-direction:column;
+}
+.chat-modal.is-expanded .chat-thread{
+  max-height:none;
+  flex:1 1 auto;
 }
 .chat-bubble{
   padding:10px 12px;

@@ -1383,7 +1383,12 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
       <h3 id="seekerChatTitle">Employer Chat</h3>
       <p id="seekerChatSubtitle" class="chat-sub">Role conversation</p>
     </div>
-    <button class="close-btn small-btn" onclick="closeSeekerChat()">Close</button>
+    <div class="chat-head-actions">
+      <button class="icon-btn small" id="seekerChatExpandBtn" type="button" aria-label="Expand chat" title="Expand">
+        <i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+      </button>
+      <button class="close-btn small-btn" onclick="closeSeekerChat()">Close</button>
+    </div>
   </div>
   <div class="chat-thread" id="seekerChatThread">
     <div class="chat-bubble employer">

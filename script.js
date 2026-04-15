@@ -3906,6 +3906,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupSeekerSearch();
   setupSeekerChatControls();
   setupSeekerChatAttachmentUi();
+  setupSeekerChatExpandUi();
   setupEmployerApplicantsSearch();
   setupEmployerApplicantsJobsSearch();
   setupEmployerApplicantsJobsFilterSort();
@@ -5390,6 +5391,35 @@ async function submitSupportTicket(event) {
   }
 }
 
+let seekerChatIsExpanded = false;
+
+function setSeekerChatExpanded(next) {
+  seekerChatIsExpanded = Boolean(next);
+  const modalContent = document.querySelector("#seekerChatModal .modal-content.chat-modal");
+  const btn = document.getElementById("seekerChatExpandBtn");
+  if (modalContent) modalContent.classList.toggle("is-expanded", seekerChatIsExpanded);
+  if (btn) {
+    btn.setAttribute("aria-label", seekerChatIsExpanded ? "Collapse chat" : "Expand chat");
+    btn.setAttribute("title", seekerChatIsExpanded ? "Collapse" : "Expand");
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.className = seekerChatIsExpanded
+        ? "fa-solid fa-down-left-and-up-right-to-center"
+        : "fa-solid fa-up-right-and-down-left-from-center";
+    }
+  }
+}
+
+function setupSeekerChatExpandUi() {
+  const btn = document.getElementById("seekerChatExpandBtn");
+  if (!btn) return;
+  if (btn.dataset.bound === "1") return;
+  btn.dataset.bound = "1";
+
+  btn.addEventListener("click", () => setSeekerChatExpanded(!seekerChatIsExpanded));
+  setSeekerChatExpanded(seekerChatIsExpanded);
+}
+
 function openSeekerChat(button) {
   const modal = document.getElementById("seekerChatModal");
   if (!modal) {
@@ -5401,6 +5431,7 @@ function openSeekerChat(button) {
   const subtitle = document.getElementById("seekerChatSubtitle");
   if (title) title.textContent = name;
   if (subtitle) subtitle.textContent = role;
+  setSeekerChatExpanded(seekerChatIsExpanded);
   modal.style.display = "flex";
 }
 
@@ -5413,6 +5444,7 @@ async function openSeekerChatForApplication(app) {
   if (subtitle) subtitle.textContent = String(app.jobTitle || "Role conversation");
   modal.setAttribute("data-application-id", String(app.id || ""));
   await loadSeekerChatThread(String(app.id || ""));
+  setSeekerChatExpanded(seekerChatIsExpanded);
   modal.style.display = "flex";
 }
 
