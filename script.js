@@ -994,9 +994,12 @@ function formatSeekerJobLocation(job) {
 }
 
 function formatSeekerJobPay(job) {
-  const raw = String(job && job.salary ? job.salary : "").trim();
+  const raw = String(job && job.salary ? job.salary : "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (isPlaceholderText(raw)) return "Not specified";
-  return raw;
+  // Prevent awkward wrapping where a hyphen ends up alone at the start of a new line on mobile.
+  return raw.replace(/\s*-\s*/g, "\u00A0\u2013\u00A0");
 }
 
 function getSeekerJobBadge(job) {

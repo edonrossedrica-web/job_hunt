@@ -3113,6 +3113,16 @@ textarea[data-autogrow="1"]{
   .add-job-grid{grid-template-columns:1fr;}
   .section-number{width:28px;height:28px;}
   .quick-view-grid{grid-template-columns:1fr;}
+  .quick-view-footer{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .quick-view-pay{
+    width:100%;
+  }
+  .quick-view-footer .pill-btn{
+    width:100%;
+  }
   .detail-actions,
   .status-item-actions,
   .history-actions,
