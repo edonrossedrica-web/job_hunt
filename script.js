@@ -1169,11 +1169,12 @@ function renderQuickViewDetails(job) {
   if (descriptionEl) descriptionEl.textContent = getSeekerJobDescription(job);
   if (tagsEl) {
     tagsEl.innerHTML = "";
-    getSeekerJobTags(job).forEach((tag) => {
-      const pill = document.createElement("span");
-      pill.textContent = tag;
-      tagsEl.appendChild(pill);
-    });
+    // Tags were duplicates of requirements; keep the section hidden in the Quick View.
+    try {
+      tagsEl.style.display = "none";
+    } catch {
+      // ignore
+    }
   }
   if (requirementsEl) {
     requirementsEl.innerHTML = "";
