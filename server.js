@@ -1204,7 +1204,6 @@ async function handleApi(req, res, url) {
     return json(res, 200, {
       ok: true,
       googleClientId: String(process.env.GOOGLE_CLIENT_ID || "").trim(),
-      linkedinClientId: String(process.env.LINKEDIN_CLIENT_ID || "").trim(),
       storageProvider: getStorageProvider(),
       supabaseConfigured: hasSupabaseConfig(),
       dataDir: DATA_DIR,
@@ -2043,18 +2042,13 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const pathname = url.pathname || "/";
 
-    if (
-      pathname === "/auth/linkedin/start" ||
-      pathname === "/auth/linkedin/callback" ||
-      pathname === "/auth/facebook/start" ||
-      pathname === "/auth/facebook/callback"
-    ) {
-      const isLinkedIn = pathname.startsWith("/auth/linkedin/");
-      const provider = isLinkedIn ? "linkedin" : "facebook";
-      const providerLabel = isLinkedIn ? "LinkedIn" : "Facebook";
+    if (pathname === "/auth/facebook/start" || pathname === "/auth/facebook/callback") {
+      const isLinkedIn = false;
+      const provider = "facebook";
+      const providerLabel = "Facebook";
       const authType = `${provider}_auth`;
-      const clientId = String(process.env[isLinkedIn ? "LINKEDIN_CLIENT_ID" : "FACEBOOK_APP_ID"] || "").trim();
-      const clientSecret = String(process.env[isLinkedIn ? "LINKEDIN_CLIENT_SECRET" : "FACEBOOK_APP_SECRET"] || "").trim();
+      const clientId = String(process.env.FACEBOOK_APP_ID || "").trim();
+      const clientSecret = String(process.env.FACEBOOK_APP_SECRET || "").trim();
       const graphVersion = String(process.env.FACEBOOK_GRAPH_VERSION || "v22.0").trim() || "v22.0";
 
       const sendAuthResult = (payload) => {
@@ -2083,9 +2077,9 @@ const server = http.createServer(async (req, res) => {
       const role = roleRaw === "employer" ? "employer" : "seeker";
       const mode = modeRaw === "signup" ? "signup" : "login";
       const redirectUri =
-        String(process.env[isLinkedIn ? "LINKEDIN_REDIRECT_URI" : "FACEBOOK_REDIRECT_URI"] || "").trim() ||
+        String(process.env.FACEBOOK_REDIRECT_URI || "").trim() ||
         `${getPublicOrigin(req, url)}/auth/${provider}/callback`;
-      const stateStoreKey = isLinkedIn ? "__hireupLinkedInStates" : "__hireupFacebookStates";
+      const stateStoreKey = "__hireupFacebookStates";
 
       if (pathname.endsWith("/start")) {
         if (req.method !== "GET") return sendNotFound(res);
@@ -2097,9 +2091,7 @@ const server = http.createServer(async (req, res) => {
             rid,
             role,
             mode,
-            error: isLinkedIn
-              ? "LinkedIn sign-in is not configured on the server (missing LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET)."
-              : "Facebook sign-in is not configured on the server (missing FACEBOOK_APP_ID / FACEBOOK_APP_SECRET).",
+            error: "Facebook sign-in is not configured on the server (missing FACEBOOK_APP_ID / FACEBOOK_APP_SECRET).",
           });
         }
 
@@ -2108,16 +2100,12 @@ const server = http.createServer(async (req, res) => {
         const state = crypto.randomBytes(18).toString("hex");
         states.set(state, { createdAt: Date.now(), role, mode, rid });
 
-        const authUrl = new URL(
-          isLinkedIn
-            ? "https://www.linkedin.com/oauth/v2/authorization"
-            : `https://www.facebook.com/${graphVersion}/dialog/oauth`,
-        );
+        const authUrl = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
         authUrl.searchParams.set("response_type", "code");
         authUrl.searchParams.set("client_id", clientId);
         authUrl.searchParams.set("redirect_uri", redirectUri);
         authUrl.searchParams.set("state", state);
-        authUrl.searchParams.set("scope", isLinkedIn ? "openid profile email" : "email,public_profile");
+        authUrl.searchParams.set("scope", "email,public_profile");
 
         res.writeHead(302, { Location: authUrl.toString(), "Cache-Control": "no-store" });
         res.end();
@@ -2129,9 +2117,7 @@ const server = http.createServer(async (req, res) => {
         return sendAuthResult({
           type: authType,
           ok: false,
-          error: isLinkedIn
-            ? "LinkedIn sign-in is not configured on the server (missing LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET)."
-            : "Facebook sign-in is not configured on the server (missing FACEBOOK_APP_ID / FACEBOOK_APP_SECRET).",
+          error: "Facebook sign-in is not configured on the server (missing FACEBOOK_APP_ID / FACEBOOK_APP_SECRET).",
         });
       }
 
@@ -2183,34 +2169,17 @@ const server = http.createServer(async (req, res) => {
       let accessToken = "";
       try {
         const tokenResp = await fetch(
-          isLinkedIn
-            ? "https://www.linkedin.com/oauth/v2/accessToken"
-            : `https://graph.facebook.com/${graphVersion}/oauth/access_token?` +
-                new URLSearchParams({
-                  client_id: clientId,
-                  client_secret: clientSecret,
-                  redirect_uri: redirectUri,
-                  code,
-                }).toString(),
-          isLinkedIn
-            ? {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                  grant_type: "authorization_code",
-                  code,
-                  redirect_uri: redirectUri,
-                  client_id: clientId,
-                  client_secret: clientSecret,
-                }).toString(),
-              }
-            : undefined,
+          `https://graph.facebook.com/${graphVersion}/oauth/access_token?` +
+            new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: redirectUri,
+              code,
+            }).toString(),
         );
         const tokenData = await tokenResp.json().catch(() => null);
         if (!tokenResp.ok || !tokenData) {
-          const providerError = isLinkedIn
-            ? tokenData?.error_description || tokenData?.error
-            : tokenData?.error?.message || tokenData?.error_description || tokenData?.error;
+          const providerError = tokenData?.error?.message || tokenData?.error_description || tokenData?.error;
           throw new Error(String(providerError || `Failed to exchange ${providerLabel} code.`));
         }
         accessToken = String(tokenData.access_token || "").trim();
@@ -2227,24 +2196,16 @@ const server = http.createServer(async (req, res) => {
       let info;
       try {
         const profileResp = await fetch(
-          isLinkedIn
-            ? "https://api.linkedin.com/v2/userinfo"
-            : `https://graph.facebook.com/${graphVersion}/me?` +
-                new URLSearchParams({
-                  fields: "id,name,email",
-                  access_token: accessToken,
-                }).toString(),
-          isLinkedIn
-            ? {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              }
-            : undefined,
+          `https://graph.facebook.com/${graphVersion}/me?` +
+            new URLSearchParams({
+              fields: "id,name,email",
+              access_token: accessToken,
+            }).toString(),
         );
         const profileData = await profileResp.json().catch(() => null);
         if (!profileResp.ok || !profileData) {
-          const providerError = isLinkedIn
-            ? profileData?.error_description || profileData?.error
-            : profileData?.error?.message || profileData?.error_description || profileData?.error;
+          const providerError =
+            profileData?.error?.message || profileData?.error_description || profileData?.error;
           throw new Error(String(providerError || `Failed to fetch ${providerLabel} profile.`));
         }
         info = profileData;
