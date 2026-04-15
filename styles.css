@@ -2958,7 +2958,16 @@ textarea:-webkit-autofill:focus{
     margin:2px 0 8px;
     padding:10px 9px;
   }
-  .fab-new-job{align-self:stretch;text-align:center;right:20px;left:20px;bottom:88px;}
+  .fab-new-job{
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    width:min(320px, calc(100% - 32px));
+    padding:12px 18px;
+    text-align:center;
+    bottom:88px;
+  }
+  .fab-new-job:hover{transform:translateX(-50%) translateY(-1px);}
   .employer-bottom-nav{left:16px;right:16px;bottom:14px;}
   .seeker-bottom-nav{left:16px;right:16px;bottom:14px;}
   .add-job-section{grid-template-columns:1fr;}
