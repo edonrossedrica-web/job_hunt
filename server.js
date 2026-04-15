@@ -1682,8 +1682,8 @@ async function handleApi(req, res, url) {
         });
       }
 
-      if (user.role === "seeker" && app.updatedAt && String(app.status || "").toLowerCase() !== "applied") {
-        const createdAt = app.updatedAt;
+      if (user.role === "seeker" && app.statusUpdatedAt && String(app.status || "").toLowerCase() !== "applied") {
+        const createdAt = app.statusUpdatedAt;
         const id = `ntf_status_${app.id}_${createdAt}`;
         notes.push({
           id,
@@ -1703,7 +1703,9 @@ async function handleApi(req, res, url) {
       if (msgs.length) {
         const last = msgs[msgs.length - 1];
         const fromRole = String(last && last.fromRole ? last.fromRole : "").toLowerCase();
-        if (fromRole && fromRole !== user.role) {
+        const isInitialApplicationMessage =
+          user.role === "employer" && fromRole === "seeker" && msgs.length === 1 && !app.updatedAt;
+        if (fromRole && fromRole !== user.role && !isInitialApplicationMessage) {
           const createdAt = (last && last.createdAt) || app.updatedAt || app.createdAt || nowIso();
           const id = `ntf_message_${app.id}_${createdAt}`;
           const textBody = String(last && last.text ? last.text : "").trim();
@@ -1860,6 +1862,7 @@ async function handleApi(req, res, url) {
 
     app.status = nextStatus === "new" ? "applied" : nextStatus;
     app.updatedAt = nowIso();
+    app.statusUpdatedAt = app.updatedAt;
     await writeDb(db);
     broadcastSse("applications_updated", {
       applicationId: app.id,

@@ -214,7 +214,28 @@ function scheduleSyncRefresh() {
   }, 250);
 }
 
-function renderConversationThread(thread, msgs) {
+function markConversationNotificationsSeen(applicationId, msgs) {
+  const role = getLoggedInRole();
+  const userId = localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "";
+  const appId = String(applicationId || "").trim();
+  if (!role || !userId || !appId || !Array.isArray(msgs) || !msgs.length) return;
+
+  const latestInboundMs = msgs.reduce((latest, msg) => {
+    if (!msg || typeof msg !== "object") return latest;
+    const fromRole = String(msg.fromRole || "").toLowerCase();
+    if (!fromRole || fromRole === role) return latest;
+    return Math.max(latest, isoToMs(msg.createdAt || ""));
+  }, 0);
+
+  if (!latestInboundMs) return;
+  const key = getNotifSeenMsgKey(role, userId, appId);
+  const existing = Number.parseInt(localStorage.getItem(key) || "0", 10) || 0;
+  if (latestInboundMs > existing) {
+    localStorage.setItem(key, String(latestInboundMs));
+  }
+}
+
+function renderConversationThread(thread, msgs, applicationId = "") {
   if (!thread) return;
   thread.innerHTML = "";
   if (!Array.isArray(msgs) || !msgs.length) {
@@ -225,6 +246,7 @@ function renderConversationThread(thread, msgs) {
     thread.appendChild(empty);
     return;
   }
+  markConversationNotificationsSeen(applicationId, msgs);
   msgs.forEach((msg) => {
     const bubble = createConversationBubble(msg);
     if (!bubble) return;
@@ -374,7 +396,7 @@ async function refreshOpenEmployerConversationThreads() {
           auth: true,
         });
         const msgs = data && data.ok && Array.isArray(data.messages) ? data.messages : [];
-        renderConversationThread(thread, msgs);
+        renderConversationThread(thread, msgs, applicationId);
       } catch {
         // leave the current thread as-is on refresh failures
       }
@@ -1229,6 +1251,25 @@ function setupSeekerSearch() {
   const btn = document.getElementById("seekerSearchBtn");
   if (!keywordsEl || !locationEl || !btn) return;
 
+  const scrollRecommendedJobsIntoView = () => {
+    const target =
+      document.getElementById("recommendedJobsSection") ||
+      document.getElementById("recommendedJobsBox") ||
+      document.getElementById("recommendedJobsGrid");
+    if (!target) return;
+
+    const navbar = document.querySelector(".navbar");
+    const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 0;
+    const top = window.pageYOffset + target.getBoundingClientRect().top - navbarHeight - 12;
+    const safeTop = Math.max(0, top);
+
+    try {
+      window.scrollTo({ top: safeTop, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, safeTop);
+    }
+  };
+
   const run = async () => {
     const jobs = await withPageLoader(() => getJobsSnapshot(), {
       message: "Searching jobs...",
@@ -1244,18 +1285,7 @@ function setupSeekerSearch() {
     seekerSearchState = { keywords, location };
     renderSeekerJobsWithSearch(jobs);
     if (window.matchMedia && window.matchMedia("(max-width: 640px)").matches) {
-      const target =
-        document.getElementById("recommendedJobsBox") ||
-        document.getElementById("recommendedJobsGrid");
-      if (target && typeof target.scrollIntoView === "function") {
-        setTimeout(() => {
-          try {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
-          } catch {
-            target.scrollIntoView();
-          }
-        }, 60);
-      }
+      setTimeout(scrollRecommendedJobsIntoView, 60);
     }
   };
 
@@ -1587,7 +1617,7 @@ async function loadApplicantsForJob(jobId, panel) {
           try {
             const m = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
             const msgs = (m && m.ok && Array.isArray(m.messages)) ? m.messages : [];
-            renderConversationThread(thread, msgs);
+            renderConversationThread(thread, msgs, a.id);
           } catch (err) {
             if (thread) {
               thread.innerHTML = `<div style='color:#ffb4b4;font-size:12px;'>${err?.message || "Failed to load messages."}</div>`;
@@ -1613,7 +1643,7 @@ async function loadApplicantsForJob(jobId, panel) {
               if (fileInput) fileInput.value = "";
               const m2 = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
               const msgs2 = (m2 && m2.ok && Array.isArray(m2.messages)) ? m2.messages : [];
-              renderConversationThread(thread, msgs2);
+              renderConversationThread(thread, msgs2, a.id);
               emitSyncEvent("messages_updated", { applicationId: a.id, jobId });
             } catch (err) {
               alert(err?.message || "Failed to send message.");
@@ -1665,6 +1695,24 @@ function formatRelative(createdAt) {
   if (days <= 0) return "today";
   if (days === 1) return "1 day ago";
   return `${days} days ago`;
+}
+
+function getLastConversationMessage(application) {
+  if (!application || typeof application !== "object") return null;
+  const msgs = Array.isArray(application.messages) ? application.messages : [];
+  if (msgs.length) {
+    const sorted = msgs
+      .filter((msg) => msg && typeof msg === "object")
+      .slice()
+      .sort((a, b) => isoToMs(b.createdAt || "") - isoToMs(a.createdAt || ""));
+    return sorted[0] || null;
+  }
+  const legacyText = String(application.message || "").trim();
+  if (!legacyText) return null;
+  return {
+    text: legacyText,
+    createdAt: application.createdAt || "",
+  };
 }
 
 function isoToMs(iso) {
@@ -4046,7 +4094,11 @@ async function loadSeekerConversationsFromBackend() {
       const status = String(a.status || "applied").toLowerCase();
       const statusClass = status === "rejected" ? "rejected" : status === "passed" ? "shortlist" : status === "pending" ? "interview" : "new";
       const statusLabel = status === "rejected" ? "Closed" : status === "passed" ? "Passed" : status === "pending" ? "Pending" : "Applied";
-      const preview = String(a.message || "").trim() || "No messages yet. Say hi to start the conversation.";
+      const lastMessage = getLastConversationMessage(a);
+      const preview = lastMessage
+        ? (String(lastMessage.text || "").trim() || (lastMessage.attachment ? "Attachment sent." : ""))
+        : "";
+      const noteMarkup = preview ? `<p class="conversation-card__note">${preview}</p>` : "";
 
       const card = document.createElement("div");
       card.className = "conversation-card";
@@ -4064,13 +4116,10 @@ async function loadSeekerConversationsFromBackend() {
         <div class="conversation-card__meta">
           <div class="applicant-meta">
               <span class="status-tag ${statusClass}">${statusLabel}</span>
-              <span>${formatRelative(a.createdAt)}</span>
-          </div>
-          <div class="applicant-tags">
-            <span class="tag-pill">${String(a.jobTitle || "Role")}</span>
+              <span>Applied ${formatRelative(a.createdAt)}</span>
           </div>
         </div>
-        <p class="conversation-card__note">${preview}</p>
+        ${noteMarkup}
       `;
       const btn = card.querySelector("button");
       if (btn) {
@@ -5199,7 +5248,7 @@ async function loadSeekerChatThread(applicationId) {
   try {
     const data = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(applicationId)}`, { method: "GET", auth: true });
     const msgs = data && data.ok && Array.isArray(data.messages) ? data.messages : [];
-    renderConversationThread(thread, msgs);
+    renderConversationThread(thread, msgs, applicationId);
     if (!msgs.length) {
       thread.innerHTML = "<div style='color:#9aa4b2;font-size:12px;'>No messages yet. Send the first message below.</div>";
     }
