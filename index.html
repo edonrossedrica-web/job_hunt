@@ -106,13 +106,13 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
 <div>
 <h2>Jobs for You</h2>
 </div>
-<div class="section-controls">
-<button class="link-cta btn-link" id="recoViewAllBtn" onclick="showAllRecommendedJobs()">View All</button>
-<button class="link-cta btn-link is-hidden" id="recoReturnBtn" onclick="showLessRecommendedJobs()">Return</button>
-</div>
 </div>
 
-<div class="match-card" id="recommendedJobsBox">
+<div class="match-card match-card--toolbar" id="recommendedJobsBox">
+  <div class="match-card-toolbar">
+    <button class="link-cta btn-link" id="recoViewAllBtn" onclick="showAllRecommendedJobs()">View All</button>
+    <button class="link-cta btn-link is-hidden" id="recoReturnBtn" onclick="showLessRecommendedJobs()">Return</button>
+  </div>
   <div class="jobs-grid" id="recommendedJobsGrid"></div>
   <div class="empty-state-card" id="recommendedJobsEmpty">No jobs posted yet.</div>
 </div>
