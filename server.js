@@ -691,6 +691,9 @@ async function readDb() {
   return parsed;
 }
 
+let lastReadableTablesSyncAt = 0;
+const READABLE_TABLES_SYNC_INTERVAL_MS = 5000;
+
 async function writeDb(db) {
   await ensureDb();
   const normalized = normalizeDbShape(db);
@@ -704,7 +707,8 @@ async function writeDb(db) {
     return;
   }
 
-  const payload = JSON.stringify(normalized, null, 2);
+  // Avoid pretty-printing to keep writes fast as the DB grows (messages can make payload large).
+  const payload = JSON.stringify(normalized);
   const sqlDb = new DatabaseSync(SQLITE_PATH);
   sqlDb
     .prepare(
@@ -713,11 +717,16 @@ async function writeDb(db) {
     .run(SQLITE_KV_KEY, payload);
 
   // Keep the readable mirror tables in sync for easier DB inspection.
-  try {
-    syncReadableTables(sqlDb, normalized);
-    hasSyncedReadableTables = true;
-  } catch {
-    // best-effort; readable tables are optional
+  const now = Date.now();
+  const shouldSyncReadable = !hasSyncedReadableTables || now - lastReadableTablesSyncAt >= READABLE_TABLES_SYNC_INTERVAL_MS;
+  if (shouldSyncReadable) {
+    try {
+      syncReadableTables(sqlDb, normalized);
+      hasSyncedReadableTables = true;
+      lastReadableTablesSyncAt = now;
+    } catch {
+      // best-effort; readable tables are optional
+    }
   }
   sqlDb.close();
 }
