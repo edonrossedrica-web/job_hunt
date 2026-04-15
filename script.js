@@ -226,32 +226,136 @@ function renderConversationThread(thread, msgs) {
     return;
   }
   msgs.forEach((msg) => {
-    const bubble = document.createElement("div");
-    const fromRole = String(msg.fromRole || "").toLowerCase();
-    const myRole = String(getLoggedInRole() || "").toLowerCase();
-    const roleClass = fromRole === "seeker" ? "seeker" : "employer";
-    const sideClass = myRole && fromRole === myRole ? "me" : "them";
-    bubble.className = `chat-bubble ${roleClass} ${sideClass}`;
-    bubble.textContent = String(msg.text || "");
+    const bubble = createConversationBubble(msg);
+    if (!bubble) return;
     thread.appendChild(bubble);
   });
   thread.scrollTop = thread.scrollHeight;
 }
 
-function appendConversationBubble(thread, text, role) {
+function appendConversationBubble(thread, payload, role) {
   if (!thread) return null;
-  const fromRole = String(role || "").toLowerCase() === "seeker" ? "seeker" : "employer";
-  const myRole = String(getLoggedInRole() || "").toLowerCase();
-  const bubble = document.createElement("div");
-  const sideClass = myRole && fromRole === myRole ? "me" : "them";
-  bubble.className = `chat-bubble ${fromRole} ${sideClass}`;
-  bubble.textContent = String(text || "");
+  const bubble = createConversationBubble(
+    typeof payload === "object" && payload
+      ? { ...payload, fromRole: role || payload.fromRole || "employer" }
+      : { text: String(payload || ""), fromRole: role || "employer" },
+  );
+  if (!bubble) return null;
   const empty = thread.firstElementChild;
   if (empty && thread.children.length === 1 && !empty.classList.contains("chat-bubble")) {
     thread.innerHTML = "";
   }
   thread.appendChild(bubble);
   thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+const MESSAGE_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024;
+
+function isConversationAttachmentImage(attachment) {
+  return /^image\//i.test(String(attachment?.type || "").trim());
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read the selected file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function buildConversationAttachment(file) {
+  if (!file) return null;
+  if (file.size > MESSAGE_ATTACHMENT_MAX_BYTES) {
+    throw new Error("File is too large. Maximum size is 4 MB.");
+  }
+  const dataUrl = await fileToDataUrl(file);
+  return {
+    name: String(file.name || "attachment").trim() || "attachment",
+    type: String(file.type || "application/octet-stream").trim(),
+    size: Number(file.size) || 0,
+    dataUrl,
+  };
+}
+
+function downloadConversationAttachment(attachment) {
+  if (!attachment || !attachment.dataUrl) return;
+  const a = document.createElement("a");
+  a.href = attachment.dataUrl;
+  a.download = String(attachment.name || "attachment").trim() || "attachment";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function createConversationBubble(message) {
+  if (!message || typeof message !== "object") return null;
+  const fromRole = String(message.fromRole || "").toLowerCase() === "seeker" ? "seeker" : "employer";
+  const myRole = String(getLoggedInRole() || "").toLowerCase();
+  const roleClass = fromRole === "seeker" ? "seeker" : "employer";
+  const sideClass = myRole && fromRole === myRole ? "me" : "them";
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${roleClass} ${sideClass}`;
+
+  const text = String(message.text || "").trim();
+  if (text) {
+    const textEl = document.createElement("div");
+    textEl.className = "chat-bubble-text";
+    textEl.textContent = text;
+    bubble.appendChild(textEl);
+  }
+
+  const attachment = message.attachment && typeof message.attachment === "object" ? message.attachment : null;
+  if (attachment && attachment.dataUrl) {
+    const attachmentEl = document.createElement("div");
+    attachmentEl.className = "chat-attachment";
+
+    if (isConversationAttachmentImage(attachment)) {
+      const preview = document.createElement("img");
+      preview.className = "chat-attachment-preview";
+      preview.src = attachment.dataUrl;
+      preview.alt = String(attachment.name || "Attachment");
+      preview.addEventListener("click", () => openUploadedFile(attachment));
+      attachmentEl.appendChild(preview);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "chat-attachment-meta";
+    const nameEl = document.createElement("div");
+    nameEl.className = "chat-attachment-name";
+    nameEl.textContent = String(attachment.name || "Attachment");
+    meta.appendChild(nameEl);
+
+    const actions = document.createElement("div");
+    actions.className = "chat-attachment-actions";
+
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "chat-attachment-btn";
+    openBtn.textContent = "Open";
+    openBtn.addEventListener("click", () => openUploadedFile(attachment));
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "chat-attachment-btn";
+    downloadBtn.textContent = "Download";
+    downloadBtn.addEventListener("click", () => downloadConversationAttachment(attachment));
+
+    actions.appendChild(openBtn);
+    actions.appendChild(downloadBtn);
+    meta.appendChild(actions);
+    attachmentEl.appendChild(meta);
+    bubble.appendChild(attachmentEl);
+  }
+
+  if (!bubble.childNodes.length) {
+    const empty = document.createElement("div");
+    empty.className = "chat-bubble-text";
+    empty.textContent = "Attachment";
+    bubble.appendChild(empty);
+  }
+
   return bubble;
 }
 
@@ -1400,6 +1504,10 @@ async function loadApplicantsForJob(jobId, panel) {
           </div>
           <div class="detail-chat">
             <input type="text" data-input placeholder="Write a message...">
+            <label class="chat-attach" aria-label="Attach file">
+              <input type="file" data-file accept="image/*,.pdf,.doc,.docx">
+              <i class="fa-solid fa-paperclip"></i>
+            </label>
             <button class="employer-text-btn" type="button" data-action="send">Send</button>
           </div>
         </div>
@@ -1474,12 +1582,21 @@ async function loadApplicantsForJob(jobId, panel) {
 
           const sendBtn = detail.querySelector('button[data-action="send"]');
           const input = detail.querySelector("input[data-input]");
+          const fileInput = detail.querySelector("input[data-file]");
           const send = async () => {
             const text = (input?.value || "").trim();
-            if (!text) return;
+            const file = fileInput?.files && fileInput.files[0] ? fileInput.files[0] : null;
+            let attachment = null;
+            if (!text && !file) return;
             try {
-              await apiRequest("/api/messages", { method: "POST", auth: true, body: { applicationId: a.id, text } });
+              if (file) attachment = await buildConversationAttachment(file);
+              await apiRequest("/api/messages", {
+                method: "POST",
+                auth: true,
+                body: { applicationId: a.id, text, ...(attachment ? { attachment } : {}) },
+              });
               if (input) input.value = "";
+              if (fileInput) fileInput.value = "";
               const m2 = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
               const msgs2 = (m2 && m2.ok && Array.isArray(m2.messages)) ? m2.messages : [];
               renderConversationThread(thread, msgs2);
@@ -5171,14 +5288,20 @@ function sendSeekerMessage() {
   const applicationId = modal ? (modal.getAttribute("data-application-id") || "") : "";
 
   const sendText = async () => {
-    if (!text) return;
+    let attachment = null;
+    if (file) attachment = await buildConversationAttachment(file);
     // If connected to backend, persist the message so employer can see it.
     if (applicationId && hasBackendToken()) {
-      const optimisticBubble = appendConversationBubble(thread, text, "seeker");
+      const optimisticBubble = appendConversationBubble(thread, { text, attachment }, "seeker");
       seekerChatSuppressRefreshUntil = Date.now() + 1200;
       try {
-        await apiRequest("/api/messages", { method: "POST", auth: true, body: { applicationId, text } });
+        await apiRequest("/api/messages", {
+          method: "POST",
+          auth: true,
+          body: { applicationId, text, ...(attachment ? { attachment } : {}) },
+        });
         input.value = "";
+        fileInput.value = "";
         loadSeekerConversationsFromBackend();
         emitSyncEvent("messages_updated", { applicationId });
         return;
@@ -5192,17 +5315,15 @@ function sendSeekerMessage() {
     }
 
     // Fallback (file:// demo)
-    appendConversationBubble(thread, text, "seeker");
+    appendConversationBubble(thread, { text, attachment }, "seeker");
     input.value = "";
+    fileInput.value = "";
     thread.scrollTop = thread.scrollHeight;
   };
 
-  sendText();
-  if (file) {
-    appendConversationBubble(thread, `Sent file: ${file.name}`, "seeker");
-    fileInput.value = "";
-  }
-  thread.scrollTop = thread.scrollHeight;
+  sendText().catch((err) => {
+    alert(err?.message || "Failed to send message.");
+  });
 }
 
 function openQuickView(button) {

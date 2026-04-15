@@ -833,6 +833,26 @@ function sanitizeUser(user) {
   };
 }
 
+function normalizeMessageAttachmentInput(value) {
+  if (!value || typeof value !== "object") return null;
+  const name = String(value.name || "").trim().slice(0, 255);
+  const type = String(value.type || "").trim().slice(0, 255);
+  const dataUrl = String(value.dataUrl || "").trim();
+  const size = Number(value.size) || 0;
+  if (!name || !dataUrl || !/^data:/i.test(dataUrl)) return null;
+  if (dataUrl.length > 6_000_000) {
+    const err = new Error("Attachment is too large.");
+    err.status = 413;
+    throw err;
+  }
+  return {
+    name,
+    type,
+    size: Math.max(0, Math.floor(size)),
+    dataUrl,
+  };
+}
+
 async function appendFeedbackLog(entry) {
   try {
     await ensureDataDirWritable();
@@ -1928,8 +1948,15 @@ async function handleApi(req, res, url) {
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
     const applicationId = String(body.applicationId || "").trim();
     const textBody = String(body.text || "").trim();
-    if (!applicationId || !textBody) {
-      return json(res, 400, { ok: false, error: "applicationId and text required" });
+    let attachment = null;
+    try {
+      attachment = normalizeMessageAttachmentInput(body.attachment);
+    } catch (err) {
+      const status = typeof err?.status === "number" ? err.status : 400;
+      return json(res, status, { ok: false, error: err?.message || "Invalid attachment" });
+    }
+    if (!applicationId || (!textBody && !attachment)) {
+      return json(res, 400, { ok: false, error: "applicationId and either text or attachment required" });
     }
 
     const app = db.applications.find((a) => a.id === applicationId);
@@ -1937,7 +1964,13 @@ async function handleApi(req, res, url) {
     if (!canAccessApplication(user, app)) return json(res, 403, { ok: false, error: "Forbidden" });
 
     if (!Array.isArray(app.messages)) app.messages = [];
-    const msg = { id: createId("msg"), fromRole: user.role, text: textBody, createdAt: nowIso() };
+    const msg = {
+      id: createId("msg"),
+      fromRole: user.role,
+      text: textBody,
+      createdAt: nowIso(),
+      ...(attachment ? { attachment } : {}),
+    };
     app.messages.push(msg);
     app.updatedAt = nowIso();
     await writeDb(db);
