@@ -95,6 +95,14 @@ body{
   position: relative;
 }
 
+.avatar-row{
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
 .company-logo{
   width:120px;
   height:120px;
@@ -430,6 +438,45 @@ body.page-loading{
 #contactPhone:empty::before{content:"—";opacity:.7;}
 #contactFacebook:empty::before{content:"—";opacity:.7;}
 
+/* Mobile: match seeker profile layout */
+@media (max-width:780px){
+  .navbar{padding:15px 16px;}
+  .brand-logo{
+    height:32px;
+    max-width:220px;
+    transform:none;
+    border-radius:0;
+  }
+  .page{padding:140px 18px 56px;}
+  .company-banner{height:160px;border-radius:18px;margin-bottom:-56px;}
+  .company-header{margin-bottom:36px;}
+  .company-logo{
+    border-radius:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    cursor:pointer;
+  }
+  .logo-btn{margin-top:0;padding:10px 16px;font-weight:800;white-space:nowrap;}
+  .company-name{font-size:28px;}
+  .company-meta{font-size:13px;flex-wrap:wrap;}
+  .section{padding:18px;}
+  .info-grid{grid-template-columns:1fr;gap:12px;}
+  .info-box{padding:12px;}
+  .publish-fab{
+    left:50%;
+    right:auto;
+    bottom:14px;
+    transform:translateX(-50%);
+    padding:7px 12px;
+    min-height:34px;
+    font-size:11px;
+    border-radius:999px;
+    box-shadow:0 10px 24px rgba(0,0,0,.38);
+  }
+}
+@media (max-width:420px){
+  .company-name{font-size:26px;}
+}
+
 </style>
 </head>
 
@@ -453,9 +500,11 @@ body.page-loading{
 
   <div class="company-header">
 
-    <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" class="company-logo" id="companyLogo" alt="Default logo">
+    <div class="avatar-row">
+      <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E" class="company-logo" id="companyLogo" alt="Default logo">
+      <button class="logo-btn" id="companyLogoBtn" style="display:none;" type="button">Change Photo</button>
+    </div>
     <input type="file" id="companyLogoInput" accept="image/*" hidden>
-    <button class="logo-btn" id="companyLogoBtn" style="display:none;">Change Photo</button>
 
     <div class="editable-row">
       <div class="company-name" id="companyName"></div>
