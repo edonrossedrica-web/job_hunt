@@ -1384,8 +1384,8 @@ async function loadApplicantsForJob(jobId, panel) {
             <p class="detail-value" data-location>—</p>
           </div>
           <div>
-            <p class="detail-label">LinkedIn</p>
-            <p class="detail-value" data-linkedin>—</p>
+            <p class="detail-label">Facebook</p>
+            <p class="detail-value" data-facebook>—</p>
           </div>
         </div>
         <div class="detail-actions">
@@ -1413,7 +1413,7 @@ async function loadApplicantsForJob(jobId, panel) {
           detailsBtn.textContent = willShow ? "Hide" : "Details";
           if (!willShow) return;
 
-          // Load profile (best-effort) for location/linkedin + resume
+          // Load profile (best-effort) for location/facebook + resume
           let loadedProfile = null;
           try {
             if (a.seekerId) {
@@ -1422,9 +1422,9 @@ async function loadApplicantsForJob(jobId, panel) {
               const profile = loadedProfile || {};
               const contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
               const loc = detail.querySelector("[data-location]");
-              const ln = detail.querySelector("[data-linkedin]");
+              const fb = detail.querySelector("[data-facebook]");
               if (loc) loc.textContent = contact.location || profile.location || "—";
-              if (ln) ln.textContent = contact.linkedin || "—";
+              if (fb) fb.textContent = contact.facebook || "—";
               const note = detail.querySelector("[data-note]");
               const about = String(profile.aboutText || profile.about || "").trim();
               if (note && about) note.textContent = about;
@@ -3046,7 +3046,7 @@ function goToSeekerProfileReview(userId) {
   const emailEl = document.getElementById("seekerProfileEmail");
   const phoneEl = document.getElementById("seekerProfilePhone");
   const locEl = document.getElementById("seekerProfileLocation");
-  const lnEl = document.getElementById("seekerProfileLinkedIn");
+  const fbEl = document.getElementById("seekerProfileFacebook");
   const ghEl = document.getElementById("seekerProfileGithub");
   const aboutEl = document.getElementById("seekerProfileAbout");
   const skillsEl = document.getElementById("seekerProfileSkills");
@@ -3059,7 +3059,7 @@ function goToSeekerProfileReview(userId) {
   setText(emailEl, "");
   setText(phoneEl, "");
   setText(locEl, "");
-  setLink(lnEl, "");
+  setLink(fbEl, "");
   setLink(ghEl, "");
   setText(aboutEl, "");
   setText(avatarEl, "…");
@@ -3087,7 +3087,7 @@ function goToSeekerProfileReview(userId) {
       setText(emailEl, contact.email || user.email || "—");
       setText(phoneEl, contact.phone || "—");
       setText(locEl, contact.location || profile.location || "—");
-      setLink(lnEl, contact.linkedin || "");
+      setLink(fbEl, contact.facebook || "");
       setLink(ghEl, contact.github || "");
 
       const about = String(profile.aboutText || profile.about || "").trim();
