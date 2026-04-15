@@ -137,6 +137,8 @@ function ensureMirrorTables(db) {
     company TEXT,
     authProvider TEXT,
     googleSub TEXT,
+    linkedinSub TEXT,
+    facebookSub TEXT,
     createdAt TEXT,
     profileJson TEXT,
     rawJson TEXT
@@ -148,6 +150,16 @@ function ensureMirrorTables(db) {
   }
   try {
     db.exec("ALTER TABLE users ADD COLUMN passwordHash TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN linkedinSub TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN facebookSub TEXT;");
   } catch {
     // ignore (already exists)
   }
@@ -222,7 +234,7 @@ function syncMirrorTables(db, jsonDb) {
     db.exec("DELETE FROM applications;");
 
     const insertUser = db.prepare(
-      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, linkedinSub, facebookSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     );
     for (const u of users) {
       if (!u || typeof u !== "object") continue;
@@ -238,6 +250,8 @@ function syncMirrorTables(db, jsonDb) {
         toNullableText(u.company),
         toNullableText(u.authProvider),
         toNullableText(u.googleSub),
+        toNullableText(u.linkedinSub),
+        toNullableText(u.facebookSub),
         toNullableText(u.createdAt),
         toJsonText(u.profile ?? null),
         toJsonText(u),

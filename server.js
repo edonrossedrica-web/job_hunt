@@ -346,7 +346,7 @@ function syncReadableTables(sqlDb, jsonDb) {
     sqlDb.exec("DELETE FROM applications;");
 
     const insertUser = sqlDb.prepare(
-      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+      "INSERT INTO users(id, role, email, passwordSalt, passwordHash, name, company, authProvider, googleSub, linkedinSub, facebookSub, createdAt, profileJson, rawJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     );
     for (const u of users) {
       if (!u || typeof u !== "object") continue;
@@ -362,6 +362,8 @@ function syncReadableTables(sqlDb, jsonDb) {
         toNullableText(u.company),
         toNullableText(u.authProvider),
         toNullableText(u.googleSub),
+        toNullableText(u.linkedinSub),
+        toNullableText(u.facebookSub),
         toNullableText(u.createdAt),
         toJsonText(u.profile ?? null),
         toJsonText(u),
@@ -560,6 +562,8 @@ async function ensureLocalDb() {
     company TEXT,
     authProvider TEXT,
     googleSub TEXT,
+    linkedinSub TEXT,
+    facebookSub TEXT,
     createdAt TEXT,
     profileJson TEXT,
     rawJson TEXT
@@ -571,6 +575,16 @@ async function ensureLocalDb() {
   }
   try {
     db.exec("ALTER TABLE users ADD COLUMN passwordHash TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN linkedinSub TEXT;");
+  } catch {
+    // ignore (already exists)
+  }
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN facebookSub TEXT;");
   } catch {
     // ignore (already exists)
   }
@@ -2125,11 +2139,17 @@ const server = http.createServer(async (req, res) => {
       const state = String(url.searchParams.get("state") || "").trim();
       const error = String(url.searchParams.get("error") || "").trim();
       const errorDesc = String(url.searchParams.get("error_description") || "").trim();
+      if (!global[stateStoreKey]) global[stateStoreKey] = new Map();
+      const states = global[stateStoreKey];
+      const stored = state ? states.get(state) : null;
+      const resultRid = stored && stored.rid ? String(stored.rid) : "";
 
       if (error) {
+        if (state) states.delete(state);
         return sendAuthResult({
           type: authType,
           ok: false,
+          rid: resultRid,
           error: errorDesc || error || `${providerLabel} sign-in failed.`,
         });
       }
@@ -2137,18 +2157,17 @@ const server = http.createServer(async (req, res) => {
         return sendAuthResult({
           type: authType,
           ok: false,
+          rid: resultRid,
           error: `Missing ${providerLabel} OAuth parameters.`,
         });
       }
 
-      if (!global[stateStoreKey]) global[stateStoreKey] = new Map();
-      const states = global[stateStoreKey];
-      const stored = states.get(state);
       states.delete(state);
       if (!stored) {
         return sendAuthResult({
           type: authType,
           ok: false,
+          rid: resultRid,
           error: `${providerLabel} sign-in expired. Please try again.`,
         });
       }
@@ -2156,6 +2175,7 @@ const server = http.createServer(async (req, res) => {
         return sendAuthResult({
           type: authType,
           ok: false,
+          rid: resultRid,
           error: `${providerLabel} sign-in expired. Please try again.`,
         });
       }
@@ -2237,9 +2257,11 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      const email = String(info.email || info.emailAddress || "").trim().toLowerCase();
       const name = String(info.name || info.given_name || "").trim();
       const sub = String(info.sub || info.id || "").trim();
+      const rawEmail = String(info.email || info.emailAddress || "").trim().toLowerCase();
+      const email =
+        rawEmail || (!isLinkedIn && sub ? `facebook-${sub}@users.hireup.local` : "");
       if (!email) {
         return sendAuthResult({
           type: authType,
@@ -2257,7 +2279,11 @@ const server = http.createServer(async (req, res) => {
       }
 
       const authRole = stored.role === "employer" ? "employer" : "seeker";
-      let user = db.users.find((u) => u.email === email && u.role === authRole);
+      let user =
+        (!isLinkedIn && sub
+          ? db.users.find((u) => u.role === authRole && String(u.facebookSub || "") === sub)
+          : null) ||
+        db.users.find((u) => u.email === email && u.role === authRole);
       if (!user) {
         if (stored.mode === "login") {
           return sendAuthResult({
