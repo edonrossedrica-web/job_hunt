@@ -1562,6 +1562,15 @@ textarea:-webkit-autofill:focus{
   align-items:center;
 }
 .toggle-password:hover{color:var(--accent);}
+.password-strength{
+  margin-top:8px;
+  min-height:18px;
+  font-size:12px;
+  color:var(--muted);
+}
+.password-strength.is-weak{color:#f87171;}
+.password-strength.is-medium{color:#fbbf24;}
+.password-strength.is-strong{color:#34d399;}
 .login-btn{
   margin-top:10px;padding:12px;border:none;border-radius:10px;
   background:var(--accent);color:white;font-weight:600;cursor:pointer;transition:0.3s;

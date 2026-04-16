@@ -1173,13 +1173,14 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
  <div class="login-form">
  <div class="input-group"><i class="fa-solid fa-user"></i><input id="seekerSignupName" type="text" placeholder="Full Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
  <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="seekerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
- <div class="input-group">
+<div class="input-group">
    <i class="fa-solid fa-lock"></i>
   <input id="seekerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
   <button class="toggle-password" type="button" data-target="seekerSignupPassword" aria-label="Show password">
     <i class="fa-regular fa-eye"></i>
   </button>
 </div>
+<div class="password-strength" id="seekerSignupPasswordStrength" aria-live="polite"></div>
 <button class="login-btn" onclick="handleSignup('seeker')">Sign Up</button>
  <div class="divider"><span>or</span></div>
  <button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('seeker','signup')">
@@ -1240,13 +1241,14 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
  <div class="login-form">
  <div class="input-group"><i class="fa-solid fa-building"></i><input id="employerSignupCompany" type="text" placeholder="Company Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
  <div class="input-group"><i class="fa-solid fa-envelope"></i><input id="employerSignupEmail" type="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
- <div class="input-group">
+<div class="input-group">
    <i class="fa-solid fa-lock"></i>
   <input id="employerSignupPassword" type="password" placeholder="Password" autocomplete="new-password">
   <button class="toggle-password" type="button" data-target="employerSignupPassword" aria-label="Show password">
     <i class="fa-regular fa-eye"></i>
   </button>
 </div>
+<div class="password-strength" id="employerSignupPasswordStrength" aria-live="polite"></div>
 <button class="login-btn" onclick="handleSignup('employer')">Sign Up</button>
  <div class="divider"><span>or</span></div>
  <button class="social-btn google-btn" type="button" onclick="handleGoogleAuth('employer','signup')">

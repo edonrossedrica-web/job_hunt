@@ -4336,6 +4336,8 @@ function goHome() {
 
 function setupPasswordToggles() {
   document.querySelectorAll(".toggle-password").forEach((btn) => {
+    if (btn.dataset.bound === "true") return;
+    btn.dataset.bound = "true";
     btn.addEventListener("click", () => {
       const targetId = btn.getAttribute("data-target");
       const input = document.getElementById(targetId);
@@ -4351,6 +4353,68 @@ function setupPasswordToggles() {
       }
       btn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
     });
+  });
+}
+
+function getPasswordStrengthMeta(value) {
+  const password = String(value || "");
+  if (!password) return { tone: "", label: "", hint: "" };
+
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  if (password.length < 8 || score <= 2) {
+    return {
+      tone: "is-weak",
+      label: "Weak password",
+      hint: "Use 8+ chars with uppercase, lowercase, number, and symbol.",
+    };
+  }
+  if (score <= 4) {
+    return {
+      tone: "is-medium",
+      label: "Medium password",
+      hint: "Add more length or character variety.",
+    };
+  }
+  return {
+    tone: "is-strong",
+    label: "Strong password",
+    hint: "Good password strength.",
+  };
+}
+
+function updatePasswordStrength(inputId, outputId) {
+  const input = document.getElementById(inputId);
+  const output = document.getElementById(outputId);
+  if (!input || !output) return;
+  const meta = getPasswordStrengthMeta(input.value);
+  output.classList.remove("is-weak", "is-medium", "is-strong");
+  if (!meta.label) {
+    output.textContent = "";
+    return;
+  }
+  output.classList.add(meta.tone);
+  output.textContent = `${meta.label} - ${meta.hint}`;
+}
+
+function setupPasswordStrengthMeters() {
+  [
+    ["seekerSignupPassword", "seekerSignupPasswordStrength"],
+    ["employerSignupPassword", "employerSignupPasswordStrength"],
+  ].forEach(([inputId, outputId]) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.dataset.strengthBound !== "true") {
+      input.dataset.strengthBound = "true";
+      input.addEventListener("input", () => updatePasswordStrength(inputId, outputId));
+      input.addEventListener("blur", () => updatePasswordStrength(inputId, outputId));
+    }
+    updatePasswordStrength(inputId, outputId);
   });
 }
 
@@ -4546,6 +4610,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       openWelcome();
     }
     setupPasswordToggles();
+    setupPasswordStrengthMeters();
     setupHistoryViewButtons();
     setupHistoryStatusButtons();
     finishInitialRender();
@@ -4555,6 +4620,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStorage.removeItem("postLoginTarget");
     showEmployerDashboard();
     setupPasswordToggles();
+    setupPasswordStrengthMeters();
     setupHistoryViewButtons();
     setupHistoryStatusButtons();
     finishInitialRender();
@@ -4562,6 +4628,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   showHome();
   setupPasswordToggles();
+  setupPasswordStrengthMeters();
   setupHistoryViewButtons();
   setupHistoryStatusButtons();
   // Render jobs from backend (if running) and wire add-job buttons.
@@ -5089,6 +5156,11 @@ async function handleSignup(type) {
 
   if (!email || !password || (role === "seeker" && !name) || (role === "employer" && !company)) {
     alert("Please complete all fields to sign up.");
+    return;
+  }
+  const passwordStrength = getPasswordStrengthMeta(password);
+  if (passwordStrength.tone === "is-weak") {
+    alert("Password is too weak. Use 8+ characters with uppercase, lowercase, number, and symbol.");
     return;
   }
 
