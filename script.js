@@ -4993,10 +4993,55 @@ async function handleLogin() {
   const password = passwordInput?.value || "";
 
   try {
-    const backend = await tryBackendLogin({ role, email, password });
-    if (backend) {
+    await withPageLoader(async () => {
+      const backend = await tryBackendLogin({ role, email, password });
+      if (backend) {
+        setAuth(role);
+        setCurrentUser(backend.user);
+        closeLogin();
+        if (role === "seeker") {
+          showHome();
+          openWelcome();
+        } else {
+          showEmployerDashboard();
+          openEmployerWelcome();
+        }
+        updateAuthUI();
+        syncBookmarkButtons(document);
+        renderSavedJobs();
+        return;
+      }
+
+      const storedUser = findUserByEmailRole(email, role);
+      if (storedUser && storedUser.password === password) {
+        setAuth(role);
+        setCurrentUser(storedUser);
+        closeLogin();
+        if (role === "seeker") {
+          showHome();
+          openWelcome();
+        } else {
+          showEmployerDashboard();
+          openEmployerWelcome();
+        }
+        updateAuthUI();
+        syncBookmarkButtons(document);
+        renderSavedJobs();
+        return;
+      }
+
+      const tempUsers = {
+        seeker: { email: "seeker@test.com", password: "seeker123" },
+        employer: { email: "employer@test.com", password: "employer123" },
+      };
+      const valid = email === tempUsers[role].email && password === tempUsers[role].password;
+
+      if (!valid) {
+        throw new Error("Invalid credentials. Try seeker@test.com / seeker123 or employer@test.com / employer123.");
+      }
+
       setAuth(role);
-      setCurrentUser(backend.user);
+      setCurrentUser({ id: `temp_${role}`, email: tempUsers[role].email, name: role });
       closeLogin();
       if (role === "seeker") {
         showHome();
@@ -5008,55 +5053,11 @@ async function handleLogin() {
       updateAuthUI();
       syncBookmarkButtons(document);
       renderSavedJobs();
-      return;
-    }
+    }, { message: "Logging in..." });
   } catch (err) {
     alert(err?.message || "Login failed.");
     return;
   }
-
-  const storedUser = findUserByEmailRole(email, role);
-  if (storedUser && storedUser.password === password) {
-    setAuth(role);
-    setCurrentUser(storedUser);
-    closeLogin();
-    if (role === "seeker") {
-      showHome();
-      openWelcome();
-    } else {
-      showEmployerDashboard();
-      openEmployerWelcome();
-    }
-    updateAuthUI();
-    syncBookmarkButtons(document);
-    renderSavedJobs();
-    return;
-  }
-
-  const tempUsers = {
-    seeker: { email: "seeker@test.com", password: "seeker123" },
-    employer: { email: "employer@test.com", password: "employer123" },
-  };
-  const valid = email === tempUsers[role].email && password === tempUsers[role].password;
-
-  if (!valid) {
-    alert("Invalid credentials. Try seeker@test.com / seeker123 or employer@test.com / employer123.");
-    return;
-  }
-
-  setAuth(role);
-  setCurrentUser({ id: `temp_${role}`, email: tempUsers[role].email, name: role });
-  closeLogin();
-  if (role === "seeker") {
-    showHome();
-    openWelcome();
-  } else {
-    showEmployerDashboard();
-    openEmployerWelcome();
-  }
-  updateAuthUI();
-  syncBookmarkButtons(document);
-  renderSavedJobs();
 }
 
 function switchToSignup(type) {
@@ -5094,16 +5095,16 @@ async function handleSignup(type) {
   try {
     const backend = await withPageLoader(
       () => tryBackendSignup({ role, email, password, name, company }),
-      { message: "Creating account..." },
+      { message: "Signing up..." },
     );
     if (backend) {
       setAuth(role);
       setCurrentUser(backend.user);
       closeSignup(type);
       if (role === "seeker") {
-        navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
+        navigateWithLoader("Seeker_profile.html", { message: "Signing up..." });
       } else {
-        navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
+        navigateWithLoader("employer_profile.html", { message: "Signing up..." });
       }
       updateAuthUI();
       syncBookmarkButtons(document);
@@ -5136,9 +5137,9 @@ async function handleSignup(type) {
   setCurrentUser(newUser);
   closeSignup(type);
   if (role === "seeker") {
-    navigateWithLoader("Seeker_profile.html", { message: "Opening profile..." });
+    navigateWithLoader("Seeker_profile.html", { message: "Signing up..." });
   } else {
-    navigateWithLoader("employer_profile.html", { message: "Opening profile..." });
+    navigateWithLoader("employer_profile.html", { message: "Signing up..." });
   }
   updateAuthUI();
   syncBookmarkButtons(document);
