@@ -5381,82 +5381,91 @@ async function handleGoogleAuth(role, mode) {
     syncBookmarkButtons(document);
   };
 
-  let accessToken;
-  try {
-    accessToken = await getGoogleAccessToken();
-  } catch (err) {
-    const msg = String(err?.message || "Google sign-in could not start.");
-    // Only fall back to demo mode when running as file:// (no backend).
-    if (!runningServer) {
-      demoFallback(msg);
-      return;
-    }
-    alert(msg);
-    return;
-  }
-
-  if (runningServer) {
+  const runAuthFlow = async () => {
+    let accessToken;
     try {
-      const data = await apiRequest("/api/auth/google", {
-        method: "POST",
-        body: { role: normalizedRole, mode: mode === "signup" ? "signup" : "login", accessToken },
-      });
-      if (data && data.ok && data.token && data.user) {
-        finalizeLogin(data.user, data.token);
+      accessToken = await getGoogleAccessToken();
+    } catch (err) {
+      const msg = String(err?.message || "Google sign-in could not start.");
+      // Only fall back to demo mode when running as file:// (no backend).
+      if (!runningServer) {
+        demoFallback(msg);
         return;
       }
-      alert("Google sign-in failed.");
+      alert(msg);
       return;
+    }
+
+    if (runningServer) {
+      try {
+        const data = await apiRequest("/api/auth/google", {
+          method: "POST",
+          body: { role: normalizedRole, mode: mode === "signup" ? "signup" : "login", accessToken },
+        });
+        if (data && data.ok && data.token && data.user) {
+          finalizeLogin(data.user, data.token);
+          return;
+        }
+        alert("Google sign-in failed.");
+        return;
+      } catch (err) {
+        const message =
+          err?.message ||
+          "Google sign-in failed. Make sure your Google OAuth client allows this origin (e.g. http://localhost:3000) and your browser allows popups/sign-in.";
+        alert(message);
+        return;
+      }
+    }
+
+    // Fallback when not running the backend (file://): use userinfo and store a local mock user.
+    let profile;
+    try {
+      profile = await fetchGoogleUserInfo(accessToken);
     } catch (err) {
-      const message =
-        err?.message ||
-        "Google sign-in failed. Make sure your Google OAuth client allows this origin (e.g. http://localhost:3000) and your browser allows popups/sign-in.";
-      alert(message);
+      if (!runningServer) {
+        demoFallback(String(err?.message || "Google sign-in failed."));
+        return;
+      }
+      alert(String(err?.message || "Google sign-in failed."));
       return;
     }
-  }
 
-  // Fallback when not running the backend (file://): use userinfo and store a local mock user.
-  let profile;
-  try {
-    profile = await fetchGoogleUserInfo(accessToken);
-  } catch (err) {
-    if (!runningServer) {
-      demoFallback(String(err?.message || "Google sign-in failed."));
+    const email = String(profile?.email || "").trim().toLowerCase();
+    if (!email) {
+      alert("Google sign-in failed (missing email).");
       return;
     }
-    alert(String(err?.message || "Google sign-in failed."));
+
+    const users = getStoredUsers();
+    let user = users.find((u) => String(u.email || "").toLowerCase() === email && u.role === normalizedRole);
+    if (!user) {
+      if (mode !== "signup") {
+        alert("No account found. Please sign up first before you log in.");
+        return;
+      }
+      user = createMockUser({
+        role: normalizedRole,
+        email,
+        name: normalizedRole === "seeker" ? String(profile?.name || "").trim() : "",
+        company: normalizedRole === "employer" ? "" : "",
+        provider: "google",
+      });
+      users.push(user);
+      saveStoredUsers(users);
+    } else if (mode === "signup") {
+      alert("You already have an account.");
+      return;
+    }
+
+    finalizeLogin(user, "");
+  };
+
+  if (runningServer) {
+    await withPageLoader(runAuthFlow, { message: "Logging in..." });
     return;
   }
 
-  const email = String(profile?.email || "").trim().toLowerCase();
-  if (!email) {
-    alert("Google sign-in failed (missing email).");
-    return;
-  }
-
-  const users = getStoredUsers();
-  let user = users.find((u) => String(u.email || "").toLowerCase() === email && u.role === normalizedRole);
-  if (!user) {
-    if (mode !== "signup") {
-      alert("No account found. Please sign up first before you log in.");
-      return;
-    }
-    user = createMockUser({
-      role: normalizedRole,
-      email,
-      name: normalizedRole === "seeker" ? String(profile?.name || "").trim() : "",
-      company: normalizedRole === "employer" ? "" : "",
-      provider: "google",
-    });
-    users.push(user);
-    saveStoredUsers(users);
-  } else if (mode === "signup") {
-    alert("You already have an account.");
-    return;
-  }
-
-  finalizeLogin(user, "");
+  await runAuthFlow();
 }
 
 function handleFacebookAuth(role, mode) {
