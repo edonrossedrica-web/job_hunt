@@ -5304,6 +5304,15 @@ async function getGoogleAccessToken() {
           }
           done(resolve, token);
         },
+        error_callback: (errorResponse) => {
+          clearTimeout(timeout);
+          const code = String(errorResponse && errorResponse.type ? errorResponse.type : "").trim().toLowerCase();
+          if (code === "popup_closed" || code === "popup_closed_by_user") {
+            done(reject, new Error("Google sign-in was canceled."));
+            return;
+          }
+          done(reject, new Error("Google sign-in failed. Please try again."));
+        },
       });
 
       // Force the account picker every time.
