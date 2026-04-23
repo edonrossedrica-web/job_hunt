@@ -16,9 +16,12 @@ let syncRefreshTimer = null;
 let lastHandledSyncTs = 0;
 let liveRefreshTimer = null;
 let serverEventsSource = null;
+const SEEKER_PROFILE_CACHE_KEY_PREFIX = "smartHuntProfileCache_v1:seeker:";
+const SEEKER_PROFILE_TITLE_CACHE_TTL_MS = 2 * 60 * 1000;
 let cachedJobs = null;
 let cachedJobsFetchedAt = 0;
 let seekerSearchState = { keywords: "", location: "" };
+let seekerRecommendationProfile = { userId: "", title: "", fetchedAt: 0, refreshPromise: null };
 let employerApplicantsSearchTimer = null;
 let employerApplicantsJobsSearchTimer = null;
 let employerApplicantsSelectedJobId = "";
@@ -1251,8 +1254,180 @@ function renderQuickViewDetails(job) {
 function normalizeSearchText(value) {
   return String(value || "")
     .toLowerCase()
+    .replace(/[\-_\/]+/g, " ")
+    .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function getSeekerProfileCacheKey(userId) {
+  const id = String(userId || "").trim();
+  return id ? `${SEEKER_PROFILE_CACHE_KEY_PREFIX}${id}` : "";
+}
+
+function getSeekerRecommendationTitleFromProfile(profile) {
+  if (!profile || typeof profile !== "object") return "";
+  return String(profile.title || profile.headline || "").trim();
+}
+
+function readSeekerRecommendationTitleFromLocalCache(userId) {
+  const key = getSeekerProfileCacheKey(userId);
+  if (!key) return "";
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    return getSeekerRecommendationTitleFromProfile(parsed);
+  } catch {
+    return "";
+  }
+}
+
+function getSeekerRecommendationTitle() {
+  if (!getLoggedIn() || getLoggedInRole() !== "seeker") return "";
+  const userId = String(localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "").trim();
+  if (!userId) return "";
+
+  const now = Date.now();
+  if (
+    seekerRecommendationProfile.userId === userId &&
+    now - (Number(seekerRecommendationProfile.fetchedAt) || 0) < SEEKER_PROFILE_TITLE_CACHE_TTL_MS
+  ) {
+    return String(seekerRecommendationProfile.title || "").trim();
+  }
+
+  const title = readSeekerRecommendationTitleFromLocalCache(userId);
+  seekerRecommendationProfile = {
+    userId,
+    title,
+    fetchedAt: now,
+    refreshPromise: seekerRecommendationProfile.refreshPromise || null,
+  };
+  return title;
+}
+
+async function refreshSeekerRecommendationTitle() {
+  if (!getLoggedIn() || getLoggedInRole() !== "seeker") return false;
+  const userId = String(localStorage.getItem(STORAGE_CURRENT_USER_KEY) || "").trim();
+  if (!userId) return false;
+  if (seekerRecommendationProfile.userId !== userId) {
+    seekerRecommendationProfile = { userId, title: "", fetchedAt: 0, refreshPromise: null };
+  }
+  if (seekerRecommendationProfile.refreshPromise) {
+    return seekerRecommendationProfile.refreshPromise;
+  }
+
+  const request = (async () => {
+    try {
+      const data = await tryApi("/api/profile", { method: "GET", auth: true });
+      const nextTitle = getSeekerRecommendationTitleFromProfile(data && data.ok ? data.profile : null);
+      const prevTitle = String(seekerRecommendationProfile.title || "").trim();
+      seekerRecommendationProfile = {
+        userId,
+        title: nextTitle,
+        fetchedAt: Date.now(),
+        refreshPromise: null,
+      };
+      return nextTitle !== prevTitle;
+    } catch {
+      seekerRecommendationProfile = {
+        userId,
+        title: seekerRecommendationProfile.title || "",
+        fetchedAt: Date.now(),
+        refreshPromise: null,
+      };
+      return false;
+    }
+  })();
+
+  seekerRecommendationProfile.refreshPromise = request;
+  return request;
+}
+
+function getRecommendationTerms(value) {
+  return normalizeSearchText(value)
+    .split(" ")
+    .filter(Boolean)
+    .filter((term) => term.length > 1)
+    .filter((term) => !["a", "an", "and", "for", "of", "the", "to", "with"].includes(term));
+}
+
+function expandRecommendationTerms(terms) {
+  const expanded = new Set(Array.isArray(terms) ? terms : []);
+  const synonymGroups = [
+    ["developer", "developers", "engineer", "engineers", "programmer", "programmers", "coder", "coders"],
+    ["frontend", "front", "ui", "web"],
+    ["backend", "back", "server", "api"],
+    ["fullstack", "full", "stack"],
+    ["mobile", "android", "ios", "app"],
+    ["data", "analyst", "analytics", "bi"],
+    ["design", "designer", "ux", "ui"],
+    ["marketing", "marketer", "seo", "content"],
+    ["teacher", "tutor", "instructor", "educator"],
+    ["accounting", "accountant", "finance", "bookkeeper"],
+    ["sales", "seller", "business", "development"],
+    ["support", "service", "customer"],
+  ];
+
+  expanded.forEach((term) => {
+    synonymGroups.forEach((group) => {
+      if (!group.includes(term)) return;
+      group.forEach((alt) => expanded.add(alt));
+    });
+  });
+
+  return expanded;
+}
+
+function getSeekerRecommendationScore(job, profileTitle) {
+  const targetTitle = normalizeSearchText(profileTitle);
+  const jobTitle = normalizeSearchText(job && job.title ? job.title : "");
+  if (!targetTitle || !jobTitle) return 0;
+
+  let score = 0;
+  if (jobTitle === targetTitle) score += 200;
+  if (jobTitle.includes(targetTitle)) score += 120;
+  if (targetTitle.includes(jobTitle)) score += 80;
+
+  const profileTerms = getRecommendationTerms(profileTitle);
+  const expandedTerms = expandRecommendationTerms(profileTerms);
+  const titleTerms = new Set(getRecommendationTerms(jobTitle));
+  const bodyTerms = new Set(getRecommendationTerms(`${job && job.description ? job.description : ""} ${job && job.requirements ? job.requirements : ""}`));
+
+  profileTerms.forEach((term) => {
+    if (titleTerms.has(term)) score += 32;
+    else if (bodyTerms.has(term)) score += 10;
+  });
+
+  expandedTerms.forEach((term) => {
+    if (profileTerms.includes(term)) return;
+    if (titleTerms.has(term)) score += 12;
+    else if (bodyTerms.has(term)) score += 4;
+  });
+
+  return score;
+}
+
+function rankJobsForSeekerProfile(jobs, profileTitle) {
+  const list = Array.isArray(jobs) ? jobs.slice() : [];
+  const title = String(profileTitle || "").trim();
+  if (!title) return list;
+
+  return list
+    .map((job, index) => ({
+      job,
+      index,
+      score: getSeekerRecommendationScore(job, title),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const byDate = String(b.job && b.job.createdAt ? b.job.createdAt : "").localeCompare(
+        String(a.job && a.job.createdAt ? a.job.createdAt : ""),
+      );
+      if (byDate !== 0) return byDate;
+      return a.index - b.index;
+    })
+    .map((entry) => entry.job);
 }
 
 function filterJobs(jobs, { keywords = "", location = "" } = {}) {
@@ -1286,7 +1461,12 @@ function renderSeekerJobsWithSearch(jobs) {
   const openJobs = Array.isArray(jobs) ? jobs.filter(isJobOpen) : jobs;
   const { keywords, location, hasQuery } = getActiveSearch();
   if (!hasQuery) {
-    renderSeekerJobs(openJobs);
+    renderSeekerJobs(rankJobsForSeekerProfile(openJobs, getSeekerRecommendationTitle()));
+    refreshSeekerRecommendationTitle()
+      .then((changed) => {
+        if (changed && cachedJobs) renderSeekerJobsWithSearch(cachedJobs);
+      })
+      .catch(() => {});
     return;
   }
 
