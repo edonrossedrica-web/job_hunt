@@ -1786,6 +1786,24 @@ function renderEmployerPostedJobs(jobs) {
 async function loadApplicantsForJob(jobId, panel) {
   if (!panel) return;
 
+  const applyPendingButtonState = (btn, currentStatus) => {
+    if (!btn) return;
+    const status = String(currentStatus || "").trim().toLowerCase();
+    const shouldDisable = status === "pending" || status === "passed" || status === "rejected";
+    btn.disabled = shouldDisable;
+    btn.style.opacity = shouldDisable ? "0.65" : "";
+    btn.style.cursor = shouldDisable ? "default" : "";
+    if (!shouldDisable) {
+      btn.title = "";
+      return;
+    }
+    if (status === "pending") {
+      btn.title = "Already pending.";
+      return;
+    }
+    btn.title = `Locked after ${status}.`;
+  };
+
   const options = (arguments && arguments.length >= 3 && arguments[2] && typeof arguments[2] === "object") ? arguments[2] : {};
   const quiet = Boolean(options && options.quiet);
   const force = Boolean(options && options.force);
@@ -1845,12 +1863,7 @@ async function loadApplicantsForJob(jobId, panel) {
       if (p) p.textContent = email ? `Applied • ${email}` : "Applied";
 
       const pendingBtn = row.querySelector('button[data-status="pending"]');
-      if (pendingBtn && status === "pending") {
-        pendingBtn.disabled = true;
-        pendingBtn.style.opacity = "0.65";
-        pendingBtn.style.cursor = "default";
-        pendingBtn.title = "Already pending.";
-      }
+      applyPendingButtonState(pendingBtn, status);
 
       const detail = document.createElement("div");
       detail.className = "posted-applicant-detail";
@@ -2030,6 +2043,16 @@ async function loadApplicantsForJob(jobId, panel) {
           }));
           try {
             const next = String(btn.getAttribute("data-status") || "").trim().toLowerCase();
+            if (next === "pending") {
+              const ok = await showConfirmModal(`Are you sure you want to mark ${name} as pending?`, {
+                title: "Confirm Pending",
+                okText: "Yes",
+                cancelText: "Cancel",
+              });
+              if (!ok) {
+                return;
+              }
+            }
             statusButtons.forEach((node) => {
               node.disabled = true;
             });
@@ -2049,13 +2072,7 @@ async function loadApplicantsForJob(jobId, panel) {
               tag.className = `status-tag ${statusClass}`;
               tag.textContent = statusLabel;
             }
-            if (pendingBtn) {
-              const shouldDisable = next === "pending";
-              pendingBtn.disabled = shouldDisable;
-              pendingBtn.style.opacity = shouldDisable ? "0.65" : "";
-              pendingBtn.style.cursor = shouldDisable ? "default" : "";
-              pendingBtn.title = shouldDisable ? "Already pending." : "";
-            }
+            applyPendingButtonState(pendingBtn, next);
             try {
               const key = String(jobId || "").trim();
               const cached = key ? employerJobApplicantsCache.get(key) : null;
