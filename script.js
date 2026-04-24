@@ -6239,6 +6239,14 @@ function showInfoModal(title, message, { okText = "OK" } = {}) {
   modal.style.display = "flex";
 }
 
+function setInfoModalButtonState({ disabled = false } = {}) {
+  const okBtn = document.getElementById("infoOkBtn");
+  if (!okBtn) return;
+  okBtn.disabled = Boolean(disabled);
+  okBtn.style.opacity = disabled ? "0.7" : "";
+  okBtn.style.cursor = disabled ? "default" : "";
+}
+
 function closeInfoModal() {
   const modal = document.getElementById("infoModal");
   if (modal) modal.style.display = "none";
@@ -6632,6 +6640,8 @@ async function submitApplication(event) {
   }
   const message = (document.getElementById("applyMessage")?.value || "").trim();
   try {
+    showInfoModal("Submitting Application", "Please wait while we submit your application.", { okText: "Please wait..." });
+    setInfoModalButtonState({ disabled: true });
     await apiRequest("/api/applications", { method: "POST", auth: true, body: { jobId, message } });
     const msgEl = document.getElementById("applyMessage");
     if (msgEl) msgEl.value = "";
@@ -6643,8 +6653,10 @@ async function submitApplication(event) {
     syncSeekerApplyButtons(document);
     emitSyncEvent("applications_updated", { jobId });
     showInfoModal("Application Submitted", "Your application was submitted successfully.");
+    setInfoModalButtonState({ disabled: false });
     refreshDataViews().catch(() => {});
   } catch (err) {
+    closeInfoModal();
     if (err && err.status === 409) {
       try {
         seekerAppliedJobIds.add(String(jobId || "").trim());
