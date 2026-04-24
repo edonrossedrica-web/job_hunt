@@ -707,6 +707,7 @@ async function loadDbFromStorage() {
 
 let lastReadableTablesSyncAt = 0;
 const READABLE_TABLES_SYNC_INTERVAL_MS = 5000;
+let backgroundPersistPromise = Promise.resolve();
 
 async function persistDbToStorage(db) {
   const normalized = normalizeDbShape(db);
@@ -742,6 +743,22 @@ async function persistDbToStorage(db) {
     }
   }
   sqlDb.close();
+}
+
+function persistDbInBackground(db) {
+  const snapshot = cloneDbShape(db);
+  backgroundPersistPromise = backgroundPersistPromise
+    .catch(() => {})
+    .then(() => persistDbToStorage(snapshot))
+    .catch((err) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.error("Background DB persist failed", err);
+      } catch {
+        // ignore logging errors
+      }
+    });
+  return backgroundPersistPromise;
 }
 
 async function ensureDbCacheLoaded({ force = false } = {}) {
@@ -1701,7 +1718,7 @@ async function handleApi(req, res, url) {
         createdAt: Date.now(),
         expiresAt: Date.now() + SESSION_TTL_MS,
       });
-      await writeDb(db);
+      persistDbInBackground(db);
     }
     logAuthTiming("login_complete", loginStartedAt, { role, email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
