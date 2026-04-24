@@ -433,6 +433,10 @@
         const data=await backendRequest("/api/profile",{method:"GET"});
         const hadBackendProfile = Boolean(data&&data.ok&&data.profile&&typeof data.profile==="object"&&Object.keys(data.profile||{}).length);
         if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
+        if(hadBackendProfile && !profile.publishedAt){
+          profile.publishedAt=new Date().toISOString();
+          try{await backendRequest("/api/profile",{method:"PUT",body:{profile}});}catch{}
+        }
         if(data&&data.ok&&data.user){
           if(!profile.name.trim()) profile.name=String(data.user.name||"");
           if(!profile.contact.email.trim()){

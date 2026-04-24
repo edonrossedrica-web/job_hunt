@@ -1420,6 +1420,10 @@ function setupFinishEmployerProfileCta() {
               : (backendProfile.logoSrc || cachedObj?.logoSrc || "")) || "",
           ).trim(),
         };
+        if (!merged.publishedAt) {
+          merged.publishedAt = new Date().toISOString();
+          backendRequest("/api/profile", { method: "PUT", body: { profile: merged } }).catch(() => {});
+        }
         applyEmployerProfile(merged);
         saveLocalProfileCache(merged);
       }
