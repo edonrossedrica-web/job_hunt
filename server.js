@@ -2082,7 +2082,7 @@ async function handleApi(req, res, url) {
     app.status = nextStatus === "new" ? "applied" : nextStatus;
     app.updatedAt = nowIso();
     app.statusUpdatedAt = app.updatedAt;
-    await writeDb(db);
+    persistDbInBackground(db);
     broadcastSse("applications_updated", {
       applicationId: app.id,
       jobId: app.jobId,

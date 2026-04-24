@@ -2022,8 +2022,18 @@ async function loadApplicantsForJob(jobId, panel) {
       row.querySelectorAll("button[data-status]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           if (btn.disabled) return;
+          const statusButtons = Array.from(row.querySelectorAll("button[data-status]"));
+          const originalStates = statusButtons.map((node) => ({
+            node,
+            disabled: Boolean(node.disabled),
+            text: String(node.textContent || ""),
+          }));
           try {
             const next = String(btn.getAttribute("data-status") || "").trim().toLowerCase();
+            statusButtons.forEach((node) => {
+              node.disabled = true;
+            });
+            btn.textContent = "Saving...";
             await apiRequest(`/api/applications/${encodeURIComponent(a.id)}`, {
               method: "PATCH",
               auth: true,
@@ -2066,6 +2076,10 @@ async function loadApplicantsForJob(jobId, panel) {
             emitSyncEvent("applications_updated", { applicationId: a.id, jobId });
           } catch (err) {
             alert(err?.message || "Failed to update status.");
+            originalStates.forEach(({ node, disabled, text }) => {
+              node.disabled = disabled;
+              node.textContent = text;
+            });
           }
         });
       });
