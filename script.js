@@ -33,6 +33,8 @@ let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants |
 let employerApplicantsLastLoadedAt = 0;
 let employerApplicantsDirty = true;
 let employerOverviewRefreshTimer = null;
+let dataViewsRefreshTimer = null;
+let googleClientIdBootstrapPromise = null;
 const EMPLOYER_APPLICANTS_REFRESH_MS = 20000;
 const EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS = 30000;
 const employerJobApplicantsCache = new Map(); // jobId -> { apps, fetchedAt }
@@ -3863,6 +3865,16 @@ function scheduleEmployerOverviewRefresh() {
   }, 32);
 }
 
+function scheduleRefreshDataViews(delay = 0) {
+  if (dataViewsRefreshTimer != null) {
+    return;
+  }
+  dataViewsRefreshTimer = window.setTimeout(() => {
+    dataViewsRefreshTimer = null;
+    refreshDataViews().catch(() => {});
+  }, Math.max(0, Number(delay || 0)));
+}
+
 function openNotifications() {
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const role = localStorage.getItem("userRole");
@@ -4512,7 +4524,7 @@ function showHome() {
   if (Array.isArray(cachedJobs)) {
     renderSeekerJobsWithSearch(cachedJobs);
   } else {
-    refreshDataViews().catch(() => {});
+    scheduleRefreshDataViews();
   }
   window.scrollTo(0, 0);
   updateAuthUI();
@@ -4831,7 +4843,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPasswordToggles();
     setupHistoryViewButtons();
     setupHistoryStatusButtons();
-    refreshDataViews();
+    scheduleRefreshDataViews();
     renderSavedJobs();
     syncBookmarkButtons(document);
     finishInitialRender();
@@ -4873,7 +4885,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupHistoryViewButtons();
   setupHistoryStatusButtons();
   // Render jobs from backend (if running) and wire add-job buttons.
-  refreshDataViews();
+  scheduleRefreshDataViews();
   renderSavedJobs();
   syncBookmarkButtons(document);
   const homePage = document.getElementById("homePage");
@@ -4885,6 +4897,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
   finishInitialRender();
+
+  window.setTimeout(() => {
+    bootstrapGoogleClientIdFromServer().catch(() => {});
+    waitForGoogleIdentityServices(12000).catch(() => {});
+  }, 0);
 });
 
 // Toggle Employer/Seeker view
@@ -5478,17 +5495,28 @@ async function bootstrapGoogleClientIdFromServer() {
   const proto = window.location && window.location.protocol;
   const runningServer = proto === "http:" || proto === "https:";
   if (!runningServer) return;
+  if (googleClientIdBootstrapPromise) {
+    return await googleClientIdBootstrapPromise;
+  }
+
+  googleClientIdBootstrapPromise = (async () => {
+    try {
+      const data = await apiRequest("/api/config", { method: "GET" });
+      const clientId = data && data.ok ? String(data.googleClientId || "").trim() : "";
+      if (clientId) {
+        window.GOOGLE_CLIENT_ID = clientId;
+      }
+      const meta = document.querySelector('meta[name="google-client-id"]');
+      if (meta && clientId) meta.content = clientId;
+    } catch {
+      // ignore
+    }
+  })();
 
   try {
-    const data = await apiRequest("/api/config", { method: "GET" });
-    const clientId = data && data.ok ? String(data.googleClientId || "").trim() : "";
-    if (clientId) {
-      window.GOOGLE_CLIENT_ID = clientId;
-    }
-    const meta = document.querySelector('meta[name="google-client-id"]');
-    if (meta && clientId) meta.content = clientId;
-  } catch {
-    // ignore
+    await googleClientIdBootstrapPromise;
+  } finally {
+    googleClientIdBootstrapPromise = null;
   }
 }
 

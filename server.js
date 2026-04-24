@@ -1227,9 +1227,15 @@ async function verifyGoogleAccessToken(accessToken) {
     throw err;
   }
 
-  const { statusCode: tokenStatusCode, body: tokenBody, raw: tokenRaw } = await fetchJson(
-    `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
-  );
+  const [
+    { statusCode: tokenStatusCode, body: tokenBody, raw: tokenRaw },
+    { statusCode, body, raw },
+  ] = await Promise.all([
+    fetchJson(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`),
+    fetchJsonWithHeaders("https://openidconnect.googleapis.com/v1/userinfo", {
+      Authorization: `Bearer ${accessToken}`,
+    }),
+  ]);
 
   if (tokenStatusCode !== 200 || !tokenBody || typeof tokenBody !== "object") {
     const message =
@@ -1247,13 +1253,6 @@ async function verifyGoogleAccessToken(accessToken) {
     err.status = 401;
     throw err;
   }
-
-  const { statusCode, body, raw } = await fetchJsonWithHeaders(
-    "https://openidconnect.googleapis.com/v1/userinfo",
-    {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  );
 
   if (statusCode !== 200 || !body || typeof body !== "object") {
     const message =
@@ -1820,16 +1819,20 @@ async function handleApi(req, res, url) {
     }
 
     const token = issueAuthTokenForUser(user);
-    if (userChanged || !hasStatelessSessions()) {
-      if (!hasStatelessSessions()) {
-        db.sessions.push({
-          token,
-          userId: user.id,
-          createdAt: Date.now(),
-          expiresAt: Date.now() + SESSION_TTL_MS,
-        });
-      }
+    let sessionAdded = false;
+    if (!hasStatelessSessions()) {
+      db.sessions.push({
+        token,
+        userId: user.id,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      });
+      sessionAdded = true;
+    }
+    if (userChanged) {
       await writeDb(db);
+    } else if (sessionAdded) {
+      persistDbInBackground(db);
     }
     logAuthTiming("google_login_complete", googleAuthStartedAt, { role, mode: normalizedMode, email: info.email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
