@@ -9,7 +9,7 @@ const crypto = require("crypto");
 const { DatabaseSync } = require("node:sqlite");
 let nodemailer = null;
 try {
-  // Optional dependency. If not installed/configured, feedback is stored locally instead.
+  // Optional dependency. If not installed/configured, feedback is still stored in app state.
   nodemailer = require("nodemailer");
 } catch {
   nodemailer = null;
@@ -285,7 +285,7 @@ function nowIso() {
 }
 
 function emptyDbShape() {
-  return { users: [], sessions: [], jobs: [], applications: [] };
+  return { users: [], sessions: [], jobs: [], applications: [], feedback: [] };
 }
 
 function normalizeJobStatus(status) {
@@ -659,6 +659,7 @@ function normalizeDbShape(parsed) {
   parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
   parsed.jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
   parsed.applications = Array.isArray(parsed.applications) ? parsed.applications : [];
+  parsed.feedback = Array.isArray(parsed.feedback) ? parsed.feedback : [];
   return parsed;
 }
 
@@ -862,15 +863,16 @@ function normalizeMessageAttachmentInput(value) {
   };
 }
 
-async function appendFeedbackLog(entry) {
-  try {
-    await ensureDataDirWritable();
-  } catch {
-    // ignore
+async function appendFeedbackEntry(db, entry) {
+  if (!db || typeof db !== "object") return false;
+  db.feedback = Array.isArray(db.feedback) ? db.feedback : [];
+  db.feedback.push(entry);
+  // Keep feedback bounded so the single-row app_state record stays manageable.
+  if (db.feedback.length > 500) {
+    db.feedback = db.feedback.slice(-500);
   }
-  const filePath = path.join(DATA_DIR, "feedback.jsonl");
-  const line = JSON.stringify(entry) + "\n";
-  await fsp.appendFile(filePath, line, "utf8");
+  await writeDb(db);
+  return true;
 }
 
 function smtpConfigFromEnv() {
@@ -1270,8 +1272,7 @@ async function handleApi(req, res, url) {
 
     let stored = false;
     try {
-      await appendFeedbackLog(entry);
-      stored = true;
+      stored = await appendFeedbackEntry(db, entry);
     } catch {
       stored = false;
     }

@@ -50,6 +50,7 @@ function ensureShape(db) {
   out.sessions = Array.isArray(out.sessions) ? out.sessions : [];
   out.jobs = Array.isArray(out.jobs) ? out.jobs : [];
   out.applications = Array.isArray(out.applications) ? out.applications : [];
+  out.feedback = Array.isArray(out.feedback) ? out.feedback : [];
   return out;
 }
 
@@ -114,7 +115,7 @@ function ensureSqlite() {
     } catch {
       // ignore
     }
-    if (!seed || typeof seed !== "object") seed = { users: [], sessions: [], jobs: [], applications: [] };
+    if (!seed || typeof seed !== "object") seed = { users: [], sessions: [], jobs: [], applications: [], feedback: [] };
 
     db.prepare("INSERT OR IGNORE INTO kv(key, value) VALUES(?, ?)").run(
       SQLITE_KV_KEY,
@@ -389,7 +390,7 @@ function main() {
     nextDb = { ...db, users: [], sessions: [] };
   } else
   if (role === "all") {
-    nextDb = { users: [], sessions: [], jobs: [], applications: [] };
+    nextDb = { users: [], sessions: [], jobs: [], applications: [], feedback: [] };
   } else {
     const removedUserIds = db.users.filter((u) => u && u.role === role).map((u) => u.id);
 
