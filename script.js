@@ -6642,7 +6642,7 @@ async function submitApplication(event) {
     }
     syncSeekerApplyButtons(document);
     emitSyncEvent("applications_updated", { jobId });
-    alert("Application submitted!");
+    showInfoModal("Application Submitted", "Your application was submitted successfully.");
     refreshDataViews().catch(() => {});
   } catch (err) {
     if (err && err.status === 409) {
