@@ -6495,6 +6495,8 @@ async function submitApplication(event) {
     event.preventDefault();
   }
   const modal = document.getElementById("applyModal");
+  const submitBtn = event && event.currentTarget ? event.currentTarget : null;
+  const originalSubmitText = submitBtn ? String(submitBtn.textContent || "").trim() || "Submit" : "Submit";
   const ok = await showConfirmModal("Do you want to submit this application?", {
     title: "Submit Application",
     okText: "Yes",
@@ -6503,23 +6505,43 @@ async function submitApplication(event) {
   if (!ok) {
     return;
   }
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+  }
   if (modal) modal.style.display = "none";
   if (!getLoggedIn() || getLoggedInRole() !== "seeker") {
     alert("Please log in as a seeker to apply.");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
     return;
   }
   if (!hasBackendToken()) {
     alert("Please log in again to apply.");
     handleNotAuthenticated("seeker");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
     return;
   }
   const jobId = modal ? modal.getAttribute("data-job-id") : "";
   if (!jobId) {
     alert("Missing job reference. Please try again from a job card.");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
     return;
   }
   if (isSeekerAppliedToJob(jobId)) {
     showInfoModal("Applied", "You already applied to this job.");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
     return;
   }
   const message = (document.getElementById("applyMessage")?.value || "").trim();
@@ -6533,9 +6555,9 @@ async function submitApplication(event) {
       // ignore
     }
     syncSeekerApplyButtons(document);
-    await refreshDataViews();
     emitSyncEvent("applications_updated", { jobId });
     alert("Application submitted!");
+    refreshDataViews().catch(() => {});
   } catch (err) {
     if (err && err.status === 409) {
       try {
@@ -6545,14 +6567,31 @@ async function submitApplication(event) {
       }
       syncSeekerApplyButtons(document);
       showInfoModal("Applied", "You already applied to this job.");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalSubmitText;
+      }
       return;
     }
     if (err && err.status === 401) {
       alert("Session expired. Please log in again.");
       handleNotAuthenticated("seeker");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalSubmitText;
+      }
       return;
     }
     alert(err?.message || "Failed to submit application.");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
+    return;
+  }
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalSubmitText;
   }
 }
 
