@@ -746,10 +746,12 @@ async function persistDbToStorage(db) {
 }
 
 function persistDbInBackground(db) {
-  const snapshot = cloneDbShape(db);
-  backgroundPersistPromise = backgroundPersistPromise
-    .catch(() => {})
-    .then(() => persistDbToStorage(snapshot))
+  const normalized = cloneDbShape(db);
+  dbCache = cloneDbShape(normalized);
+  dbCacheProvider = getStorageProvider();
+
+  backgroundPersistPromise = Promise.allSettled([dbWriteChain, backgroundPersistPromise])
+    .then(() => persistDbToStorage(normalized))
     .catch((err) => {
       try {
         // eslint-disable-next-line no-console
