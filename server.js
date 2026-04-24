@@ -175,6 +175,10 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // For easier inspection in tools like DB Browser for SQLite, we maintain a few readable tables
 // as a best-effort mirror of that JSON. The server continues to use the JSON blob as source of truth.
 let hasSyncedReadableTables = false;
+let dbCache = null;
+let dbCacheProvider = "";
+let dbLoadPromise = null;
+let dbWriteChain = Promise.resolve();
 
 // Very small "realtime" layer for live UI updates (no polling).
 // Clients connect to GET /api/events using Server-Sent Events (SSE).
@@ -663,8 +667,16 @@ function normalizeDbShape(parsed) {
   return parsed;
 }
 
-async function readDb() {
-  await ensureDb();
+function cloneDbShape(db) {
+  const normalized = normalizeDbShape(db);
+  try {
+    return normalizeDbShape(JSON.parse(JSON.stringify(normalized)));
+  } catch {
+    return emptyDbShape();
+  }
+}
+
+async function loadDbFromStorage() {
   if (getStorageProvider() === "supabase") {
     const cfg = getSupabaseConfig();
     const rows = await supabaseRequest(
@@ -695,8 +707,7 @@ async function readDb() {
 let lastReadableTablesSyncAt = 0;
 const READABLE_TABLES_SYNC_INTERVAL_MS = 5000;
 
-async function writeDb(db) {
-  await ensureDb();
+async function persistDbToStorage(db) {
   const normalized = normalizeDbShape(db);
   if (getStorageProvider() === "supabase") {
     const cfg = getSupabaseConfig();
@@ -730,6 +741,53 @@ async function writeDb(db) {
     }
   }
   sqlDb.close();
+}
+
+async function ensureDbCacheLoaded({ force = false } = {}) {
+  await ensureDb();
+  const provider = getStorageProvider();
+  if (!force && dbCache && dbCacheProvider === provider) return dbCache;
+  if (!force && dbLoadPromise) return dbLoadPromise;
+
+  dbLoadPromise = (async () => {
+    const loaded = await loadDbFromStorage();
+    dbCache = cloneDbShape(loaded);
+    dbCacheProvider = provider;
+    return dbCache;
+  })();
+
+  try {
+    return await dbLoadPromise;
+  } finally {
+    dbLoadPromise = null;
+  }
+}
+
+async function readDb() {
+  await dbWriteChain;
+  const cached = await ensureDbCacheLoaded();
+  return cloneDbShape(cached);
+}
+
+async function writeDb(db) {
+  await ensureDb();
+  const normalized = cloneDbShape(db);
+  dbCache = cloneDbShape(normalized);
+  dbCacheProvider = getStorageProvider();
+
+  const run = async () => {
+    try {
+      await persistDbToStorage(normalized);
+    } catch (err) {
+      dbCache = null;
+      dbCacheProvider = "";
+      throw err;
+    }
+  };
+
+  const pending = dbWriteChain.then(run, run);
+  dbWriteChain = pending.catch(() => {});
+  return pending;
 }
 
 function json(res, statusCode, body) {
