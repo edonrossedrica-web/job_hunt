@@ -3837,6 +3837,14 @@ function updateNotificationsBackButton() {
   btn.style.display = visible ? "inline-flex" : "none";
 }
 
+function schedulePostLoginUiRefresh() {
+  window.setTimeout(() => {
+    updateAuthUI();
+    syncBookmarkButtons(document);
+    renderSavedJobs();
+  }, 0);
+}
+
 function openNotifications() {
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const role = localStorage.getItem("userRole");
@@ -5335,7 +5343,7 @@ async function handleLogin() {
       updateAuthUI();
       syncBookmarkButtons(document);
       renderSavedJobs();
-    }, { message: "Logging in..." });
+    }, { message: "Logging in...", minDuration: 120 });
   } catch (err) {
     alert(err?.message || "Login failed.");
     return;
@@ -5601,8 +5609,7 @@ async function handleGoogleAuth(role, mode) {
       showEmployerDashboard();
       openEmployerWelcome();
     }
-    updateAuthUI();
-    syncBookmarkButtons(document);
+    schedulePostLoginUiRefresh();
   };
 
   const runAuthFlow = async () => {
@@ -5685,7 +5692,7 @@ async function handleGoogleAuth(role, mode) {
   };
 
   if (runningServer) {
-    await withPageLoader(runAuthFlow, { message: "Logging in..." });
+    await withPageLoader(runAuthFlow, { message: "Logging in...", minDuration: 80 });
     return;
   }
 

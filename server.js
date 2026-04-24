@@ -853,10 +853,36 @@ function hashPassword(password, saltHex) {
   return derived.toString("hex");
 }
 
-function createPasswordRecord(password) {
+async function hashPasswordAsync(password, saltHex) {
+  const salt = Buffer.from(saltHex, "hex");
+  const derived = await new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
+  return Buffer.from(derived).toString("hex");
+}
+
+async function createPasswordRecord(password) {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = hashPassword(password, salt);
+  const hash = await hashPasswordAsync(password, salt);
   return { salt, hash };
+}
+
+function logAuthTiming(stage, startedAt, extra = {}) {
+  if (String(process.env.LOG_AUTH_TIMINGS || "").trim() !== "1") return;
+  try {
+    // eslint-disable-next-line no-console
+    console.log("AUTH TIMING", {
+      stage,
+      durationMs: Date.now() - startedAt,
+      provider: getStorageProvider(),
+      ...extra,
+    });
+  } catch {
+    // ignore timing log errors
+  }
 }
 
 function timingSafeEqualHex(a, b) {
@@ -1419,7 +1445,7 @@ async function handleApi(req, res, url) {
 
     if (!user) return json(res, 404, { ok: false, error: "User not found" });
 
-    const passwordRecord = createPasswordRecord(newPassword);
+    const passwordRecord = await createPasswordRecord(newPassword);
     user.passwordSalt = passwordRecord.salt;
     user.passwordHash = passwordRecord.hash;
     if (!user.authProvider) user.authProvider = "local";
@@ -1519,7 +1545,7 @@ async function handleApi(req, res, url) {
       return json(res, 409, { ok: false, error: "Email already registered for this role" });
     }
 
-    const passwordRecord = createPasswordRecord(password);
+    const passwordRecord = await createPasswordRecord(password);
     const user = {
       id: createId("user"),
       role,
@@ -1570,6 +1596,7 @@ async function handleApi(req, res, url) {
   }
 
   if (pathname === "/api/login" && req.method === "POST") {
+    const loginStartedAt = Date.now();
     const body = await readJsonBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
     const role = normalizeRole(body.role);
@@ -1583,7 +1610,8 @@ async function handleApi(req, res, url) {
     const user = db.users.find((u) => u.email === email && u.role === role);
     if (!user) return json(res, 401, { ok: false, error: "Invalid credentials" });
 
-    const computed = hashPassword(password, user.passwordSalt);
+    const computed = await hashPasswordAsync(password, user.passwordSalt);
+    logAuthTiming("login_hash_complete", loginStartedAt, { role, email });
     if (!timingSafeEqualHex(computed, user.passwordHash)) {
       return json(res, 401, { ok: false, error: "Invalid credentials" });
     }
@@ -1596,10 +1624,12 @@ async function handleApi(req, res, url) {
       expiresAt: Date.now() + SESSION_TTL_MS,
     });
     await writeDb(db);
+    logAuthTiming("login_complete", loginStartedAt, { role, email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
   }
 
   if (pathname === "/api/auth/google" && req.method === "POST") {
+    const googleAuthStartedAt = Date.now();
     const body = await readJsonBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
 
@@ -1615,6 +1645,7 @@ async function handleApi(req, res, url) {
     let info;
     try {
       info = accessToken ? await verifyGoogleAccessToken(accessToken) : await verifyGoogleIdToken(idToken);
+      logAuthTiming("google_verify_complete", googleAuthStartedAt, { role, mode: mode || "login" });
     } catch (err) {
       const status = typeof err?.status === "number" ? err.status : 401;
       return json(res, status, { ok: false, error: err?.message || "Google sign-in failed" });
@@ -1685,6 +1716,7 @@ async function handleApi(req, res, url) {
       expiresAt: Date.now() + SESSION_TTL_MS,
     });
     await writeDb(db);
+    logAuthTiming("google_login_complete", googleAuthStartedAt, { role, mode: normalizedMode, email: info.email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
   }
 
