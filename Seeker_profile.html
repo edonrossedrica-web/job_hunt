@@ -306,8 +306,13 @@
       o.about=String(o.about||"");
       if(o.about.trim().toLowerCase()==="add a short bio about you") o.about="";
       o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
+      o.publishedAt=String(o.publishedAt||"").trim();
       o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
       return o;
+    }
+    function hasPublishedSeekerProfile(p){
+      const o=ensureShape(p);
+      return Boolean(o.publishedAt || (o.name.trim() && o.title.trim()));
     }
     function fileToDataUrl(file){
       return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||""));r.onerror=()=>reject(new Error("File read failed"));r.readAsDataURL(file);});
@@ -446,6 +451,7 @@
         profile.contact.email=isSyntheticAuthEmail(storedEmail) ? "" : storedEmail;
       }
       writeCache(profile);
+      if(hasPublishedSeekerProfile(profile)) markFinishProfileDone("seeker",true);
     }
     function requireSeeker(){
       const loggedIn=localStorage.getItem("isLoggedIn")==="true";
@@ -754,6 +760,7 @@
         if (!profile.name) throw new Error("Name is required before publishing.");
         if (!profile.title) throw new Error("Title is required before publishing.");
 
+        if(!profile.publishedAt) profile.publishedAt=new Date().toISOString();
         try{profile.__updatedAt=Date.now();profile.__schema=1}catch{}
         writeCache(profile);
         await withPageLoader(()=>backendRequest("/api/profile",{method:"PUT",body:{profile}}),"Publishing profile...");

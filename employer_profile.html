@@ -757,6 +757,19 @@ function markFinishProfileDone(role, done){
   try { localStorage.removeItem(`finishProfileDone_${role}`); } catch {}
 }
 
+function hasPublishedEmployerProfile(profile){
+  const p = profile && typeof profile === "object" ? profile : {};
+  const contact = p.contact && typeof p.contact === "object" ? p.contact : {};
+  return Boolean(
+    String(p.publishedAt || "").trim() ||
+    String(p.companyName || "").trim() ||
+    String(p.companyIndustry || "").trim() ||
+    String(p.aboutText || "").trim() ||
+    String(contact.email || "").trim() ||
+    String(p.logoSrc || "").trim()
+  );
+}
+
 let confirmResolve = null;
 function closeConfirmModal(result){
   const modal = document.getElementById("confirmModal");
@@ -938,6 +951,7 @@ function saveLocalProfileCache(profile){
 }
 
 function collectEmployerProfile(){
+  const cached = loadLocalProfileCache();
   const getText = (id) => {
     const el = document.getElementById(id);
     if (!el) return "";
@@ -950,6 +964,7 @@ function collectEmployerProfile(){
     companyIndustry: getText("companyIndustry"),
     companyLocation: getText("companyLocation"),
     aboutText: getText("aboutText"),
+    publishedAt: String(cached && cached.publishedAt ? cached.publishedAt : "").trim(),
     info: {
       industry: getText("infoIndustry"),
       size: getText("infoSize"),
@@ -1021,6 +1036,9 @@ function applyEmployerProfile(profile){
   if (typeof profile.logoSrc === "string" && profile.logoSrc) {
     const logo = document.getElementById("companyLogo");
     if (logo) logo.src = profile.logoSrc;
+  }
+  if (hasPublishedEmployerProfile(profile)) {
+    markFinishProfileDone("employer", true);
   }
 }
 
@@ -1251,6 +1269,11 @@ async function finishEmployerProfile(btn){
   }
   try {
     // Ensure the backend write completes before navigating away (navigation can abort in-flight fetch).
+    const cached = loadLocalProfileCache();
+    if (cached && typeof cached === "object" && !cached.publishedAt) {
+      cached.publishedAt = new Date().toISOString();
+      saveLocalProfileCache(cached);
+    }
     await withPageLoader(() => saveEmployerProfileToBackend(), "Publishing profile...");
     markFinishProfileDone("employer", true);
     localStorage.setItem("postSignupWelcome","employer");
