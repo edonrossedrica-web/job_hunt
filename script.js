@@ -20,6 +20,7 @@ const SEEKER_PROFILE_CACHE_KEY_PREFIX = "smartHuntProfileCache_v1:seeker:";
 const SEEKER_PROFILE_TITLE_CACHE_TTL_MS = 2 * 60 * 1000;
 let cachedJobs = null;
 let cachedJobsFetchedAt = 0;
+let jobsSnapshotPromise = null;
 let seekerSearchState = { keywords: "", location: "" };
 let seekerRecommendationProfile = { userId: "", title: "", fetchedAt: 0, refreshPromise: null };
 let employerApplicantsSearchTimer = null;
@@ -1103,11 +1104,16 @@ function isJobOpen(job) {
   return String(job && job.status ? job.status : "open").toLowerCase() !== "closed";
 }
 
+function isElementVisibleForRender(id) {
+  const el = document.getElementById(id);
+  return Boolean(el && el.style.display !== "none");
+}
+
 function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
   const grid = document.getElementById("recommendedJobsGrid");
   if (!grid) return;
   const empty = document.getElementById("recommendedJobsEmpty");
-  grid.innerHTML = "";
+  grid.replaceChildren();
   const list = Array.isArray(jobs) ? jobs : [];
   if (empty) {
     empty.style.display = list.length ? "none" : "block";
@@ -1115,6 +1121,7 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
       empty.textContent = emptyText || "No jobs posted yet.";
     }
   }
+  const fragment = document.createDocumentFragment();
   list.forEach((job, index) => {
     const card = document.createElement("article");
     card.className = "job-card" + (index >= 3 ? " hidden-reco" : "");
@@ -1161,8 +1168,9 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
     }
     if (salaryEl) salaryEl.textContent = pay;
 
-    grid.appendChild(card);
+    fragment.appendChild(card);
   });
+  grid.appendChild(fragment);
 
   // Update bookmark state after rendering.
   syncBookmarkButtons(grid);
@@ -1483,11 +1491,21 @@ function renderSeekerJobsWithSearch(jobs) {
 async function getJobsSnapshot() {
   const freshEnough = cachedJobs && Date.now() - cachedJobsFetchedAt < 15000;
   if (freshEnough) return cachedJobs;
-  const jobs = await fetchJobs();
-  if (!jobs) return cachedJobs;
-  cachedJobs = jobs;
-  cachedJobsFetchedAt = Date.now();
-  return jobs;
+  if (jobsSnapshotPromise) return jobsSnapshotPromise;
+
+  jobsSnapshotPromise = (async () => {
+    const jobs = await fetchJobs();
+    if (!jobs) return cachedJobs;
+    cachedJobs = jobs;
+    cachedJobsFetchedAt = Date.now();
+    return jobs;
+  })();
+
+  try {
+    return await jobsSnapshotPromise;
+  } finally {
+    jobsSnapshotPromise = null;
+  }
 }
 
 function setupSeekerSearch() {
@@ -1599,12 +1617,13 @@ function renderEmployerPostedJobs(jobs) {
   const uiState = captureEmployerPostedApplicantsUIState(container);
   clearEmployerPostedJobSamples();
   if (!container) return;
-  container.innerHTML = "";
+  container.replaceChildren();
 
   const list = Array.isArray(jobs) ? jobs.filter(isJobOpen) : [];
   const pageSize = getEmployerPostedJobsPageSize();
   const canToggle = list.length > pageSize;
   const visibleList = !canToggle || employerPostedJobsShowAll ? list : list.slice(0, pageSize);
+  const fragment = document.createDocumentFragment();
 
   const kpiCards = document.querySelectorAll("#employeePage .kpi-card .kpi-value");
   if (kpiCards.length >= 2) {
@@ -1643,7 +1662,7 @@ function renderEmployerPostedJobs(jobs) {
         window.scrollTo(0, 0);
       });
     }
-    container.appendChild(toolbar);
+    fragment.appendChild(toolbar);
   }
 
   visibleList.forEach((job) => {
@@ -1683,8 +1702,9 @@ function renderEmployerPostedJobs(jobs) {
 
     block.appendChild(card);
     block.appendChild(panel);
-    container.appendChild(block);
+    fragment.appendChild(block);
   });
+  container.appendChild(fragment);
 
   // Restore open applicants panels/details after refresh (prevents chat sending from collapsing Details).
   try {
@@ -2809,7 +2829,7 @@ async function loadEmployerApplicantsFromBackend(options = {}) {
     }
 
     try {
-      const jobs = await fetchJobs();
+      const jobs = await getJobsSnapshot();
       if (!jobs) {
         if (jobsList) {
           jobsList.innerHTML = `<div class="empty-state-box" style="margin-top:18px;">Backend API not reachable. Start the server (node server.js) and refresh.</div>`;
@@ -2826,6 +2846,7 @@ async function loadEmployerApplicantsFromBackend(options = {}) {
 
       if (!jobsList) return;
       jobsList.innerHTML = "";
+      const fragment = document.createDocumentFragment();
 
       let mineVisible = mineOpen;
       if (employerApplicantsJobsFilterMode === "archived") mineVisible = mineClosed;
@@ -2955,8 +2976,9 @@ async function loadEmployerApplicantsFromBackend(options = {}) {
           });
         });
 
-        jobsList.appendChild(card);
+        fragment.appendChild(card);
       });
+      jobsList.appendChild(fragment);
 
       employerApplicantsLastLoadedAt = Date.now();
       employerApplicantsDirty = false;
@@ -3617,24 +3639,30 @@ function setupUniversalTextareaAutogrow() {
 }
 
 async function refreshDataViews() {
-  const jobs = await fetchJobs();
+  const jobs = await getJobsSnapshot();
   if (!jobs) return;
 
   cachedJobs = jobs;
   cachedJobsFetchedAt = Date.now();
-  renderSeekerJobsWithSearch(jobs);
+  if (isElementVisibleForRender("homePage")) {
+    renderSeekerJobsWithSearch(jobs);
+  }
 
-  if (getLoggedIn() && getLoggedInRole() === "employer") {
+  const seekerHistoryVisible = isElementVisibleForRender("seekerHistoryPage");
+  const employerHistoryVisible = isElementVisibleForRender("employerHistory");
+  const employerOverviewVisible = isElementVisibleForRender("employeePage");
+
+  if (getLoggedIn() && getLoggedInRole() === "employer" && employerOverviewVisible) {
     const myId = localStorage.getItem(STORAGE_CURRENT_USER_KEY);
     const mine = myId ? jobs.filter((j) => j.employerId === myId) : jobs;
     renderEmployerPostedJobs(mine);
   }
 
-  if (getLoggedIn() && getLoggedInRole() === "seeker") {
-    loadSeekerHistoryFromBackend();
+  if (getLoggedIn() && getLoggedInRole() === "seeker" && seekerHistoryVisible) {
+    loadSeekerHistoryFromBackend().catch(() => {});
   }
-  if (getLoggedIn() && getLoggedInRole() === "employer") {
-    loadEmployerHistoryFromBackend();
+  if (getLoggedIn() && getLoggedInRole() === "employer" && employerHistoryVisible) {
+    loadEmployerHistoryFromBackend().catch(() => {});
   }
 }
 
@@ -4455,6 +4483,11 @@ function showHome() {
   setRoleToggleLabel("Hunter Site");
   setActiveNav("homeLink");
   showSeekerHome();
+  if (Array.isArray(cachedJobs)) {
+    renderSeekerJobsWithSearch(cachedJobs);
+  } else {
+    refreshDataViews().catch(() => {});
+  }
   window.scrollTo(0, 0);
   updateAuthUI();
 }
@@ -4691,7 +4724,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncBookmarkButtons(document);
   });
 
-  revalidateBackendSession();
+  window.setTimeout(() => {
+    revalidateBackendSession().catch(() => {});
+  }, 0);
 
   const handleReturnToViewOnLoad = async () => {
     let params;
