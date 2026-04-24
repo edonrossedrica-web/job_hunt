@@ -32,6 +32,7 @@ let employerApplicantsJobsFilterMode = "active"; // active | archived | all
 let employerApplicantsJobsSortMode = "newest"; // newest | oldest | applicants | title
 let employerApplicantsLastLoadedAt = 0;
 let employerApplicantsDirty = true;
+let employerOverviewRefreshTimer = null;
 const EMPLOYER_APPLICANTS_REFRESH_MS = 20000;
 const EMPLOYER_JOB_APPLICANTS_CACHE_TTL_MS = 30000;
 const employerJobApplicantsCache = new Map(); // jobId -> { apps, fetchedAt }
@@ -3845,6 +3846,23 @@ function schedulePostLoginUiRefresh() {
   }, 0);
 }
 
+function scheduleEmployerOverviewRefresh() {
+  if (employerOverviewRefreshTimer != null) {
+    return;
+  }
+  // Let the dashboard paint first, then refresh its heavier job/KPI data in the background.
+  employerOverviewRefreshTimer = window.setTimeout(() => {
+    employerOverviewRefreshTimer = null;
+    if (!getLoggedIn() || getLoggedInRole() !== "employer") {
+      return;
+    }
+    if (!isElementVisibleForRender("employeePage")) {
+      return;
+    }
+    refreshDataViews().catch(() => {});
+  }, 32);
+}
+
 function openNotifications() {
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const role = localStorage.getItem("userRole");
@@ -5171,8 +5189,7 @@ function showEmployerDashboard() {
   setActiveNav("homeLink");
   window.scrollTo(0, 0);
   updateAuthUI();
-  // Ensure the overview always reflects the latest backend data (posted jobs, KPIs, etc.).
-  refreshDataViews();
+  scheduleEmployerOverviewRefresh();
 }
 
 function openAddJob() {
@@ -5207,7 +5224,7 @@ function showEmployerOverview() {
   document.getElementById("employerNotifications").style.display = "none";
   setEmployerNavActive(0);
   window.scrollTo(0, 0);
-  refreshDataViews();
+  scheduleEmployerOverviewRefresh();
 }
 
 function showEmployerHistory() {
