@@ -170,6 +170,7 @@ async function ensureDataDirWritable() {
 }
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_TOKEN_PREFIX = "st1";
 
 // The app stores its "real" database as a single JSON blob (kv.value) for simplicity.
 // For easier inspection in tools like DB Browser for SQLite, we maintain a few readable tables
@@ -847,6 +848,71 @@ function createId(prefix) {
   return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
 }
 
+function getSessionSecret() {
+  return String(process.env.SESSION_SECRET || "").trim();
+}
+
+function hasStatelessSessions() {
+  return Boolean(getSessionSecret());
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlDecode(value) {
+  const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "===".slice((normalized.length + 3) % 4);
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function getUserAuthVersion(user) {
+  const n = Number(user && user.authVersion);
+  return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
+}
+
+function createStatelessSessionToken(user) {
+  const secret = getSessionSecret();
+  if (!secret || !user || !user.id) return "";
+  const payload = {
+    uid: String(user.id),
+    iat: Date.now(),
+    exp: Date.now() + SESSION_TTL_MS,
+    av: getUserAuthVersion(user),
+  };
+  const payloadB64 = base64UrlEncode(JSON.stringify(payload));
+  const sig = crypto.createHmac("sha256", secret).update(payloadB64).digest("hex");
+  return `${SESSION_TOKEN_PREFIX}.${payloadB64}.${sig}`;
+}
+
+function readStatelessSessionToken(token) {
+  const raw = String(token || "").trim();
+  if (!raw || !raw.startsWith(`${SESSION_TOKEN_PREFIX}.`) || !hasStatelessSessions()) return null;
+  const parts = raw.split(".");
+  if (parts.length !== 3) return null;
+  const [, payloadB64, providedSig] = parts;
+  const expectedSig = crypto.createHmac("sha256", getSessionSecret()).update(payloadB64).digest("hex");
+  if (!timingSafeEqualHex(expectedSig, String(providedSig || ""))) return null;
+  try {
+    const payload = safeJsonParse(base64UrlDecode(payloadB64));
+    if (!payload || typeof payload !== "object") return null;
+    const exp = Number(payload.exp);
+    if (!Number.isFinite(exp) || Date.now() > exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function issueAuthTokenForUser(user) {
+  if (hasStatelessSessions()) return createStatelessSessionToken(user);
+  return crypto.randomBytes(24).toString("hex");
+}
+
 function hashPassword(password, saltHex) {
   const salt = Buffer.from(saltHex, "hex");
   const derived = crypto.scryptSync(password, salt, 64);
@@ -1209,6 +1275,13 @@ function canAccessApplication(user, application) {
 async function getAuthedUser(req, db) {
   const token = getBearerToken(req);
   if (!token) return null;
+  const stateless = readStatelessSessionToken(token);
+  if (stateless && stateless.uid) {
+    const user = db.users.find((u) => u.id === stateless.uid);
+    if (!user) return null;
+    if (getUserAuthVersion(user) !== Number(stateless.av || 0)) return null;
+    return user;
+  }
   const session = db.sessions.find((s) => s.token === token);
   if (!session) return null;
   if (typeof session.expiresAt === "number" && Date.now() > session.expiresAt) {
@@ -1448,6 +1521,7 @@ async function handleApi(req, res, url) {
     const passwordRecord = await createPasswordRecord(newPassword);
     user.passwordSalt = passwordRecord.salt;
     user.passwordHash = passwordRecord.hash;
+    user.authVersion = getUserAuthVersion(user) + 1;
     if (!user.authProvider) user.authProvider = "local";
 
     // Invalidate sessions for that user.
@@ -1550,6 +1624,7 @@ async function handleApi(req, res, url) {
       id: createId("user"),
       role,
       email,
+      authVersion: 0,
       passwordSalt: passwordRecord.salt,
       passwordHash: passwordRecord.hash,
       name: role === "seeker" ? name : "",
@@ -1583,13 +1658,15 @@ async function handleApi(req, res, url) {
     };
     db.users.push(user);
 
-    const token = crypto.randomBytes(24).toString("hex");
-    db.sessions.push({
-      token,
-      userId: user.id,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + SESSION_TTL_MS,
-    });
+    const token = issueAuthTokenForUser(user);
+    if (!hasStatelessSessions()) {
+      db.sessions.push({
+        token,
+        userId: user.id,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      });
+    }
 
     await writeDb(db);
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
@@ -1616,14 +1693,16 @@ async function handleApi(req, res, url) {
       return json(res, 401, { ok: false, error: "Invalid credentials" });
     }
 
-    const token = crypto.randomBytes(24).toString("hex");
-    db.sessions.push({
-      token,
-      userId: user.id,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + SESSION_TTL_MS,
-    });
-    await writeDb(db);
+    const token = issueAuthTokenForUser(user);
+    if (!hasStatelessSessions()) {
+      db.sessions.push({
+        token,
+        userId: user.id,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      });
+      await writeDb(db);
+    }
     logAuthTiming("login_complete", loginStartedAt, { role, email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
   }
@@ -1652,6 +1731,7 @@ async function handleApi(req, res, url) {
     }
 
     let user = db.users.find((u) => u.email === info.email && u.role === role);
+    let userChanged = false;
     const normalizedMode = mode === "signup" ? "signup" : "login";
     if (!user) {
       if (normalizedMode === "login") {
@@ -1662,6 +1742,7 @@ async function handleApi(req, res, url) {
         id: createId("user"),
         role,
         email: info.email,
+        authVersion: 0,
         // No password for Google users; login happens via Google id_token verification.
         passwordSalt: "",
         passwordHash: "",
@@ -1697,25 +1778,42 @@ async function handleApi(req, res, url) {
         createdAt: nowIso(),
       };
       db.users.push(user);
+      userChanged = true;
     } else {
       if (normalizedMode === "signup") {
         return json(res, 409, { ok: false, error: "You already have an account." });
       }
       // Backfill missing profile basics for older accounts.
-      if (role === "seeker" && !user.name && info.name) user.name = info.name;
-      if (role === "employer" && !user.company) user.company = "";
-      if (!user.authProvider) user.authProvider = "google";
-      if (!user.googleSub && info.sub) user.googleSub = info.sub;
+      if (role === "seeker" && !user.name && info.name) {
+        user.name = info.name;
+        userChanged = true;
+      }
+      if (role === "employer" && !user.company) {
+        user.company = "";
+        userChanged = true;
+      }
+      if (!user.authProvider) {
+        user.authProvider = "google";
+        userChanged = true;
+      }
+      if (!user.googleSub && info.sub) {
+        user.googleSub = info.sub;
+        userChanged = true;
+      }
     }
 
-    const token = crypto.randomBytes(24).toString("hex");
-    db.sessions.push({
-      token,
-      userId: user.id,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + SESSION_TTL_MS,
-    });
-    await writeDb(db);
+    const token = issueAuthTokenForUser(user);
+    if (userChanged || !hasStatelessSessions()) {
+      if (!hasStatelessSessions()) {
+        db.sessions.push({
+          token,
+          userId: user.id,
+          createdAt: Date.now(),
+          expiresAt: Date.now() + SESSION_TTL_MS,
+        });
+      }
+      await writeDb(db);
+    }
     logAuthTiming("google_login_complete", googleAuthStartedAt, { role, mode: normalizedMode, email: info.email });
     return json(res, 200, { ok: true, token, user: sanitizeUser(user) });
   }
@@ -1723,6 +1821,7 @@ async function handleApi(req, res, url) {
   if (pathname === "/api/logout" && req.method === "POST") {
     const token = getBearerToken(req);
     if (!token) return json(res, 200, { ok: true });
+    if (readStatelessSessionToken(token)) return json(res, 200, { ok: true });
     db.sessions = db.sessions.filter((s) => s.token !== token);
     await writeDb(db);
     return json(res, 200, { ok: true });
@@ -2442,14 +2541,23 @@ const server = http.createServer(async (req, res) => {
         if (!isLinkedIn && !user.facebookSub && sub) user.facebookSub = sub;
       }
 
-      const token = crypto.randomBytes(24).toString("hex");
-      db.sessions.push({
-        token,
-        userId: user.id,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + SESSION_TTL_MS,
-      });
-      await writeDb(db);
+      let userChanged = false;
+      if (user.authVersion === undefined || user.authVersion === null) {
+        user.authVersion = 0;
+        userChanged = true;
+      }
+      const token = issueAuthTokenForUser(user);
+      if (userChanged || !hasStatelessSessions()) {
+        if (!hasStatelessSessions()) {
+          db.sessions.push({
+            token,
+            userId: user.id,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + SESSION_TTL_MS,
+          });
+        }
+        await writeDb(db);
+      }
 
       return sendAuthResult({
         type: authType,
