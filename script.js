@@ -5042,6 +5042,9 @@ function setSeekerView(viewId, navIndex) {
 function showSeekerHome() {
   setSeekerView("seekerHomePage", 0);
   window.scrollTo(0, 0);
+  if (getLoggedIn() && getLoggedInRole() === "seeker") {
+    loadSeekerHistoryFromBackend().catch(() => {});
+  }
 }
 
 function showSeekerHistory() {
