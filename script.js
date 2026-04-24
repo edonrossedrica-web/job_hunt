@@ -1990,6 +1990,7 @@ async function loadApplicantsForJob(jobId, panel) {
             const text = (input?.value || "").trim();
             const file = fileInput?.files && fileInput.files[0] ? fileInput.files[0] : null;
             let attachment = null;
+            let optimisticBubble = null;
             if (!text && !file) return;
             let restoreSendBtn = null;
             if (sendBtn && !sendBtn.disabled) {
@@ -2003,6 +2004,7 @@ async function loadApplicantsForJob(jobId, panel) {
             }
             try {
               if (file) attachment = await buildConversationAttachment(file);
+              optimisticBubble = appendConversationBubble(thread, { text, attachment }, "employer");
               await apiRequest("/api/messages", {
                 method: "POST",
                 auth: true,
@@ -2010,11 +2012,16 @@ async function loadApplicantsForJob(jobId, panel) {
               });
               if (input) input.value = "";
               if (fileInput) fileInput.value = "";
-              const m2 = await apiRequest(`/api/messages?applicationId=${encodeURIComponent(a.id)}`, { method: "GET", auth: true });
-              const msgs2 = (m2 && m2.ok && Array.isArray(m2.messages)) ? m2.messages : [];
-              renderConversationThread(thread, msgs2, a.id);
+              try {
+                fileInput.dispatchEvent(new Event("change"));
+              } catch {
+                // ignore
+              }
               emitSyncEvent("messages_updated", { applicationId: a.id, jobId });
             } catch (err) {
+              if (optimisticBubble && optimisticBubble.parentNode) {
+                optimisticBubble.parentNode.removeChild(optimisticBubble);
+              }
               alert(err?.message || "Failed to send message.");
             } finally {
               if (restoreSendBtn) restoreSendBtn();
@@ -6726,7 +6733,7 @@ function sendSeekerMessage() {
         } catch {
           // ignore
         }
-        loadSeekerConversationsFromBackend();
+        loadSeekerConversationsFromBackend().catch(() => {});
         emitSyncEvent("messages_updated", { applicationId });
         return;
       }

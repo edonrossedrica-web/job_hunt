@@ -2197,7 +2197,7 @@ async function handleApi(req, res, url) {
     };
     app.messages.push(msg);
     app.updatedAt = nowIso();
-    await writeDb(db);
+    persistDbInBackground(db);
     broadcastSse("messages_updated", {
       applicationId: app.id,
       jobId: app.jobId,
