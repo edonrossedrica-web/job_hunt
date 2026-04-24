@@ -22,6 +22,7 @@ let cachedJobs = null;
 let cachedJobsFetchedAt = 0;
 let jobsSnapshotPromise = null;
 let seekerSearchState = { keywords: "", location: "" };
+let seekerRecommendedShowAll = false;
 let seekerRecommendationProfile = { userId: "", title: "", fetchedAt: 0, refreshPromise: null };
 let employerApplicantsSearchTimer = null;
 let employerApplicantsJobsSearchTimer = null;
@@ -1118,6 +1119,7 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
   const empty = document.getElementById("recommendedJobsEmpty");
   grid.replaceChildren();
   const list = Array.isArray(jobs) ? jobs : [];
+  const expanded = !getActiveSearch().hasQuery && seekerRecommendedShowAll;
   if (empty) {
     empty.style.display = list.length ? "none" : "block";
     if (!list.length) {
@@ -1127,7 +1129,7 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
   const fragment = document.createDocumentFragment();
   list.forEach((job, index) => {
     const card = document.createElement("article");
-    card.className = "job-card" + (index >= 3 ? " hidden-reco" : "");
+    card.className = "job-card" + (!expanded && index >= 3 ? " hidden-reco" : "");
     card.setAttribute("data-job-id", job.id);
 
     const pay = formatSeekerJobPay(job);
@@ -1183,8 +1185,8 @@ function renderSeekerJobs(jobs, { emptyText = "" } = {}) {
   const viewBtn = document.getElementById("recoViewAllBtn");
   const returnBtn = document.getElementById("recoReturnBtn");
   const hasMore = list.length > 3;
-  if (viewBtn) viewBtn.classList.toggle("is-hidden", !hasMore);
-  if (returnBtn) returnBtn.classList.add("is-hidden");
+  if (viewBtn) viewBtn.classList.toggle("is-hidden", !hasMore || expanded);
+  if (returnBtn) returnBtn.classList.toggle("is-hidden", !hasMore || !expanded);
 }
 
 function findRenderedJobById(jobId) {
@@ -6912,6 +6914,7 @@ function closeEmployerWelcome() {
 
 function showAllRecommendedJobs() {
   if (getActiveSearch().hasQuery) return;
+  seekerRecommendedShowAll = true;
   const grid = document.getElementById("recommendedJobsGrid");
   if (!grid) {
     return;
@@ -6927,6 +6930,7 @@ function showAllRecommendedJobs() {
 
 function showLessRecommendedJobs() {
   if (getActiveSearch().hasQuery) return;
+  seekerRecommendedShowAll = false;
   const grid = document.getElementById("recommendedJobsGrid");
   if (!grid) {
     return;

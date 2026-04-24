@@ -2132,7 +2132,7 @@ async function handleApi(req, res, url) {
       createdAt: nowIso(),
     };
     db.applications.push(application);
-    await writeDb(db);
+    persistDbInBackground(db);
     broadcastSse("applications_updated", {
       applicationId: application.id,
       jobId: application.jobId,
