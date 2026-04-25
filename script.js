@@ -3915,24 +3915,105 @@ function clearAuth() {
   clearAuthToken();
 }
 
+function getNavProfileCacheKey(role) {
+  const normalizedRole = role === "employer" ? "employer" : "seeker";
+  const email = String(localStorage.getItem("currentUserEmail") || "").trim().toLowerCase();
+  const userId = String(localStorage.getItem("currentUserId") || "").trim();
+  if (normalizedRole === "seeker") {
+    return `${SEEKER_PROFILE_CACHE_KEY_PREFIX}${email || userId || "anon"}`;
+  }
+  const id = email || userId || "anon";
+  return `smartHuntProfileCache_v1:${normalizedRole}:${id}`;
+}
+
+function readNavProfileCache(role) {
+  const key = getNavProfileCacheKey(role);
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getNavProfileImage(profile, role) {
+  const raw =
+    role === "employer"
+      ? String(profile && profile.logoSrc ? profile.logoSrc : "").trim()
+      : String(
+          profile && (profile.avatarDataUrl || profile.avatar || profile.photo)
+            ? profile.avatarDataUrl || profile.avatar || profile.photo
+            : "",
+        ).trim();
+  if (!raw) return "";
+  return /^data:image\//i.test(raw) || /^https?:\/\//i.test(raw) ? raw : "";
+}
+
+function getInitialsLabel(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return "U";
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function refreshNavProfileButton() {
+  const profileBtn = document.getElementById("navProfileBtn");
+  const avatarImg = document.getElementById("navProfileAvatarImg");
+  const fallbackEl = document.getElementById("navProfileAvatarFallback");
+  const labelEl = document.getElementById("navProfileLabel");
+  if (!profileBtn || !avatarImg || !fallbackEl || !labelEl) return;
+
+  const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const role = localStorage.getItem("userRole") === "employer" ? "employer" : "seeker";
+  const profile = loggedIn ? readNavProfileCache(role) : null;
+  const imageSrc = loggedIn ? getNavProfileImage(profile, role) : "";
+  const displayName =
+    role === "employer"
+      ? String(
+          (profile && (profile.companyName || localStorage.getItem("currentUserCompany"))) ||
+            localStorage.getItem("currentUserName") ||
+            "Profile",
+        ).trim()
+      : String(
+          (profile && (profile.name || profile.title)) || localStorage.getItem("currentUserName") || "Profile",
+        ).trim();
+
+  labelEl.textContent = loggedIn ? "Profile" : "Profile";
+  fallbackEl.textContent = getInitialsLabel(displayName);
+
+  if (imageSrc) {
+    avatarImg.src = imageSrc;
+    avatarImg.style.display = "block";
+    fallbackEl.style.display = "none";
+  } else {
+    avatarImg.removeAttribute("src");
+    avatarImg.style.display = "none";
+    fallbackEl.style.display = "inline";
+  }
+}
+
 function updateAuthUI() {
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const logoutBtn = document.getElementById("logoutBtn");
   const notificationsBtn = document.getElementById("notificationsBtn");
-  const userMenuToggleBtn = document.getElementById("userMenuToggleBtn");
-  const userMenu = document.getElementById("userMenu");
+  const navProfileBtn = document.getElementById("navProfileBtn");
   if (logoutBtn) {
     logoutBtn.style.display = loggedIn ? "inline-flex" : "none";
   }
   if (notificationsBtn) {
     notificationsBtn.style.display = loggedIn ? "inline-flex" : "none";
   }
-  if (userMenuToggleBtn) {
-    userMenuToggleBtn.style.display = loggedIn ? "inline-flex" : "none";
+  if (navProfileBtn) {
+    navProfileBtn.style.display = loggedIn ? "inline-flex" : "none";
   }
-  if (userMenu && !loggedIn) {
-    userMenu.style.display = "none";
-  }
+  refreshNavProfileButton();
   updateNotificationsBackButton();
 }
 
@@ -4509,34 +4590,6 @@ function handleNotificationClick(card) {
     showEmployerNotifications();
   }
 }
-
-function toggleUserMenu() {
-  const menu = document.getElementById("userMenu");
-  if (!menu) {
-    return;
-  }
-  const isOpen = menu.style.display === "flex";
-  menu.style.display = isOpen ? "none" : "flex";
-}
-
-function closeUserMenu() {
-  const menu = document.getElementById("userMenu");
-  if (menu) {
-    menu.style.display = "none";
-  }
-}
-
-document.addEventListener("click", (e) => {
-  const menu = document.getElementById("userMenu");
-  const toggle = document.querySelector(".hamburger-btn");
-  if (!menu || !toggle) {
-    return;
-  }
-  if (menu.contains(e.target) || toggle.contains(e.target)) {
-    return;
-  }
-  menu.style.display = "none";
-});
 
 // When returning to this page via browser back/forward (bfcache), clear any
 // temporary restore params from the address bar without forcing a reload.
@@ -6002,7 +6055,6 @@ function handleFacebookAuth(role, mode) {
 }
 
 function openProfile() {
-  closeUserMenu();
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const role = localStorage.getItem("userRole");
   if (!loggedIn) {
@@ -6110,7 +6162,6 @@ function setupInfoModal() {
 }
 
 async function logoutAndReturn() {
-  closeUserMenu();
   const ok = await showConfirmModal("Do you want to log out?", { title: "Log Out", okText: "Log out", cancelText: "Cancel" });
   if (!ok) {
     return;

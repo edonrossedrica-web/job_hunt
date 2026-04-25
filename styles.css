@@ -157,28 +157,45 @@ body.page-loading{
 }
 .icon-btn:hover{border-color:var(--accent);box-shadow:0 0 16px var(--glow);}
 .icon-btn.small{width:32px;height:32px;border-radius:10px;}
-
-.profile-pill{
-  display:flex;
+.nav-profile-btn{
+  display:inline-flex;
   align-items:center;
-  gap:12px;
-  padding:6px 10px 6px 14px;
+  gap:10px;
+  min-height:38px;
+  padding:5px 12px 5px 6px;
   border-radius:999px;
   border:1px solid rgba(148,163,184,0.2);
-  background:rgba(15,23,42,0.75);
+  background:rgba(15,23,42,0.78);
   color:var(--text);
   cursor:pointer;
   transition:0.3s;
 }
-.profile-pill:hover{border-color:var(--accent);box-shadow:0 0 16px var(--glow);}
-.pill-name{font-weight:600;font-size:13px;}
-.pill-tier{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;}
-.pill-avatar{
-  width:30px;height:30px;border-radius:50%;
+.nav-profile-btn:hover{border-color:var(--accent);box-shadow:0 0 16px var(--glow);}
+.nav-profile-avatar{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  overflow:hidden;
   background:linear-gradient(135deg, var(--accent), #60a5fa);
   color:#081225;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  font-size:12px;
+  flex:0 0 auto;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.nav-profile-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.nav-profile-label{
+  font-weight:600;
+  font-size:13px;
+  white-space:nowrap;
 }
 .logout-btn{
   display:inline-flex;
@@ -198,33 +215,6 @@ body.page-loading{
 .logout-btn#logoutBtn{display:none;}
 .logout-btn i{font-size:12px;}
 .logout-btn:hover{border-color:var(--accent);box-shadow:0 0 16px var(--glow);color:var(--accent);}
-.hamburger-btn{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-}
-.user-menu{
-  position:absolute;
-  top:70px;
-  right:24px;
-  display:none;
-  flex-direction:column;
-  gap:10px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:12px;
-  z-index:2100;
-  box-shadow:0 18px 40px rgba(0,0,0,0.35);
-}
-.user-menu .profile-pill{
-  width:100%;
-  justify-content:flex-start;
-}
-.user-menu .logout-btn{
-  width:100%;
-  justify-content:center;
-}
 
 /* SEEKER HOME */
 .seeker-home{
@@ -2908,8 +2898,6 @@ textarea[data-autogrow="1"]{
   .nav-links{gap:18px;flex-wrap:wrap;}
   .page-hero{padding:28px;}
   .hero-text h1{font-size:32px;}
-  .nav-actions > .profile-pill{display:none;}
-  .user-menu .profile-pill{display:flex;}
   .support-body{grid-template-columns:1fr;}
   .employer-hero h1{font-size:38px;}
   .add-job-hero h1{font-size:34px;}
@@ -2932,6 +2920,25 @@ textarea[data-autogrow="1"]{
   .seeker-home{padding-top:142px;}
   .nav-top{align-items:center;}
   .nav-actions{gap:8px;flex-wrap:nowrap;justify-content:flex-end;flex:0 0 auto;}
+  .nav-profile-btn{
+    min-width:0;
+    padding:4px 8px 4px 4px;
+    gap:8px;
+  }
+  .nav-profile-label{
+    display:none;
+  }
+  .logout-btn{
+    min-width:42px;
+    width:42px;
+    height:42px;
+    padding:0;
+    justify-content:center;
+    border-radius:12px;
+  }
+  .logout-btn span{
+    display:none;
+  }
   .nav-links{
     justify-content:flex-start;
     gap:10px;
@@ -3401,9 +3408,20 @@ textarea[data-autogrow="1"]{
     margin-bottom:18px;
   }
   .icon-btn,
-  .hamburger-btn{
+  .logout-btn{
     width:36px;
     height:36px;
+  }
+  .nav-profile-btn{
+    width:36px;
+    height:36px;
+    padding:2px;
+    border-radius:12px;
+    justify-content:center;
+  }
+  .nav-profile-avatar{
+    width:28px;
+    height:28px;
   }
   .chat-attach{
     width:40px;
