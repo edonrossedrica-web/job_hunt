@@ -296,6 +296,15 @@ body.page-loading{
   box-shadow:0 12px 30px rgba(37,99,235,0.3);
 }
 .search-btn:hover{transform:translateY(-1px);}
+.search-clear-btn{
+  background:rgba(148,163,184,0.12);
+  color:var(--text);
+  border:1px solid var(--line);
+  box-shadow:none;
+}
+.search-clear-btn:hover{
+  background:rgba(148,163,184,0.2);
+}
 
 .quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 .ghost-btn{

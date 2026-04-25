@@ -1519,7 +1519,8 @@ function setupSeekerSearch() {
   const keywordsEl = document.getElementById("seekerSearchKeywords");
   const locationEl = document.getElementById("seekerSearchLocation");
   const btn = document.getElementById("seekerSearchBtn");
-  if (!keywordsEl || !locationEl || !btn) return;
+  const clearBtn = document.getElementById("seekerSearchClearBtn");
+  if (!keywordsEl || !locationEl || !btn || !clearBtn) return;
 
   const scrollRecommendedJobsIntoView = () => {
     const target =
@@ -1559,7 +1560,23 @@ function setupSeekerSearch() {
     }
   };
 
+  const clearSearch = async () => {
+    keywordsEl.value = "";
+    locationEl.value = "";
+    seekerSearchState = { keywords: "", location: "" };
+
+    const jobs = await getJobsSnapshot();
+    if (!Array.isArray(jobs)) {
+      alert("Backend is not reachable yet. Start the server (node server.js) and try again.");
+      return;
+    }
+
+    renderSeekerJobsWithSearch(jobs);
+    keywordsEl.focus();
+  };
+
   btn.addEventListener("click", () => run());
+  clearBtn.addEventListener("click", () => clearSearch());
   const onKey = (e) => {
     if (e && e.key === "Enter") {
       e.preventDefault();
