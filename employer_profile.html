@@ -656,6 +656,18 @@ let pageLoaderDepth = 0;
 
 function escapeAttr(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
 function escapeText(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+const EMPLOYER_LIMITS={companyName:150,companyIndustry:100,aboutText:1500,companyLocation:100,infoIndustry:100,infoSize:50,infoFounded:4,infoWebsite:255,contactEmail:254,contactPhone:30,contactFacebook:255};
+function limitEmployerText(value,max){
+  const text=String(value||"");
+  return Number.isFinite(max)&&max>0?text.slice(0,max):text;
+}
+function applyEmployerMaxLength(input,max){
+  if(!input||!Number.isFinite(max)||max<=0) return;
+  input.maxLength=max;
+  const clamp=()=>{if(input.value.length>max) input.value=input.value.slice(0,max);};
+  clamp();
+  input.addEventListener("input",clamp);
+}
 function autoGrowTextarea(el){
   if(!el||!el.style) return;
   const max = Math.round(Math.min((window.innerHeight || 900) * 0.6, 520));
@@ -960,22 +972,22 @@ function collectEmployerProfile(){
     return String(el.innerText || "").trim();
   };
   return {
-    companyName: getText("companyName"),
-    companyIndustry: getText("companyIndustry"),
-    companyLocation: getText("companyLocation"),
-    aboutText: getText("aboutText"),
+    companyName: limitEmployerText(getText("companyName"), EMPLOYER_LIMITS.companyName),
+    companyIndustry: limitEmployerText(getText("companyIndustry"), EMPLOYER_LIMITS.companyIndustry),
+    companyLocation: limitEmployerText(getText("companyLocation"), EMPLOYER_LIMITS.companyLocation),
+    aboutText: limitEmployerText(getText("aboutText"), EMPLOYER_LIMITS.aboutText),
     publishedAt: String(cached && cached.publishedAt ? cached.publishedAt : "").trim(),
     info: {
-      industry: getText("infoIndustry"),
-      size: getText("infoSize"),
-      founded: getText("infoFounded"),
-      website: getText("infoWebsite"),
+      industry: limitEmployerText(getText("infoIndustry"), EMPLOYER_LIMITS.infoIndustry),
+      size: limitEmployerText(getText("infoSize"), EMPLOYER_LIMITS.infoSize),
+      founded: limitEmployerText(getText("infoFounded"), EMPLOYER_LIMITS.infoFounded),
+      website: limitEmployerText(getText("infoWebsite"), EMPLOYER_LIMITS.infoWebsite),
     },
     contact: {
-      email: getText("contactEmail"),
-      phone: getText("contactPhone"),
-      facebook: getText("contactFacebook"),
-      linkedin: getText("contactFacebook"),
+      email: limitEmployerText(getText("contactEmail"), EMPLOYER_LIMITS.contactEmail),
+      phone: limitEmployerText(getText("contactPhone"), EMPLOYER_LIMITS.contactPhone),
+      facebook: limitEmployerText(getText("contactFacebook"), EMPLOYER_LIMITS.contactFacebook),
+      linkedin: limitEmployerText(getText("contactFacebook"), EMPLOYER_LIMITS.contactFacebook),
     },
     logoSrc: document.getElementById("companyLogo")?.src || "",
   };
@@ -1068,6 +1080,7 @@ function editField(sectionId) {
     el.innerHTML = `<textarea class="edit-input" id="companyNameInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyName')">Save</button>`;
     const input = document.getElementById("companyNameInput");
+    applyEmployerMaxLength(input, EMPLOYER_LIMITS.companyName);
     if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'companyIndustry'){
     let el = document.getElementById('companyIndustry');
@@ -1084,6 +1097,7 @@ function editField(sectionId) {
     el.innerHTML = `<textarea class="edit-input" id="companyIndustryInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                     <button class="save-btn" onclick="saveField('companyIndustry')">Save</button>`;
     const input = document.getElementById("companyIndustryInput");
+    applyEmployerMaxLength(input, EMPLOYER_LIMITS.companyIndustry);
     if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'aboutText'){
     let para = document.getElementById('aboutText');
@@ -1100,6 +1114,7 @@ function editField(sectionId) {
     para.innerHTML = `<textarea class="edit-input" id="aboutInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('aboutText')">Save</button>`;
     const input = document.getElementById("aboutInput");
+    applyEmployerMaxLength(input, EMPLOYER_LIMITS.aboutText);
     if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'companyLocation'){
     let span = document.getElementById('companyLocation');
@@ -1116,6 +1131,7 @@ function editField(sectionId) {
     span.innerHTML = `<textarea class="edit-input" id="locationInput" data-autogrow="1" rows="1">${escapeText(current)}</textarea>
                       <button class="save-btn" onclick="saveField('companyLocation')">Save</button>`;
     const input = document.getElementById("locationInput");
+    applyEmployerMaxLength(input, EMPLOYER_LIMITS.companyLocation);
     if (input) { wireAutoGrowTextarea(input); input.focus?.(); }
   } else if(sectionId === 'infoSection'){
     const ids = ['infoIndustry','infoSize','infoFounded','infoWebsite'];
@@ -1143,6 +1159,7 @@ function editField(sectionId) {
       el.dataset.editing = "1";
       el.innerHTML = `<textarea class="edit-input" id="${id}Input" data-autogrow="1" rows="1">${escapeText(current)}</textarea>`;
       const input = document.getElementById(id + "Input");
+      applyEmployerMaxLength(input, EMPLOYER_LIMITS[id]);
       if (input) { wireAutoGrowTextarea(input); }
     });
     const firstInfo = document.getElementById(ids[0] + "Input");
@@ -1177,6 +1194,7 @@ function editField(sectionId) {
       el.dataset.editing = "1";
       el.innerHTML = `<textarea class="edit-input" id="${id}Input" data-autogrow="1" rows="1">${escapeText(current)}</textarea>`;
       const input = document.getElementById(id + "Input");
+      applyEmployerMaxLength(input, EMPLOYER_LIMITS[id]);
       if (input) { wireAutoGrowTextarea(input); }
     });
     const firstContact = document.getElementById(ids[0] + "Input");
@@ -1193,7 +1211,7 @@ function saveField(sectionId){
     let input = document.getElementById('companyNameInput');
     const el = document.getElementById('companyName');
     if (el) {
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS.companyName);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     }
@@ -1201,7 +1219,7 @@ function saveField(sectionId){
     let input = document.getElementById('companyIndustryInput');
     const el = document.getElementById('companyIndustry');
     if (el) {
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS.companyIndustry);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     }
@@ -1209,7 +1227,7 @@ function saveField(sectionId){
     let input = document.getElementById('aboutInput');
     const el = document.getElementById('aboutText');
     if (el) {
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS.aboutText);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     }
@@ -1217,7 +1235,7 @@ function saveField(sectionId){
     let input = document.getElementById('locationInput');
     const el = document.getElementById('companyLocation');
     if (el) {
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS.companyLocation);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     }
@@ -1227,7 +1245,7 @@ function saveField(sectionId){
       const input = document.getElementById(id + 'Input');
       const el = document.getElementById(id);
       if (!el) return;
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS[id]);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     });
@@ -1238,7 +1256,7 @@ function saveField(sectionId){
       const input = document.getElementById(id + 'Input');
       const el = document.getElementById(id);
       if (!el) return;
-      el.innerText = input ? input.value : "";
+      el.innerText = limitEmployerText(input ? input.value : "", EMPLOYER_LIMITS[id]);
       delete el.dataset.editing;
       delete el.dataset.originalText;
     });

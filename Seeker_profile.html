@@ -181,7 +181,7 @@
     </div>
 
     <div class="section" id="aboutSection">
-      <div class="st"><div class="l"><i class="fa-solid fa-user"></i> About Me</div></div>
+      <div class="st"><div class="l"><i class="fa-solid fa-user"></i> Professional Summary</div></div>
       <button class="eb" type="button" id="editAbout"><i class="fa-solid fa-pen-to-square"></i></button>
       <p class="about" id="aboutText"></p>
     </div>
@@ -236,6 +236,7 @@
 
   <script>
     const KEY_PREFIX="smartHuntProfileCache_v1:seeker:";
+    const SEEKER_LIMITS={name:100,title:100,about:1000,skills:300,location:100,email:254,phone:30,facebook:255,github:255};
     let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",facebook:"",github:""},__updatedAt:0,__schema:1};
     const DEFAULT_AVATAR_SRC="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E";
     let pageLoaderDepth=0;
@@ -562,6 +563,17 @@
 
     function escapeAttr(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
     function escapeText(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+    function limitText(value,max){
+      const text=String(value||"");
+      return Number.isFinite(max)&&max>0?text.slice(0,max):text;
+    }
+    function applyMaxLength(input,max){
+      if(!input||!Number.isFinite(max)||max<=0) return;
+      input.maxLength=max;
+      const clamp=()=>{if(input.value.length>max) input.value=input.value.slice(0,max);};
+      clamp();
+      input.addEventListener("input",clamp);
+    }
 
     function editField(kind){
       if(kind==="name"){
@@ -570,6 +582,7 @@
         const cur=String(el.innerText||"");
         el.dataset.originalText=cur; el.dataset.editing="1";
         el.innerHTML=`<input type="text" class="edit-input" id="nameInput" value="${escapeAttr(cur)}"><button type="button" class="save-btn" onclick="saveField('name')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        applyMaxLength(document.getElementById("nameInput"),SEEKER_LIMITS.name);
         return;
       }
       if(kind==="title"){
@@ -578,18 +591,22 @@
         const cur=String(el.innerText||"");
         const base=(cur.trim().toLowerCase()==="add your title")?"":cur;
         el.dataset.originalText=base; el.dataset.editing="1";
-        el.innerHTML=`<input type="text" class="edit-input" id="titleInput" value="${escapeAttr(base)}" placeholder="Your title"><button type="button" class="save-btn" onclick="saveField('title')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        el.innerHTML=`<input type="text" class="edit-input" id="titleInput" value="${escapeAttr(base)}" placeholder="Professional title"><button type="button" class="save-btn" onclick="saveField('title')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        applyMaxLength(document.getElementById("titleInput"),SEEKER_LIMITS.title);
         return;
       }
       if(kind==="about"){
         const el=document.getElementById("aboutText"); if(!el) return;
         if(el.dataset.editing==="1"){el.textContent=el.dataset.originalText||"";delete el.dataset.editing;delete el.dataset.originalText;return;}
         const cur=String(el.innerText||"");
-        const base=(cur.trim().toLowerCase()==="add a short bio about you")?"":cur;
+        const normalizedCur=cur.trim().toLowerCase();
+        const base=(normalizedCur==="add a short bio about you"||normalizedCur==="add your professional summary")?"":cur;
         el.dataset.originalText=base; el.dataset.editing="1";
-        el.innerHTML=`<textarea class="edit-input" id="aboutInput" data-autogrow="1" placeholder="Add a short bio about you">${escapeText(base)}</textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        el.innerHTML=`<textarea class="edit-input" id="aboutInput" data-autogrow="1" placeholder="Add your professional summary"></textarea><button type="button" class="save-btn" onclick="saveField('about')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
         const input=document.getElementById("aboutInput");
         if(input){
+          input.value=base;
+          applyMaxLength(input,SEEKER_LIMITS.about);
           const grow=()=>{try{input.style.height="auto";input.style.height=input.scrollHeight+"px";}catch{}};
           grow();
           input.addEventListener("input",grow);
@@ -605,6 +622,7 @@
         sec.dataset.editing="1";
         const cur=(Array.isArray(profile.skills)?profile.skills:[]).join(", ");
         list.innerHTML=`<input type="text" class="edit-input" id="skillsInput" value="${escapeAttr(cur)}" placeholder="JavaScript, React, SQL"><button type="button" class="save-btn" onclick="saveField('skills')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
+        applyMaxLength(document.getElementById("skillsInput"),SEEKER_LIMITS.skills);
         document.getElementById("skillsEmpty").style.display="none";
         return;
       }
@@ -616,6 +634,7 @@
         el.dataset.originalText=base; el.dataset.editing="1";
         el.innerHTML=`<input type="text" class="edit-input" id="headerLocationInput" value="${escapeAttr(base)}" placeholder="City, Country"><button type="button" class="save-btn" onclick="saveField('headerLocation')"><i class="fa-solid fa-floppy-disk"></i> Save</button>`;
         const input=document.getElementById("headerLocationInput");
+        applyMaxLength(input,SEEKER_LIMITS.location);
         if(input) setTimeout(()=>{try{input.focus()}catch{}},0);
         return;
       }
@@ -639,6 +658,10 @@
           el.dataset.originalText=base; el.dataset.editing="1";
           el.innerHTML=`<input type="text" class="edit-input" id="${id}Input" value="${escapeAttr(base)}">`;
         }
+        applyMaxLength(document.getElementById("cEmailInput"),SEEKER_LIMITS.email);
+        applyMaxLength(document.getElementById("cPhoneInput"),SEEKER_LIMITS.phone);
+        applyMaxLength(document.getElementById("cFacebookInput"),SEEKER_LIMITS.facebook);
+        applyMaxLength(document.getElementById("cGithubInput"),SEEKER_LIMITS.github);
         if(!sec.querySelector('button[data-save-all="contact"]')){
           sec.insertAdjacentHTML("beforeend",`<button type="button" class="save-btn" data-save-all="contact" onclick="saveField('contact')"><i class="fa-solid fa-floppy-disk"></i> Save All</button>`);
         }
@@ -648,34 +671,34 @@
     function saveField(kind){
       if(kind==="name"){
         const input=document.getElementById("nameInput");
-        profile.name=String(input?input.value:"").trim();
+        profile.name=limitText(String(input?input.value:"").trim(),SEEKER_LIMITS.name);
         const el=document.getElementById("nameText"); if(el){el.textContent=profile.name;delete el.dataset.editing;delete el.dataset.originalText;}
       } else if(kind==="title"){
         const input=document.getElementById("titleInput");
-        profile.title=String(input?input.value:"").trim();
+        profile.title=limitText(String(input?input.value:"").trim(),SEEKER_LIMITS.title);
         const el=document.getElementById("titleText"); if(el){el.textContent=profile.title;delete el.dataset.editing;delete el.dataset.originalText;}
       } else if(kind==="about"){
         const input=document.getElementById("aboutInput");
-        profile.about=String(input?input.value:"");
+        profile.about=limitText(String(input?input.value:""),SEEKER_LIMITS.about);
         const el=document.getElementById("aboutText"); if(el){el.textContent=profile.about;delete el.dataset.editing;delete el.dataset.originalText;}
       } else if(kind==="skills"){
         const input=document.getElementById("skillsInput");
-        const raw=String(input?input.value:"");
+        const raw=limitText(String(input?input.value:""),SEEKER_LIMITS.skills);
         profile.skills=Array.from(new Set(raw.split(",").map((s)=>s.trim()).filter(Boolean))).slice(0,30);
         const sec=document.getElementById("skillsSection"); if(sec) delete sec.dataset.editing;
       } else if(kind==="headerLocation"){
         const input=document.getElementById("headerLocationInput");
         profile.contact = profile.contact && typeof profile.contact === "object" ? profile.contact : {};
-        profile.contact.location = String(input?input.value:"").trim();
+        profile.contact.location = limitText(String(input?input.value:"").trim(),SEEKER_LIMITS.location);
         const el=document.getElementById("headerLocation"); if(el){el.textContent=profile.contact.location;delete el.dataset.editing;delete el.dataset.originalText;}
       } else if(kind==="contact"){
         const existingLocation = String((profile.contact && typeof profile.contact === "object" ? profile.contact.location : "") || "").trim();
         profile.contact={
-          email:String(document.getElementById("cEmailInput")?.value||"").trim(),
-          phone:String(document.getElementById("cPhoneInput")?.value||"").trim(),
+          email:limitText(String(document.getElementById("cEmailInput")?.value||"").trim(),SEEKER_LIMITS.email),
+          phone:limitText(String(document.getElementById("cPhoneInput")?.value||"").trim(),SEEKER_LIMITS.phone),
           location: existingLocation,
-          facebook:String(document.getElementById("cFacebookInput")?.value||"").trim(),
-          github:String(document.getElementById("cGithubInput")?.value||"").trim()
+          facebook:limitText(String(document.getElementById("cFacebookInput")?.value||"").trim(),SEEKER_LIMITS.facebook),
+          github:limitText(String(document.getElementById("cGithubInput")?.value||"").trim(),SEEKER_LIMITS.github)
         };
         const ids=["cEmail","cPhone","cFacebook","cGithub"];
         for(const id of ids){

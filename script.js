@@ -52,6 +52,49 @@ let addJobDraftAutosaveTimer = null;
 let notificationsReturnState = null;
 let pageLoaderDepth = 0;
 let pageLoaderStartedAt = 0;
+const TEXT_FIELD_LIMITS = {
+  seekerSearchKeywords: 100,
+  seekerSearchLocation: 100,
+  seekerChatSearchInput: 100,
+  employerApplicantsJobsSearch: 100,
+  employerApplicantsSearch: 100,
+  addJobTitle: 100,
+  addJobLocation: 100,
+  addJobSalary: 50,
+  addJobDescription: 3000,
+  addJobRequirements: 2000,
+  loginEmail: 254,
+  seekerSignupName: 100,
+  seekerSignupEmail: 254,
+  employerLoginEmail: 254,
+  employerSignupCompany: 150,
+  employerSignupEmail: 254,
+  feedbackName: 100,
+  feedbackEmail: 254,
+  feedbackText: 1000,
+  supportName: 100,
+  supportEmail: 254,
+  supportText: 2000,
+  seekerChatMessage: 1000,
+  applyMessage: 1000,
+};
+
+function setupTextFieldLimits() {
+  Object.entries(TEXT_FIELD_LIMITS).forEach(([id, max]) => {
+    const el = document.getElementById(id);
+    if (!el || !Number.isFinite(max) || max <= 0) return;
+    el.maxLength = max;
+    const clamp = () => {
+      if (typeof el.value === "string" && el.value.length > max) {
+        el.value = el.value.slice(0, max);
+      }
+    };
+    clamp();
+    if (el.dataset.limitBound === "1") return;
+    el.dataset.limitBound = "1";
+    el.addEventListener("input", clamp);
+  });
+}
 
 function ensurePageLoader() {
   if (typeof document === "undefined" || !document.body) return null;
@@ -4772,6 +4815,7 @@ function setupHistoryStatusButtons() {
 
 // Show home page on load
 document.addEventListener("DOMContentLoaded", async () => {
+  setupTextFieldLimits();
   setupSyncBus();
   setupServerEvents();
   setupConfirmModal();
