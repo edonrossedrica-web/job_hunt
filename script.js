@@ -1455,10 +1455,12 @@ function filterJobs(jobs, { keywords = "", location = "" } = {}) {
     const hayLocation = normalizeSearchText(job && job.location ? job.location : "");
     const hayDesc = normalizeSearchText(job && job.description ? job.description : "");
     const hayReq = normalizeSearchText(job && job.requirements ? job.requirements : "");
-    const hayAll = `${hayTitle} ${hayCompany} ${hayLocation} ${hayDesc} ${hayReq}`.trim();
+    const haySearch = `${hayTitle} ${hayCompany} ${hayDesc} ${hayReq}`.trim();
 
-    const matchKw = !terms.length || terms.every((t) => hayAll.includes(t));
-    const matchLoc = !loc || hayLocation.includes(loc) || hayAll.includes(loc);
+    // Keep keyword matching independent from location matching so a city-only
+    // match cannot satisfy a title/keyword search.
+    const matchKw = !terms.length || terms.every((t) => haySearch.includes(t));
+    const matchLoc = !loc || hayLocation.includes(loc);
     return matchKw && matchLoc;
   });
 }
