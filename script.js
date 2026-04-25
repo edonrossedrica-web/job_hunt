@@ -3918,8 +3918,20 @@ function clearAuth() {
 function updateAuthUI() {
   const loggedIn = localStorage.getItem("isLoggedIn") === "true";
   const logoutBtn = document.getElementById("logoutBtn");
+  const notificationsBtn = document.getElementById("notificationsBtn");
+  const userMenuToggleBtn = document.getElementById("userMenuToggleBtn");
+  const userMenu = document.getElementById("userMenu");
   if (logoutBtn) {
     logoutBtn.style.display = loggedIn ? "inline-flex" : "none";
+  }
+  if (notificationsBtn) {
+    notificationsBtn.style.display = loggedIn ? "inline-flex" : "none";
+  }
+  if (userMenuToggleBtn) {
+    userMenuToggleBtn.style.display = loggedIn ? "inline-flex" : "none";
+  }
+  if (userMenu && !loggedIn) {
+    userMenu.style.display = "none";
   }
   updateNotificationsBackButton();
 }
