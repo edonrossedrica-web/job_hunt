@@ -88,6 +88,7 @@ function getSupabaseConfig() {
     serviceRoleKey: String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim(),
     table: String(process.env.SUPABASE_DB_TABLE || "app_state").trim() || "app_state",
     rowId: String(process.env.SUPABASE_DB_ROW_ID || "smart_hunt_db_v1").trim() || "smart_hunt_db_v1",
+    storageBucket: String(process.env.SUPABASE_STORAGE_BUCKET || "resumes").trim() || "resumes",
   };
 }
 
@@ -337,6 +338,27 @@ function getUserCompanyName(user) {
   return profileCompany || rawCompany || rawName || "";
 }
 
+function hasUploadedResume(profile) {
+  const data = profile && typeof profile === "object" ? profile : {};
+  const resumes = Array.isArray(data.resumes) ? data.resumes : [];
+  if (
+    resumes.some(
+      (item) =>
+        item &&
+        ((typeof item.storagePath === "string" && item.storagePath.trim()) ||
+          (typeof item.dataUrl === "string" && item.dataUrl.trim())),
+    )
+  ) {
+    return true;
+  }
+  return Boolean(
+    data.resume &&
+      typeof data.resume === "object" &&
+      ((typeof data.resume.storagePath === "string" && data.resume.storagePath.trim()) ||
+        (typeof data.resume.dataUrl === "string" && data.resume.dataUrl.trim())),
+  );
+}
+
 function syncReadableTables(sqlDb, jsonDb) {
   const users = Array.isArray(jsonDb?.users) ? jsonDb.users : [];
   const sessions = Array.isArray(jsonDb?.sessions) ? jsonDb.sessions : [];
@@ -515,6 +537,34 @@ async function supabaseRequest(method, requestPath, body) {
     throw new Error(`Supabase request failed (${res.status}): ${detail}`);
   }
   return parsed;
+}
+
+async function supabaseStorageRequest(method, requestPath, body, headers = {}) {
+  const cfg = getSupabaseConfig();
+  if (!cfg.url || !cfg.serviceRoleKey) {
+    throw new Error("Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+  }
+
+  const res = await fetch(`${cfg.url}${requestPath}`, {
+    method,
+    headers: {
+      apikey: cfg.serviceRoleKey,
+      Authorization: `Bearer ${cfg.serviceRoleKey}`,
+      ...headers,
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    const raw = await res.text().catch(() => "");
+    const parsed = safeJsonParse(raw);
+    const detail =
+      (parsed && (parsed.message || parsed.error_description || parsed.hint || parsed.details || parsed.error)) ||
+      raw ||
+      `HTTP ${res.status}`;
+    throw new Error(`Supabase storage request failed (${res.status}): ${detail}`);
+  }
+  return res;
 }
 
 async function ensureSupabaseDb() {
@@ -1030,6 +1080,257 @@ function normalizeMessageAttachmentInput(value) {
     size: Math.max(0, Math.floor(size)),
     dataUrl,
   };
+}
+
+const ALLOWED_RESUME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+]);
+const MAX_RESUME_BYTES = 2.5 * 1024 * 1024;
+
+function sanitizeFileName(value, fallback = "file") {
+  const trimmed = String(value || "").trim().slice(0, 255);
+  const cleaned = trimmed.replace(/[<>:"/\\|?*\x00-\x1f]+/g, "_").replace(/\s+/g, " ");
+  return cleaned || fallback;
+}
+
+function inferResumeMimeType(name, type) {
+  const rawType = String(type || "").trim().toLowerCase();
+  if (ALLOWED_RESUME_TYPES.has(rawType)) return rawType;
+  const lowerName = String(name || "").trim().toLowerCase();
+  if (lowerName.endsWith(".pdf")) return "application/pdf";
+  if (lowerName.endsWith(".doc")) return "application/msword";
+  if (lowerName.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lowerName.endsWith(".png")) return "image/png";
+  if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) return "image/jpeg";
+  return "";
+}
+
+function getResumeFileExtension(mimeType, name) {
+  const mime = inferResumeMimeType(name, mimeType);
+  if (mime === "application/pdf") return ".pdf";
+  if (mime === "application/msword") return ".doc";
+  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx";
+  if (mime === "image/png") return ".png";
+  if (mime === "image/jpeg") return ".jpg";
+  return path.extname(String(name || "").trim()).slice(0, 10) || ".bin";
+}
+
+function parseDataUrlToBuffer(dataUrl) {
+  const raw = String(dataUrl || "").trim();
+  const match = /^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,([\s\S]+)$/i.exec(raw);
+  if (!match) {
+    const err = new Error("Invalid file payload.");
+    err.status = 400;
+    throw err;
+  }
+  const mimeType = String(match[1] || "application/octet-stream").trim().toLowerCase();
+  const isBase64 = Boolean(match[2]);
+  const body = String(match[3] || "");
+  const buffer = isBase64 ? Buffer.from(body, "base64") : Buffer.from(decodeURIComponent(body), "utf8");
+  return { mimeType, buffer };
+}
+
+function normalizeResumeRecord(value) {
+  if (!value || typeof value !== "object") return null;
+  const id = String(value.id || "").trim().slice(0, 120);
+  const name = sanitizeFileName(value.name || "resume");
+  const type = inferResumeMimeType(name, value.type);
+  const size = Math.max(0, Math.floor(Number(value.size) || 0));
+  const uploadedAt = String(value.uploadedAt || "").trim();
+  const storagePath = String(value.storagePath || "").trim().slice(0, 500);
+  const dataUrl = String(value.dataUrl || "").trim();
+  if (!id || !name) return null;
+  if (!type && !dataUrl) return null;
+  return {
+    id,
+    name,
+    type: type || "application/octet-stream",
+    size,
+    uploadedAt: uploadedAt || nowIso(),
+    storagePath,
+    dataUrl,
+  };
+}
+
+function normalizeProfileForStorage(profile) {
+  const next = profile && typeof profile === "object" ? { ...profile } : {};
+  const resumesRaw = Array.isArray(next.resumes) ? next.resumes : [];
+  next.resumes = resumesRaw.map(normalizeResumeRecord).filter(Boolean).slice(0, 5).map((resume) => ({
+    id: resume.id,
+    name: resume.name,
+    type: resume.type,
+    size: resume.size,
+    uploadedAt: resume.uploadedAt,
+    ...(resume.storagePath ? { storagePath: resume.storagePath } : {}),
+    ...(resume.dataUrl ? { dataUrl: resume.dataUrl } : {}),
+  }));
+  return next;
+}
+
+function findResumeInProfile(profile, resumeId) {
+  const data = profile && typeof profile === "object" ? profile : {};
+  const list = Array.isArray(data.resumes) ? data.resumes : [];
+  const id = String(resumeId || "").trim();
+  if (!id) return null;
+  return list.find((resume) => resume && String(resume.id || "").trim() === id) || null;
+}
+
+async function saveResumeBinary({ userId, resumeId, fileName, mimeType, buffer }) {
+  const cleanUserId = String(userId || "").trim();
+  const cleanResumeId = String(resumeId || "").trim();
+  const cleanName = sanitizeFileName(fileName, "resume");
+  const type = inferResumeMimeType(cleanName, mimeType);
+  if (!cleanUserId || !cleanResumeId || !type) {
+    const err = new Error("Invalid resume metadata.");
+    err.status = 400;
+    throw err;
+  }
+  if (!Buffer.isBuffer(buffer) || !buffer.length) {
+    const err = new Error("Resume file is empty.");
+    err.status = 400;
+    throw err;
+  }
+  if (buffer.length > MAX_RESUME_BYTES) {
+    const err = new Error("Resume file is too large.");
+    err.status = 413;
+    throw err;
+  }
+
+  const storagePath = `resumes/${cleanUserId}/${cleanResumeId}${getResumeFileExtension(type, cleanName)}`;
+  if (getStorageProvider() === "supabase") {
+    const cfg = getSupabaseConfig();
+    const requestPath = `/storage/v1/object/${encodeURIComponent(cfg.storageBucket)}/${storagePath
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/")}`;
+    await supabaseStorageRequest("POST", requestPath, buffer, {
+      "Content-Type": type,
+      "x-upsert": "true",
+    });
+    return storagePath;
+  }
+
+  const target = path.join(DATA_DIR, "uploads", storagePath);
+  await fsp.mkdir(path.dirname(target), { recursive: true });
+  await fsp.writeFile(target, buffer);
+  return storagePath;
+}
+
+async function loadResumeBinary(storagePath) {
+  const cleanPath = String(storagePath || "").trim();
+  if (!cleanPath) return null;
+  if (getStorageProvider() === "supabase") {
+    const cfg = getSupabaseConfig();
+    const requestPath = `/storage/v1/object/${encodeURIComponent(cfg.storageBucket)}/${cleanPath
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/")}`;
+    const res = await supabaseStorageRequest("GET", requestPath);
+    const arrayBuffer = await res.arrayBuffer();
+    const contentType = String(res.headers.get("content-type") || "").trim();
+    return { buffer: Buffer.from(arrayBuffer), contentType };
+  }
+
+  const target = path.join(DATA_DIR, "uploads", cleanPath);
+  const buffer = await fsp.readFile(target);
+  return { buffer, contentType: "" };
+}
+
+async function deleteResumeBinary(storagePath) {
+  const cleanPath = String(storagePath || "").trim();
+  if (!cleanPath) return;
+  if (getStorageProvider() === "supabase") {
+    const cfg = getSupabaseConfig();
+    await supabaseRequest("DELETE", `/storage/v1/object/${encodeURIComponent(cfg.storageBucket)}`, {
+      prefixes: [cleanPath],
+    });
+    return;
+  }
+  const target = path.join(DATA_DIR, "uploads", cleanPath);
+  try {
+    await fsp.unlink(target);
+  } catch (err) {
+    if (String(err?.code || "").trim().toUpperCase() !== "ENOENT") throw err;
+  }
+}
+
+async function migrateLegacyResumeRecord(userId, resume) {
+  const normalized = normalizeResumeRecord(resume);
+  if (!normalized || !normalized.dataUrl) return normalized ? { ...normalized, dataUrl: "" } : null;
+  const parsed = parseDataUrlToBuffer(normalized.dataUrl);
+  const mimeType = inferResumeMimeType(normalized.name, normalized.type || parsed.mimeType);
+  const storagePath = await saveResumeBinary({
+    userId,
+    resumeId: normalized.id,
+    fileName: normalized.name,
+    mimeType,
+    buffer: parsed.buffer,
+  });
+  return {
+    id: normalized.id,
+    name: normalized.name,
+    type: mimeType,
+    size: normalized.size || parsed.buffer.length,
+    uploadedAt: normalized.uploadedAt || nowIso(),
+    storagePath,
+  };
+}
+
+async function migrateProfileResumesToStorage(user, profile) {
+  const next = normalizeProfileForStorage(profile);
+  const resumes = Array.isArray(next.resumes) ? next.resumes : [];
+  let changed = false;
+  const migrated = [];
+  for (const resume of resumes) {
+    if (!resume || typeof resume !== "object") continue;
+    if (resume.storagePath && !resume.dataUrl) {
+      migrated.push({
+        id: resume.id,
+        name: resume.name,
+        type: resume.type,
+        size: resume.size,
+        uploadedAt: resume.uploadedAt,
+        storagePath: resume.storagePath,
+      });
+      continue;
+    }
+    const item = await migrateLegacyResumeRecord(user.id, resume);
+    if (item) migrated.push(item);
+    if (resume.dataUrl || (item && item.storagePath !== resume.storagePath)) changed = true;
+  }
+  next.resumes = migrated.slice(0, 5);
+
+  if (next.resume && typeof next.resume === "object") {
+    const legacyMigrated = await migrateLegacyResumeRecord(user.id, {
+      id: String(next.resume.id || `resume_${Date.now()}`).trim() || `resume_${Date.now()}`,
+      name: next.resume.name || "resume",
+      type: next.resume.type || "",
+      size: next.resume.size || 0,
+      uploadedAt: next.resume.uploadedAt || nowIso(),
+      storagePath: next.resume.storagePath || "",
+      dataUrl: next.resume.dataUrl || "",
+    });
+    if (legacyMigrated && !next.resumes.some((resume) => resume.id === legacyMigrated.id)) {
+      next.resumes.unshift(legacyMigrated);
+    }
+    delete next.resume;
+    changed = true;
+  }
+
+  return { profile: next, changed };
+}
+
+function canAccessSeekerResume(db, user, seekerId) {
+  if (!db || !user) return false;
+  const targetId = String(seekerId || "").trim();
+  if (!targetId) return false;
+  if (user.id === targetId) return true;
+  if (user.role !== "employer") return false;
+  return db.applications.some((a) => a && a.employerId === user.id && a.seekerId === targetId);
 }
 
 async function appendFeedbackEntry(db, entry) {
@@ -1952,7 +2253,7 @@ async function handleApi(req, res, url) {
   }
 
   // Public-ish user lookup (restricted). Used so employers can review applicant profiles.
-  if (pathname.startsWith("/api/users/") && req.method === "GET") {
+  if (pathname.startsWith("/api/users/") && !pathname.includes("/resumes/") && req.method === "GET") {
     const user = await getAuthedUser(req, db);
     if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
 
@@ -1972,6 +2273,11 @@ async function handleApi(req, res, url) {
       if (!related) return json(res, 403, { ok: false, error: "Forbidden" });
     }
 
+    const migrated = await migrateProfileResumesToStorage(target, target.profile || {});
+    if (migrated.changed) {
+      target.profile = migrated.profile;
+      await writeDb(db);
+    }
     return json(res, 200, { ok: true, user: sanitizeUser(target), profile: target.profile || {} });
   }
 
@@ -2008,6 +2314,7 @@ async function handleApi(req, res, url) {
     const salary = String(body.salary || "").trim();
     const description = String(body.description || "").trim();
     const requirements = String(body.requirements || "").trim();
+    const resumeRequired = body.resumeRequired === true;
 
     if (!title) return json(res, 400, { ok: false, error: "Job title required" });
 
@@ -2020,6 +2327,7 @@ async function handleApi(req, res, url) {
       salary,
       description,
       requirements,
+      resumeRequired,
       status: "open",
       closedAt: "",
       createdAt: nowIso(),
@@ -2109,6 +2417,9 @@ async function handleApi(req, res, url) {
     if (!job) return json(res, 404, { ok: false, error: "Job not found" });
     if (normalizeJobStatus(job.status) === "closed") {
       return json(res, 400, { ok: false, error: "Job is closed" });
+    }
+    if (job.resumeRequired && !hasUploadedResume(user.profile)) {
+      return json(res, 400, { ok: false, error: "This job requires a resume before you can apply." });
     }
 
     const already = db.applications.find((a) => a.jobId === jobId && a.seekerId === user.id);
@@ -2261,11 +2572,160 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true, applications: apps });
   }
 
+  if (pathname === "/api/profile/resumes" && req.method === "POST") {
+    const user = await getAuthedUser(req, db);
+    if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
+    if (user.role !== "seeker") return json(res, 403, { ok: false, error: "Seeker only" });
+
+    const body = await readJsonBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
+    const file = body.file && typeof body.file === "object" ? body.file : null;
+    if (!file) return json(res, 400, { ok: false, error: "file required" });
+
+    const parsed = parseDataUrlToBuffer(file.dataUrl || "");
+    const name = sanitizeFileName(file.name || "resume");
+    const type = inferResumeMimeType(name, file.type || parsed.mimeType);
+    if (!type || !ALLOWED_RESUME_TYPES.has(type)) {
+      return json(res, 400, { ok: false, error: "Only PDF, DOC, DOCX, PNG, and JPG files are allowed." });
+    }
+    if (parsed.buffer.length > MAX_RESUME_BYTES) {
+      return json(res, 413, { ok: false, error: 'Resume file is too large. Use a file under ~2.5MB.' });
+    }
+
+    const u = db.users.find((entry) => entry.id === user.id);
+    if (!u) return json(res, 404, { ok: false, error: "User not found" });
+    const migrated = await migrateProfileResumesToStorage(u, u.profile || {});
+    const profile = migrated.profile;
+    profile.resumes = Array.isArray(profile.resumes) ? profile.resumes : [];
+    if (profile.resumes.length >= 5) {
+      return json(res, 400, { ok: false, error: "You can upload up to 5 resumes." });
+    }
+
+    const resumeId = `resume_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const storagePath = await saveResumeBinary({
+      userId: u.id,
+      resumeId,
+      fileName: name,
+      mimeType: type,
+      buffer: parsed.buffer,
+    });
+    const resume = {
+      id: resumeId,
+      name,
+      type,
+      size: Number(file.size) > 0 ? Math.floor(Number(file.size)) : parsed.buffer.length,
+      uploadedAt: nowIso(),
+      storagePath,
+    };
+    profile.resumes.unshift(resume);
+    profile.resumes = profile.resumes.slice(0, 5);
+    profile.__schema = 1;
+    profile.__updatedAt = Date.now();
+    u.profile = profile;
+    await writeDb(db);
+    return json(res, 200, { ok: true, resume, profile: u.profile });
+  }
+
+  if (pathname.startsWith("/api/profile/resumes/") && pathname.endsWith("/content") && req.method === "GET") {
+    const user = await getAuthedUser(req, db);
+    if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
+
+    const parts = pathname.split("/").filter(Boolean);
+    const resumeId = String(parts[3] || "").trim();
+    if (!resumeId) return json(res, 400, { ok: false, error: "Resume id required" });
+
+    const u = db.users.find((entry) => entry.id === user.id);
+    if (!u) return json(res, 404, { ok: false, error: "User not found" });
+    const migrated = await migrateProfileResumesToStorage(u, u.profile || {});
+    if (migrated.changed) {
+      u.profile = migrated.profile;
+      await writeDb(db);
+    }
+    const resume = findResumeInProfile(u.profile || {}, resumeId);
+    if (!resume) return json(res, 404, { ok: false, error: "Resume not found" });
+    if (!resume.storagePath) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+
+    const file = await loadResumeBinary(resume.storagePath);
+    if (!file || !file.buffer) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+    res.writeHead(200, {
+      "Content-Type": resume.type || file.contentType || "application/octet-stream",
+      "Content-Length": String(file.buffer.length),
+      "Content-Disposition": `${String(new URL(req.url, "http://localhost").searchParams.get("download") || "").trim() === "1" ? "attachment" : "inline"}; filename="${sanitizeFileName(resume.name || "resume")}"`,
+      "Cache-Control": "no-store",
+    });
+    res.end(file.buffer);
+    return;
+  }
+
+  if (pathname.startsWith("/api/profile/resumes/") && req.method === "DELETE") {
+    const user = await getAuthedUser(req, db);
+    if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
+    if (user.role !== "seeker") return json(res, 403, { ok: false, error: "Seeker only" });
+
+    const parts = pathname.split("/").filter(Boolean);
+    const resumeId = String(parts[3] || "").trim();
+    if (!resumeId) return json(res, 400, { ok: false, error: "Resume id required" });
+
+    const u = db.users.find((entry) => entry.id === user.id);
+    if (!u) return json(res, 404, { ok: false, error: "User not found" });
+    const migrated = await migrateProfileResumesToStorage(u, u.profile || {});
+    const profile = migrated.profile;
+    const existing = findResumeInProfile(profile, resumeId);
+    if (!existing) return json(res, 404, { ok: false, error: "Resume not found" });
+    profile.resumes = (Array.isArray(profile.resumes) ? profile.resumes : []).filter((resume) => resume.id !== resumeId);
+    profile.__schema = 1;
+    profile.__updatedAt = Date.now();
+    u.profile = profile;
+    await writeDb(db);
+    if (existing.storagePath) {
+      await deleteResumeBinary(existing.storagePath).catch(() => {});
+    }
+    return json(res, 200, { ok: true, profile: u.profile });
+  }
+
+  if (pathname.startsWith("/api/users/") && pathname.includes("/resumes/") && pathname.endsWith("/content") && req.method === "GET") {
+    const user = await getAuthedUser(req, db);
+    if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
+    const parts = pathname.split("/").filter(Boolean);
+    const targetUserId = String(parts[2] || "").trim();
+    const resumeId = String(parts[4] || "").trim();
+    if (!targetUserId || !resumeId) return json(res, 400, { ok: false, error: "User id and resume id required" });
+    if (!canAccessSeekerResume(db, user, targetUserId)) {
+      return json(res, 403, { ok: false, error: "Forbidden" });
+    }
+    const target = db.users.find((entry) => entry.id === targetUserId);
+    if (!target) return json(res, 404, { ok: false, error: "User not found" });
+    const migrated = await migrateProfileResumesToStorage(target, target.profile || {});
+    if (migrated.changed) {
+      target.profile = migrated.profile;
+      await writeDb(db);
+    }
+    const resume = findResumeInProfile(target.profile || {}, resumeId);
+    if (!resume) return json(res, 404, { ok: false, error: "Resume not found" });
+    if (!resume.storagePath) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+    const file = await loadResumeBinary(resume.storagePath);
+    if (!file || !file.buffer) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+    res.writeHead(200, {
+      "Content-Type": resume.type || file.contentType || "application/octet-stream",
+      "Content-Length": String(file.buffer.length),
+      "Content-Disposition": `${String(new URL(req.url, "http://localhost").searchParams.get("download") || "").trim() === "1" ? "attachment" : "inline"}; filename="${sanitizeFileName(resume.name || "resume")}"`,
+      "Cache-Control": "no-store",
+    });
+    res.end(file.buffer);
+    return;
+  }
+
   // Profile (minimal)
   if (pathname === "/api/profile" && req.method === "GET") {
     const user = await getAuthedUser(req, db);
     if (!user) return json(res, 401, { ok: false, error: "Not authenticated" });
-    return json(res, 200, { ok: true, profile: user.profile || {}, user: sanitizeUser(user) });
+    const u = db.users.find((entry) => entry.id === user.id) || user;
+    const migrated = await migrateProfileResumesToStorage(u, u.profile || {});
+    if (migrated.changed) {
+      u.profile = migrated.profile;
+      await writeDb(db);
+    }
+    return json(res, 200, { ok: true, profile: u.profile || {}, user: sanitizeUser(u) });
   }
 
   if (pathname === "/api/profile" && req.method === "PUT") {
@@ -2275,7 +2735,9 @@ async function handleApi(req, res, url) {
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON" });
 
     // Keep this permissive for a school project; you can tighten later.
-    const profile = body.profile && typeof body.profile === "object" ? body.profile : {};
+    const incomingProfile = body.profile && typeof body.profile === "object" ? body.profile : {};
+    const migrated = await migrateProfileResumesToStorage(user, incomingProfile);
+    const profile = migrated.profile;
     // Server-authoritative sync metadata so clients can resolve local draft vs backend.
     try {
       profile.__schema = 1;

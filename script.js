@@ -1120,6 +1120,45 @@ function getSeekerJobSummary(job) {
   return description.length > 140 ? `${description.slice(0, 140).trimEnd()}...` : description;
 }
 
+function jobRequiresResume(job) {
+  if (!job || typeof job !== "object") return false;
+  if (job.resumeRequired === true) return true;
+  if (job.resumeRequired === false || job.resumeRequired == null) return false;
+  return String(job.resumeRequired).trim().toLowerCase() === "true";
+}
+
+function profileHasResume(profile) {
+  const data = profile && typeof profile === "object" ? profile : {};
+  const resumes = Array.isArray(data.resumes) ? data.resumes : [];
+  if (
+    resumes.some(
+      (item) =>
+        item &&
+        ((typeof item.storagePath === "string" && item.storagePath.trim()) ||
+          (typeof item.dataUrl === "string" && item.dataUrl.trim())),
+    )
+  ) {
+    return true;
+  }
+  return Boolean(
+    data.resume &&
+      typeof data.resume === "object" &&
+      ((typeof data.resume.storagePath === "string" && data.resume.storagePath.trim()) ||
+        (typeof data.resume.dataUrl === "string" && data.resume.dataUrl.trim())),
+  );
+}
+
+function getCurrentSeekerProfileCache() {
+  if (!getLoggedIn() || getLoggedInRole() !== "seeker") return null;
+  return readNavProfileCache("seeker");
+}
+
+function currentSeekerHasResume() {
+  const profile = getCurrentSeekerProfileCache();
+  if (!profile || typeof profile !== "object") return null;
+  return profileHasResume(profile);
+}
+
 function getSeekerJobTags(job) {
   const rawLines = String(job && job.requirements ? job.requirements : "")
     .split(/\r?\n/)
@@ -1131,7 +1170,8 @@ function getSeekerJobTags(job) {
     .filter((line) => !isPlaceholderText(line))
     .slice(0, 2);
 
-  return cleaned.length ? cleaned : ["No requirements listed"];
+  if (jobRequiresResume(job)) cleaned.unshift("Resume required");
+  return cleaned.length ? cleaned.slice(0, 2) : ["No requirements listed"];
 }
 
 function getSeekerJobRequirementList(job) {
@@ -1144,6 +1184,7 @@ function getSeekerJobRequirementList(job) {
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter((line) => !isPlaceholderText(line));
 
+  if (jobRequiresResume(job)) cleaned.unshift("Resume/CV required before applying.");
   return cleaned.length ? cleaned : ["No requirements listed."];
 }
 
@@ -2017,7 +2058,13 @@ async function loadApplicantsForJob(jobId, panel) {
               resumeBtn.classList.add("is-active");
               if (profileBtnLocal) profileBtnLocal.classList.remove("is-active");
               const profile = loadedProfile || {};
-              const files = extractUploadedFilesFromProfile(profile);
+              const files = extractUploadedFilesFromProfile(profile).map((file) => ({
+                ...file,
+                contentPath:
+                  file.id && a.seekerId
+                    ? `/api/users/${encodeURIComponent(String(a.seekerId))}/resumes/${encodeURIComponent(String(file.id))}/content`
+                    : "",
+              }));
               openFilePicker(files, { title: "Choose a file", sub: "Select a seeker-uploaded file to open." });
             };
           }
@@ -3464,6 +3511,7 @@ async function publishJobFromForm() {
   const salaryEl = document.getElementById("addJobSalary");
   const descEl = document.getElementById("addJobDescription");
   const reqEl = document.getElementById("addJobRequirements");
+  const resumeRequiredEl = document.getElementById("addJobResumeRequired");
 
   const title = (titleEl?.value || "").trim();
   const location = (locationEl?.value || "").trim();
@@ -3472,6 +3520,7 @@ async function publishJobFromForm() {
   const salary = salaryAmount ? `${salaryCurrency} ${salaryAmount}` : "";
   const description = (descEl?.value || "").trim();
   const requirements = (reqEl?.value || "").trim();
+  const resumeRequired = Boolean(resumeRequiredEl?.checked);
 
   if (!getLoggedIn() || getLoggedInRole() !== "employer") {
     alert("Please log in as an employer to publish jobs.");
@@ -3499,7 +3548,7 @@ async function publishJobFromForm() {
       await apiRequest("/api/jobs", {
         method: "POST",
         auth: true,
-        body: { title, location, salary, description, requirements },
+        body: { title, location, salary, description, requirements, resumeRequired },
       });
       if (titleEl) titleEl.value = "";
       if (locationEl) locationEl.value = "";
@@ -3507,6 +3556,7 @@ async function publishJobFromForm() {
       if (salaryEl) salaryEl.value = "";
       if (descEl) descEl.value = "";
       if (reqEl) reqEl.value = "";
+      if (resumeRequiredEl) resumeRequiredEl.checked = false;
       try {
         localStorage.removeItem("jobDraft");
       } catch {
@@ -3545,6 +3595,7 @@ function saveDraftFromForm() {
     salary: (document.getElementById("addJobSalary")?.value || "").trim(),
     description: (document.getElementById("addJobDescription")?.value || "").trim(),
     requirements: (document.getElementById("addJobRequirements")?.value || "").trim(),
+    resumeRequired: Boolean(document.getElementById("addJobResumeRequired")?.checked),
     savedAt: new Date().toISOString(),
   };
   localStorage.setItem("jobDraft", JSON.stringify(draft));
@@ -3576,6 +3627,8 @@ function loadDraftToForm() {
   setVal("addJobSalary", draft.salary || "");
   setVal("addJobDescription", draft.description || "");
   setVal("addJobRequirements", draft.requirements || "");
+  const resumeRequiredEl = document.getElementById("addJobResumeRequired");
+  if (resumeRequiredEl) resumeRequiredEl.checked = Boolean(draft.resumeRequired);
   const status = document.getElementById("addJobDraftStatus");
   if (status) {
     status.textContent = "Draft loaded";
@@ -3596,6 +3649,8 @@ function clearAddJobFormAndDraft() {
       // ignore
     }
   });
+  const resumeRequiredEl = document.getElementById("addJobResumeRequired");
+  if (resumeRequiredEl) resumeRequiredEl.checked = false;
   try {
     localStorage.removeItem("jobDraft");
   } catch {
@@ -4329,12 +4384,24 @@ function goToSeekerProfileReview(userId) {
     }
 
     const hasFile =
-      (Array.isArray(profile.resumes) && profile.resumes.some((r) => r && typeof r.dataUrl === "string" && r.dataUrl)) ||
-      (profile.resume && typeof profile.resume === "object" && typeof profile.resume.dataUrl === "string" && profile.resume.dataUrl);
+      (Array.isArray(profile.resumes) &&
+        profile.resumes.some(
+          (r) =>
+            r &&
+            ((typeof r.storagePath === "string" && r.storagePath) || (typeof r.dataUrl === "string" && r.dataUrl)),
+        )) ||
+      (profile.resume &&
+        typeof profile.resume === "object" &&
+        ((typeof profile.resume.storagePath === "string" && profile.resume.storagePath) ||
+          (typeof profile.resume.dataUrl === "string" && profile.resume.dataUrl)));
     if (fileBtn) {
       fileBtn.style.display = hasFile ? "inline-flex" : "none";
       fileBtn.onclick = () => {
-        const files = extractUploadedFilesFromProfile(profile);
+        const files = extractUploadedFilesFromProfile(profile).map((file) => ({
+          ...file,
+          contentPath:
+            file.id && user.id ? `/api/users/${encodeURIComponent(String(user.id))}/resumes/${encodeURIComponent(String(file.id))}/content` : "",
+        }));
         openFilePicker(files, { title: "Choose a file", sub: "Select a seeker-uploaded file to open." });
       };
     }
@@ -4405,31 +4472,30 @@ function extractUploadedFilesFromProfile(profile) {
   const files = [];
 
   resumes.forEach((r) => {
-    const dataUrl = typeof r.dataUrl === "string" ? r.dataUrl : "";
-    if (!dataUrl) return;
     files.push({
+      id: typeof r.id === "string" ? r.id : "",
       name: typeof r.name === "string" && r.name.trim() ? r.name.trim() : "File",
-      dataUrl,
+      dataUrl: typeof r.dataUrl === "string" ? r.dataUrl : "",
       uploadedAt: typeof r.uploadedAt === "string" ? r.uploadedAt : "",
       size: typeof r.size === "number" ? r.size : 0,
       type: typeof r.type === "string" ? r.type : "",
+      storagePath: typeof r.storagePath === "string" ? r.storagePath : "",
     });
   });
 
   if (!files.length && legacy) {
-    const dataUrl = typeof legacy.dataUrl === "string" ? legacy.dataUrl : "";
-    if (dataUrl) {
-      files.push({
-        name: typeof legacy.name === "string" && legacy.name.trim() ? legacy.name.trim() : "File",
-        dataUrl,
-        uploadedAt: typeof legacy.uploadedAt === "string" ? legacy.uploadedAt : "",
-        size: typeof legacy.size === "number" ? legacy.size : 0,
-        type: typeof legacy.type === "string" ? legacy.type : "",
-      });
-    }
+    files.push({
+      id: typeof legacy.id === "string" ? legacy.id : "",
+      name: typeof legacy.name === "string" && legacy.name.trim() ? legacy.name.trim() : "File",
+      dataUrl: typeof legacy.dataUrl === "string" ? legacy.dataUrl : "",
+      uploadedAt: typeof legacy.uploadedAt === "string" ? legacy.uploadedAt : "",
+      size: typeof legacy.size === "number" ? legacy.size : 0,
+      type: typeof legacy.type === "string" ? legacy.type : "",
+      storagePath: typeof legacy.storagePath === "string" ? legacy.storagePath : "",
+    });
   }
 
-  return files;
+  return files.filter((file) => file.dataUrl || file.storagePath);
 }
 
 function dataUrlToBlob(dataUrl) {
@@ -4454,15 +4520,35 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 
-function openUploadedFile({ dataUrl, name }) {
+async function fetchAuthedFileBlob(pathname) {
+  const token = localStorage.getItem(STORAGE_AUTH_TOKEN_KEY) || "";
+  if (!token) throw new Error("Please log in again.");
+  const res = await fetch(pathname, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    let errorText = `Request failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data && data.error) errorText = data.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorText);
+  }
+  return await res.blob();
+}
+
+async function openUploadedFile({ dataUrl, name, contentPath }) {
   const rawUrl = String(dataUrl || "");
-  if (!rawUrl) return;
+  if (!rawUrl && !contentPath) return;
   const fileName = String(name || "File").trim() || "File";
 
   // Large data URLs often open as blank pages in some browsers. Blob URLs are more reliable.
   let urlToOpen = rawUrl;
-  try {
-    const blob = dataUrlToBlob(rawUrl);
+  if (contentPath) {
+    const blob = await fetchAuthedFileBlob(contentPath);
     urlToOpen = URL.createObjectURL(blob);
     setTimeout(() => {
       try {
@@ -4471,8 +4557,20 @@ function openUploadedFile({ dataUrl, name }) {
         // ignore
       }
     }, 60_000);
-  } catch {
-    urlToOpen = rawUrl;
+  } else {
+    try {
+      const blob = dataUrlToBlob(rawUrl);
+      urlToOpen = URL.createObjectURL(blob);
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(urlToOpen);
+        } catch {
+          // ignore
+        }
+      }, 60_000);
+    } catch {
+      urlToOpen = rawUrl;
+    }
   }
 
   const w = window.open(urlToOpen, "_blank");
@@ -4540,8 +4638,16 @@ function openFilePicker(files, { title = "Choose a file", sub = "Select one to o
         if (titleNode) titleNode.textContent = name;
         if (metaNode) metaNode.textContent = meta || " ";
         if (openBtn) {
-          openBtn.onclick = () => {
-            openUploadedFile({ dataUrl: String(f?.dataUrl || ""), name });
+          openBtn.onclick = async () => {
+            try {
+              await openUploadedFile({
+                dataUrl: String(f?.dataUrl || ""),
+                name,
+                contentPath: String(f?.contentPath || ""),
+              });
+            } catch (err) {
+              alert(err?.message || "Could not open the file.");
+            }
           };
         }
 
@@ -6689,11 +6795,34 @@ function openApplyForm(button) {
   const company = card ? card.querySelector("p") : null;
   const titleEl = document.getElementById("applyJobTitle");
   const companyEl = document.getElementById("applyCompany");
+  const noticeEl = document.getElementById("applyResumeNotice");
   if (titleEl) {
     titleEl.textContent = title ? `Apply • ${title.textContent}` : "Apply";
   }
   if (companyEl) {
     companyEl.textContent = company ? company.textContent : "Complete the requirements below.";
+  }
+  const job = findRenderedJobById(jobId);
+  const requiresResume = jobRequiresResume(job);
+  const hasResume = currentSeekerHasResume();
+  if (noticeEl) {
+    if (requiresResume && hasResume === false) {
+      noticeEl.className = "apply-notice warn";
+      noticeEl.textContent = "This job requires a resume. Upload one in your seeker profile before submitting.";
+      noticeEl.style.display = "block";
+    } else if (requiresResume) {
+      noticeEl.className = "apply-notice info";
+      noticeEl.textContent = "This employer requires a resume. Your uploaded resume will be included with the application.";
+      noticeEl.style.display = "block";
+    } else if (hasResume === false && getLoggedInRole() === "seeker") {
+      noticeEl.className = "apply-notice info";
+      noticeEl.textContent = "You can still apply without a resume, but uploading one usually improves your shortlist chances.";
+      noticeEl.style.display = "block";
+    } else {
+      noticeEl.className = "apply-notice";
+      noticeEl.textContent = "";
+      noticeEl.style.display = "none";
+    }
   }
   if (jobId && isSeekerAppliedToJob(jobId)) {
     showInfoModal("Applied", "You already applied to this job.");
@@ -6703,6 +6832,11 @@ function openApplyForm(button) {
     modal.setAttribute("data-job-id", jobId);
   } else {
     modal.removeAttribute("data-job-id");
+  }
+  if (requiresResume) {
+    modal.setAttribute("data-resume-required", "true");
+  } else {
+    modal.removeAttribute("data-resume-required");
   }
   try {
     setupUniversalTextareaAutogrow();
@@ -6718,6 +6852,7 @@ function closeApplyForm() {
   const modal = document.getElementById("applyModal");
   if (modal) {
     modal.style.display = "none";
+    modal.removeAttribute("data-resume-required");
   }
 }
 
@@ -6769,6 +6904,14 @@ async function submitApplication(event) {
   }
   if (isSeekerAppliedToJob(jobId)) {
     showInfoModal("Applied", "You already applied to this job.");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
+    }
+    return;
+  }
+  if (modal && modal.getAttribute("data-resume-required") === "true" && currentSeekerHasResume() === false) {
+    showInfoModal("Resume Required", "This job requires a resume. Upload one in your seeker profile, then try again.");
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = originalSubmitText;

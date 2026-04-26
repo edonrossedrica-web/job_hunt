@@ -288,6 +288,22 @@
       return fetch(path,{method,headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:body?JSON.stringify(body):null})
         .then(async(res)=>{const data=await res.json().catch(()=>null);if(!res.ok) throw new Error(data&&data.error?data.error:`Request failed (${res.status})`);return data;});
     }
+    function backendBlobRequest(path,options){
+      const token=localStorage.getItem("authToken");
+      if(!token) return Promise.reject(new Error("No auth token"));
+      const method=options&&options.method?options.method:"GET";
+      return fetch(path,{method,headers:{Authorization:`Bearer ${token}`}})
+        .then(async(res)=>{
+          if(!res.ok){
+            const data=await res.json().catch(()=>null);
+            throw new Error(data&&data.error?data.error:`Request failed (${res.status})`);
+          }
+          return {
+            blob: await res.blob(),
+            contentType: String(res.headers.get("content-type")||"").trim()
+          };
+        });
+    }
     function ensureShape(p){
       const o=(p&&typeof p==="object")?{...p}:{};
       if(!Array.isArray(o.skills)) o.skills=[];
@@ -308,6 +324,18 @@
       if(o.about.trim().toLowerCase()==="add a short bio about you") o.about="";
       o.avatarDataUrl=typeof o.avatarDataUrl==="string"?o.avatarDataUrl:"";
       o.publishedAt=String(o.publishedAt||"").trim();
+      o.resumes=o.resumes.map((r)=>{
+        if(!r||typeof r!=="object") return null;
+        return {
+          id:String(r.id||""),
+          name:String(r.name||"Resume"),
+          type:String(r.type||""),
+          size:Number(r.size)||0,
+          uploadedAt:String(r.uploadedAt||""),
+          storagePath:String(r.storagePath||""),
+          dataUrl:typeof r.dataUrl==="string"?r.dataUrl:""
+        };
+      }).filter(Boolean);
       o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
       return o;
     }
@@ -344,6 +372,60 @@
         setTimeout(()=>{try{URL.revokeObjectURL(url)}catch{}},60000);
       }catch{
         alert("Could not preview this file (it may be too large or corrupted). Please re-upload and try again.");
+      }
+    }
+    function isResumePreviewable(resume){
+      const type=String(resume&&resume.type||"").toLowerCase();
+      return type.startsWith("application/pdf")||type.startsWith("image/");
+    }
+    async function fetchResumeObjectUrl(resume,download){
+      const r=resume&&typeof resume==="object"?resume:{};
+      if(typeof r.dataUrl==="string"&&r.dataUrl.startsWith("data:")){
+        const blob=dataUrlToBlob(r.dataUrl);
+        return {url:URL.createObjectURL(blob),revoke:true};
+      }
+      if(!r.id) throw new Error("Missing resume id.");
+      const suffix=download?"?download=1":"";
+      const result=await backendBlobRequest(`/api/profile/resumes/${encodeURIComponent(String(r.id))}/content${suffix}`);
+      return {url:URL.createObjectURL(result.blob),revoke:true};
+    }
+    async function openResumeFile(resume){
+      const fileName=String(resume&&resume.name||"resume").trim()||"resume";
+      try{
+        const opened=await fetchResumeObjectUrl(resume,false);
+        const w=window.open(opened.url,"_blank","noopener,noreferrer");
+        if(!w){
+          try{URL.revokeObjectURL(opened.url)}catch{}
+          alert("Your browser blocked the preview pop-up. Please allow pop-ups for this site, or use Download instead.");
+          return;
+        }
+        setTimeout(()=>{try{URL.revokeObjectURL(opened.url)}catch{}},60000);
+      }catch(err){
+        alert(err&&err.message?err.message:"Could not open this resume.");
+      }
+    }
+    async function downloadResumeFile(resume){
+      const fileName=String(resume&&resume.name||"resume").trim()||"resume";
+      try{
+        const opened=await fetchResumeObjectUrl(resume,true);
+        const a=document.createElement("a");
+        a.href=opened.url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>{try{URL.revokeObjectURL(opened.url)}catch{}},30000);
+      }catch(err){
+        alert(err&&err.message?err.message:"Could not download this resume.");
+      }
+    }
+    async function removeResumeFile(resume){
+      const id=String(resume&&resume.id||"").trim();
+      if(!id) return;
+      try{
+        const data=await backendRequest(`/api/profile/resumes/${encodeURIComponent(id)}`,{method:"DELETE"});
+        if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
+        else profile.resumes=(Array.isArray(profile.resumes)?profile.resumes:[]).filter((x)=>String(x&&x.id||"")!==id);
+        writeCache(profile);
+        render();
+      }catch(err){
+        alert(err&&err.message?err.message:"Could not remove that resume.");
       }
     }
     function setTxt(id,val){
@@ -404,21 +486,18 @@
         const name=document.createElement("div");name.className="rname";name.textContent=String(r.name||"Resume");
         const actions=document.createElement("div");actions.className="ra";
 
-        const dataUrl=(typeof r.dataUrl==="string"&&r.dataUrl.startsWith("data:"))?r.dataUrl:"";
-        const mimeFromDataUrl = dataUrl ? String(dataUrl.slice(5, dataUrl.indexOf(";") > -1 ? dataUrl.indexOf(";") : dataUrl.length)) : "";
-        const fallbackType = String(r.type||"").toLowerCase();
-        const isPreviewable = Boolean(dataUrl) && (mimeFromDataUrl.startsWith("application/pdf") || mimeFromDataUrl.startsWith("image/") || fallbackType.includes("pdf") || fallbackType.startsWith("image/"));
+        const isPreviewable = isResumePreviewable(r) || (typeof r.dataUrl==="string"&&r.dataUrl.startsWith("data:"));
         if(isPreviewable){
           const view=document.createElement("button");view.type="button";view.className="lb";view.innerHTML='<i class="fa-solid fa-eye"></i> View';
-          view.addEventListener("click",()=>previewDataUrl(dataUrl));
+          view.addEventListener("click",()=>{openResumeFile(r);});
           actions.appendChild(view);
         }
 
         const dl=document.createElement("a");dl.className="lb";dl.innerHTML='<i class="fa-solid fa-download"></i> Download';
-        dl.href=dataUrl?dataUrl:"#";dl.download=String(r.name||"resume");
-        if(dl.href==="#") dl.addEventListener("click",(e)=>{e.preventDefault();alert("This resume needs to be re-uploaded.");});
+        dl.href="#";dl.download=String(r.name||"resume");
+        dl.addEventListener("click",(e)=>{e.preventDefault();downloadResumeFile(r);});
         const rm=document.createElement("button");rm.type="button";rm.className="lb";rm.innerHTML='<i class="fa-solid fa-trash"></i> Remove';
-        rm.addEventListener("click",()=>{profile.resumes=profile.resumes.filter((x)=>x!==r);save();render();});
+        rm.addEventListener("click",()=>{removeResumeFile(r);});
         actions.appendChild(dl);actions.appendChild(rm);
         row.appendChild(name);row.appendChild(actions);list.appendChild(row);
       }
@@ -749,11 +828,14 @@
         if(file.size>2.5*1024*1024){alert(`"${file.name}" is too large. Use a file under ~2.5MB.`);continue;}
         let dataUrl="";
         try{dataUrl=await fileToDataUrl(file);}catch{alert("Could not read that file.");continue;}
-        profile.resumes=Array.isArray(profile.resumes)?profile.resumes:[];
-        profile.resumes.unshift({id:`resume_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,name:file.name,type:file.type||"",size:file.size,dataUrl,uploadedAt:new Date().toISOString()});
-        profile.resumes=profile.resumes.slice(0,5);
+        try{
+          const data=await backendRequest("/api/profile/resumes",{method:"POST",body:{file:{name:file.name,type:file.type||"",size:file.size,dataUrl}}});
+          if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
+        }catch(err){
+          alert(err&&err.message?err.message:`Could not upload "${file.name}".`);
+        }
       }
-      save();render();resumeInput.value="";
+      writeCache(profile);render();resumeInput.value="";
     });
 
     document.getElementById("finishBtn").addEventListener("click",async(e)=>{

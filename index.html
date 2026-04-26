@@ -1050,6 +1050,14 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
             <textarea id="addJobRequirements" class="add-job-textarea autogrow" rows="4" placeholder="Skills, experience, and mindset required..."></textarea>
             <p class="add-job-helper">Use bullet points to separate key requirements.</p>
           </div>
+
+          <label class="add-job-toggle" for="addJobResumeRequired">
+            <input id="addJobResumeRequired" type="checkbox">
+            <span>
+              <strong>Resume required</strong>
+              <small>Block applications until the hunter uploads a resume.</small>
+            </span>
+          </label>
         </div>
       </div>
     </section>
@@ -1448,6 +1456,7 @@ Already have an account? <a href="#" onclick="openLogin()">Log In -></a>
   </div>
   <div class="apply-form">
     <p>Your profile details and saved requirements will be sent automatically.</p>
+    <div id="applyResumeNotice" class="apply-notice" style="display:none;"></div>
     <div style="margin-top:12px;">
       <label class="detail-label" for="applyMessage">Message (optional)</label>
       <textarea id="applyMessage" data-autogrow="1" rows="3" style="width:100%;margin-top:6px;background:rgba(7,12,22,0.9);border:1px solid rgba(148,163,184,0.2);border-radius:14px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;" placeholder="Add a short message to the employer..."></textarea>
