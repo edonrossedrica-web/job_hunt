@@ -4540,15 +4540,75 @@ async function fetchAuthedFileBlob(pathname) {
   return await res.blob();
 }
 
+async function fetchAuthedOpenUrl(pathname, { download = false } = {}) {
+  const token = localStorage.getItem(STORAGE_AUTH_TOKEN_KEY) || "";
+  if (!token) throw new Error("Please log in again.");
+  const href = `${pathname}${pathname.includes("?") ? "&" : "?"}link=1${download ? "&download=1" : ""}`;
+  const res = await fetch(href, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) {
+    let errorText = `Request failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data && data.error) errorText = data.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorText);
+  }
+  const data = await res.json().catch(() => null);
+  return data && data.ok && data.url ? String(data.url) : "";
+}
+
+function openAuthedFilePath(pathname, { download = false, fileName = "" } = {}) {
+  const href = download ? `${pathname}${pathname.includes("?") ? "&" : "?"}download=1` : pathname;
+  const a = document.createElement("a");
+  a.href = href;
+  a.target = download ? "_self" : "_blank";
+  a.rel = "noopener noreferrer";
+  if (download && fileName) a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 async function openUploadedFile({ dataUrl, name, contentPath }) {
   const rawUrl = String(dataUrl || "");
   if (!rawUrl && !contentPath) return;
   const fileName = String(name || "File").trim() || "File";
 
+  if (contentPath) {
+    try {
+      const directUrl = await fetchAuthedOpenUrl(contentPath, { download: false });
+      if (directUrl) {
+        openAuthedFilePath(directUrl, { download: false, fileName });
+        return;
+      }
+    } catch {
+      // Fall back to a proxied blob fetch for local storage mode or older deployments.
+    }
+    const blob = await fetchAuthedFileBlob(contentPath);
+    const tempUrl = URL.createObjectURL(blob);
+    setTimeout(() => {
+      try {
+        URL.revokeObjectURL(tempUrl);
+      } catch {
+        // ignore
+      }
+    }, 60_000);
+    openAuthedFilePath(tempUrl, { download: false, fileName });
+    return;
+  }
+
   // Large data URLs often open as blank pages in some browsers. Blob URLs are more reliable.
   let urlToOpen = rawUrl;
-  if (contentPath) {
-    const blob = await fetchAuthedFileBlob(contentPath);
+  try {
+    const blob = dataUrlToBlob(rawUrl);
     urlToOpen = URL.createObjectURL(blob);
     setTimeout(() => {
       try {
@@ -4557,20 +4617,8 @@ async function openUploadedFile({ dataUrl, name, contentPath }) {
         // ignore
       }
     }, 60_000);
-  } else {
-    try {
-      const blob = dataUrlToBlob(rawUrl);
-      urlToOpen = URL.createObjectURL(blob);
-      setTimeout(() => {
-        try {
-          URL.revokeObjectURL(urlToOpen);
-        } catch {
-          // ignore
-        }
-      }, 60_000);
-    } catch {
-      urlToOpen = rawUrl;
-    }
+  } catch {
+    urlToOpen = rawUrl;
   }
 
   try {

@@ -308,6 +308,12 @@
           };
         });
     }
+    function backendOpenUrlRequest(path){
+      const token=localStorage.getItem("authToken");
+      if(!token) return Promise.reject(new Error("No auth token"));
+      return fetch(path,{method:"GET",headers:{Authorization:`Bearer ${token}`,Accept:"application/json"}})
+        .then(async(res)=>{const data=await res.json().catch(()=>null);if(!res.ok) throw new Error(data&&data.error?data.error:`Request failed (${res.status})`);return data;});
+    }
     function ensureShape(p){
       const o=(p&&typeof p==="object")?{...p}:{};
       if(!Array.isArray(o.skills)) o.skills=[];
@@ -375,6 +381,26 @@
         alert("Could not preview this file (it may be too large or corrupted). Please re-upload and try again.");
       }
     }
+    function openResumePath(pathname,download){
+      const a=document.createElement("a");
+      a.href=download?`${pathname}${pathname.includes("?")?"&":"?"}download=1`:pathname;
+      a.target=download?"_self":"_blank";
+      a.rel="noopener noreferrer";
+      if(download) a.download="";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    async function openResumeViaBackend(pathname,download){
+      try{
+        const data=await backendOpenUrlRequest(`${pathname}${pathname.includes("?")?"&":"?"}link=1${download?"&download=1":""}`);
+        if(data&&data.ok&&data.url){
+          openResumePath(String(data.url),download);
+          return true;
+        }
+      }catch{}
+      return false;
+    }
     function isResumePreviewable(resume){
       const type=String(resume&&resume.type||"").toLowerCase();
       return type.startsWith("application/pdf")||type.startsWith("image/");
@@ -392,6 +418,10 @@
     }
     async function openResumeFile(resume){
       try{
+        if(resume&&resume.id){
+          const direct=await openResumeViaBackend(`/api/profile/resumes/${encodeURIComponent(String(resume.id))}/content`,false);
+          if(direct) return;
+        }
         const opened=await fetchResumeObjectUrl(resume,false);
         const a=document.createElement("a");
         a.href=opened.url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove();
@@ -403,6 +433,10 @@
     async function downloadResumeFile(resume){
       const fileName=String(resume&&resume.name||"resume").trim()||"resume";
       try{
+        if(resume&&resume.id){
+          const direct=await openResumeViaBackend(`/api/profile/resumes/${encodeURIComponent(String(resume.id))}/content`,true);
+          if(direct) return;
+        }
         const opened=await fetchResumeObjectUrl(resume,true);
         const a=document.createElement("a");
         a.href=opened.url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();

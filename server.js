@@ -567,6 +567,26 @@ async function supabaseStorageRequest(method, requestPath, body, headers = {}) {
   return res;
 }
 
+async function createSupabaseSignedObjectUrl(storagePath, { expiresIn = 60, download = false } = {}) {
+  const cfg = getSupabaseConfig();
+  const requestPath = `/storage/v1/object/sign/${encodeURIComponent(cfg.storageBucket)}/${storagePath
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
+  const payload = { expiresIn: Math.max(1, Math.floor(Number(expiresIn) || 60)) };
+  if (download) payload.download = true;
+  const result = await supabaseRequest("POST", requestPath, payload);
+  const raw =
+    (result && (result.signedURL || result.signedUrl || result.url || result.publicUrl)) ||
+    "";
+  const signed = String(raw || "").trim();
+  if (!signed) {
+    throw new Error("Supabase did not return a signed URL.");
+  }
+  if (/^https?:\/\//i.test(signed)) return signed;
+  return `${cfg.url}${signed.startsWith("/") ? signed : `/${signed}`}`;
+}
+
 async function ensureSupabaseDb() {
   const cfg = getSupabaseConfig();
   const encodedRowId = encodeURIComponent(cfg.rowId);
@@ -2644,6 +2664,23 @@ async function handleApi(req, res, url) {
     const resume = findResumeInProfile(u.profile || {}, resumeId);
     if (!resume) return json(res, 404, { ok: false, error: "Resume not found" });
     if (!resume.storagePath) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+    const urlObj = new URL(req.url, "http://localhost");
+    const wantsLink = String(urlObj.searchParams.get("link") || "").trim() === "1";
+    const wantsDownload = String(urlObj.searchParams.get("download") || "").trim() === "1";
+
+    if (getStorageProvider() === "supabase") {
+      const signedUrl = await createSupabaseSignedObjectUrl(resume.storagePath, {
+        expiresIn: 60,
+        download: wantsDownload,
+      });
+      if (wantsLink) return json(res, 200, { ok: true, url: signedUrl });
+      res.writeHead(302, {
+        Location: signedUrl,
+        "Cache-Control": "no-store",
+      });
+      res.end();
+      return;
+    }
 
     const file = await loadResumeBinary(resume.storagePath);
     if (!file || !file.buffer) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
@@ -2703,6 +2740,23 @@ async function handleApi(req, res, url) {
     const resume = findResumeInProfile(target.profile || {}, resumeId);
     if (!resume) return json(res, 404, { ok: false, error: "Resume not found" });
     if (!resume.storagePath) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
+    const urlObj = new URL(req.url, "http://localhost");
+    const wantsLink = String(urlObj.searchParams.get("link") || "").trim() === "1";
+    const wantsDownload = String(urlObj.searchParams.get("download") || "").trim() === "1";
+
+    if (getStorageProvider() === "supabase") {
+      const signedUrl = await createSupabaseSignedObjectUrl(resume.storagePath, {
+        expiresIn: 60,
+        download: wantsDownload,
+      });
+      if (wantsLink) return json(res, 200, { ok: true, url: signedUrl });
+      res.writeHead(302, {
+        Location: signedUrl,
+        "Cache-Control": "no-store",
+      });
+      res.end();
+      return;
+    }
     const file = await loadResumeBinary(resume.storagePath);
     if (!file || !file.buffer) return json(res, 404, { ok: false, error: "Resume file is unavailable." });
     res.writeHead(200, {
