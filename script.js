@@ -2542,6 +2542,8 @@ async function loadSeekerHistoryFromBackend() {
     if (!list) return;
     list.innerHTML = "";
     const items = byStatus[status];
+    const expandedSection = String(root.dataset.historyExpanded || "").trim().toLowerCase();
+    const visibleItems = expandedSection === status ? items : items.slice(0, 3);
     if (!items.length) {
       const empty = document.createElement("div");
       empty.style.padding = "10px 4px";
@@ -2550,7 +2552,7 @@ async function loadSeekerHistoryFromBackend() {
       list.appendChild(empty);
       return;
     }
-    items.slice(0, 6).forEach((a) => {
+    visibleItems.forEach((a) => {
       const item = document.createElement("div");
       item.className = "status-item status-item--history";
       item.innerHTML = `
@@ -5323,10 +5325,12 @@ function showSeekerNotifications() {
 function setupHistoryViewButtons() {
   const panels = document.querySelectorAll("#seekerHistoryPage .status-panel");
   const buttons = document.querySelectorAll("#seekerHistoryPage [data-history-view]");
+  const root = document.getElementById("seekerHistoryPage");
   if (!panels.length || !buttons.length) {
     return;
   }
   const showAll = () => {
+    if (root) root.dataset.historyExpanded = "";
     panels.forEach((panel) => {
       panel.style.display = "block";
     });
@@ -5336,14 +5340,18 @@ function setupHistoryViewButtons() {
     });
   };
   buttons.forEach((btn) => {
+    if (btn.dataset.boundHistoryView === "1") return;
+    btn.dataset.boundHistoryView = "1";
     btn.setAttribute("data-mode", "view");
     btn.addEventListener("click", () => {
       const mode = btn.getAttribute("data-mode");
       if (mode === "back") {
         showAll();
+        loadSeekerHistoryFromBackend().catch(() => {});
         return;
       }
       const target = btn.getAttribute("data-history-view");
+      if (root) root.dataset.historyExpanded = target || "";
       panels.forEach((panel) => {
         const section = panel.getAttribute("data-history-section");
         panel.style.display = section === target ? "block" : "none";
@@ -5357,6 +5365,7 @@ function setupHistoryViewButtons() {
           b.setAttribute("data-mode", "view");
         }
       });
+      loadSeekerHistoryFromBackend().catch(() => {});
     });
   });
 }
