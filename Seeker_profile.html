@@ -57,10 +57,13 @@
     .ub:hover{background:#3aa0ff}
     .rlist{margin-top:14px;display:flex;flex-direction:column;gap:10px}
     .ritem{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(12,17,23,.45);border:1px solid rgba(255,255,255,.06)}
+    .ritem.uploading{border-color:rgba(58,160,255,.35);background:rgba(15,35,58,.38)}
     .rname{flex:1 1 auto;font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .rmeta{margin-top:4px;font-size:12px;color:#8fb7e8}
     .ra{display:flex;gap:10px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
     .lb{border:1px solid rgba(255,255,255,.10);background:transparent;color:#cbd5e1;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px}
     .lb:hover{border-color:rgba(58,160,255,.45);color:#fff}
+    .lb[disabled]{opacity:.55;cursor:default}
     @media (max-width: 640px){
       .section{padding:18px}
       .resume-box{padding:16px}
@@ -238,6 +241,7 @@
     const KEY_PREFIX="smartHuntProfileCache_v1:seeker:";
     const SEEKER_LIMITS={name:100,title:100,about:1000,skills:300,location:100,email:254,phone:30,facebook:255,github:255};
     let profile={name:"",title:"",about:"",openToWork:true,avatarDataUrl:"",skills:[],resumes:[],contact:{email:"",phone:"",location:"",facebook:"",github:""},__updatedAt:0,__schema:1};
+    let resumeUploadCount=0;
     const DEFAULT_AVATAR_SRC="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20fill='white'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='29'%20fill='none'%20stroke='%23111'%20stroke-width='6'/%3E%3Ccircle%20cx='32'%20cy='25'%20r='12'%20fill='%23111'/%3E%3Cpath%20d='M14%2054c4-12%2032-12%2036%200'%20fill='%23111'/%3E%3C/svg%3E";
     let pageLoaderDepth=0;
 
@@ -333,7 +337,8 @@
           size:Number(r.size)||0,
           uploadedAt:String(r.uploadedAt||""),
           storagePath:String(r.storagePath||""),
-          dataUrl:typeof r.dataUrl==="string"?r.dataUrl:""
+          dataUrl:typeof r.dataUrl==="string"?r.dataUrl:"",
+          __uploading:Boolean(r.__uploading)
         };
       }).filter(Boolean);
       o.__schema=1;o.__updatedAt=Number(o.__updatedAt||0);
@@ -363,12 +368,8 @@
       try{
         const blob=dataUrlToBlob(dataUrl);
         const url=URL.createObjectURL(blob);
-        const w=window.open(url,"_blank","noopener,noreferrer");
-        if(!w){
-          URL.revokeObjectURL(url);
-          alert("Your browser blocked the preview pop-up. Please allow pop-ups for this site, or use Download instead.");
-          return;
-        }
+        const a=document.createElement("a");
+        a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove();
         setTimeout(()=>{try{URL.revokeObjectURL(url)}catch{}},60000);
       }catch{
         alert("Could not preview this file (it may be too large or corrupted). Please re-upload and try again.");
@@ -390,15 +391,10 @@
       return {url:URL.createObjectURL(result.blob),revoke:true};
     }
     async function openResumeFile(resume){
-      const fileName=String(resume&&resume.name||"resume").trim()||"resume";
       try{
         const opened=await fetchResumeObjectUrl(resume,false);
-        const w=window.open(opened.url,"_blank","noopener,noreferrer");
-        if(!w){
-          try{URL.revokeObjectURL(opened.url)}catch{}
-          alert("Your browser blocked the preview pop-up. Please allow pop-ups for this site, or use Download instead.");
-          return;
-        }
+        const a=document.createElement("a");
+        a.href=opened.url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove();
         setTimeout(()=>{try{URL.revokeObjectURL(opened.url)}catch{}},60000);
       }catch(err){
         alert(err&&err.message?err.message:"Could not open this resume.");
@@ -482,12 +478,18 @@
       list.innerHTML="";
       for(const r of profile.resumes){
         if(!r||typeof r!=="object") continue;
-        const row=document.createElement("div");row.className="ritem";
+        const row=document.createElement("div");row.className=`ritem${r.__uploading?" uploading":""}`;
+        const info=document.createElement("div");
         const name=document.createElement("div");name.className="rname";name.textContent=String(r.name||"Resume");
+        info.appendChild(name);
+        if(r.__uploading){
+          const meta=document.createElement("div");meta.className="rmeta";meta.textContent="Uploading...";
+          info.appendChild(meta);
+        }
         const actions=document.createElement("div");actions.className="ra";
 
         const isPreviewable = isResumePreviewable(r) || (typeof r.dataUrl==="string"&&r.dataUrl.startsWith("data:"));
-        if(isPreviewable){
+        if(isPreviewable && !r.__uploading){
           const view=document.createElement("button");view.type="button";view.className="lb";view.innerHTML='<i class="fa-solid fa-eye"></i> View';
           view.addEventListener("click",()=>{openResumeFile(r);});
           actions.appendChild(view);
@@ -495,11 +497,20 @@
 
         const dl=document.createElement("a");dl.className="lb";dl.innerHTML='<i class="fa-solid fa-download"></i> Download';
         dl.href="#";dl.download=String(r.name||"resume");
-        dl.addEventListener("click",(e)=>{e.preventDefault();downloadResumeFile(r);});
+        if(r.__uploading){
+          dl.setAttribute("disabled","disabled");
+          dl.addEventListener("click",(e)=>e.preventDefault());
+        }else{
+          dl.addEventListener("click",(e)=>{e.preventDefault();downloadResumeFile(r);});
+        }
         const rm=document.createElement("button");rm.type="button";rm.className="lb";rm.innerHTML='<i class="fa-solid fa-trash"></i> Remove';
-        rm.addEventListener("click",()=>{removeResumeFile(r);});
+        if(r.__uploading){
+          rm.setAttribute("disabled","disabled");
+        }else{
+          rm.addEventListener("click",()=>{removeResumeFile(r);});
+        }
         actions.appendChild(dl);actions.appendChild(rm);
-        row.appendChild(name);row.appendChild(actions);list.appendChild(row);
+        row.appendChild(info);row.appendChild(actions);list.appendChild(row);
       }
     }
     function save(){
@@ -821,6 +832,12 @@
     });
 
     const resumeInput=document.getElementById("resumeInput");
+    const uploadBtn=document.getElementById("uploadBtn");
+    function refreshResumeUploadButton(){
+      if(!uploadBtn) return;
+      uploadBtn.disabled=resumeUploadCount>0;
+      uploadBtn.innerHTML=resumeUploadCount>0?'<i class="fa-solid fa-spinner fa-spin"></i> Uploading...':'<i class="fa-solid fa-upload"></i> Upload file(s)';
+    }
     document.getElementById("uploadBtn").addEventListener("click",()=>resumeInput.click());
     resumeInput.addEventListener("change",async(e)=>{
       const files=Array.from((e&&e.target&&e.target.files)?e.target.files:[]);
@@ -828,14 +845,24 @@
         if(file.size>2.5*1024*1024){alert(`"${file.name}" is too large. Use a file under ~2.5MB.`);continue;}
         let dataUrl="";
         try{dataUrl=await fileToDataUrl(file);}catch{alert("Could not read that file.");continue;}
+        const tempId=`uploading_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+        profile.resumes=Array.isArray(profile.resumes)?profile.resumes:[];
+        profile.resumes.unshift({id:tempId,name:file.name,type:file.type||"",size:file.size,uploadedAt:new Date().toISOString(),storagePath:"",dataUrl:"",__uploading:true});
+        profile.resumes=profile.resumes.slice(0,5);
+        resumeUploadCount+=1;refreshResumeUploadButton();render();
         try{
           const data=await backendRequest("/api/profile/resumes",{method:"POST",body:{file:{name:file.name,type:file.type||"",size:file.size,dataUrl}}});
           if(data&&data.ok&&data.profile) profile=ensureShape(data.profile);
         }catch(err){
+          profile.resumes=(Array.isArray(profile.resumes)?profile.resumes:[]).filter((r)=>String(r&&r.id||"")!==tempId);
           alert(err&&err.message?err.message:`Could not upload "${file.name}".`);
+        }finally{
+          resumeUploadCount=Math.max(0,resumeUploadCount-1);
+          refreshResumeUploadButton();
+          writeCache(profile);render();
         }
       }
-      writeCache(profile);render();resumeInput.value="";
+      resumeInput.value="";
     });
 
     document.getElementById("finishBtn").addEventListener("click",async(e)=>{

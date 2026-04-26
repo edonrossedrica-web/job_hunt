@@ -4573,26 +4573,25 @@ async function openUploadedFile({ dataUrl, name, contentPath }) {
     }
   }
 
-  const w = window.open(urlToOpen, "_blank");
-  if (w) {
-    try {
-      w.document.title = fileName;
-    } catch {
-      // ignore (cross-origin / navigation timing)
-    }
-    return;
-  }
-
-  // Popup blocked: fall back to a download.
   try {
     const a = document.createElement("a");
     a.href = urlToOpen;
-    a.download = fileName;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
     document.body.appendChild(a);
     a.click();
     a.remove();
   } catch {
-    alert("Popup blocked. Allow popups to view the file.");
+    try {
+      const a = document.createElement("a");
+      a.href = urlToOpen;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      alert("Could not open the file. Please try Download instead.");
+    }
   }
 }
 
