@@ -584,6 +584,8 @@ async function createSupabaseSignedObjectUrl(storagePath, { expiresIn = 60, down
     throw new Error("Supabase did not return a signed URL.");
   }
   if (/^https?:\/\//i.test(signed)) return signed;
+  if (signed.startsWith("/storage/v1/")) return `${cfg.url}${signed}`;
+  if (signed.startsWith("/object/")) return `${cfg.url}/storage/v1${signed}`;
   return `${cfg.url}${signed.startsWith("/") ? signed : `/${signed}`}`;
 }
 
