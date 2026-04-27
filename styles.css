@@ -829,6 +829,12 @@ body.page-loading{
 .hero span{color:var(--accent);}
 .hero p{color:var(--muted);margin-bottom:45px;}
 
+#howItWorksPage{
+  min-height:auto;
+  align-items:flex-start;
+  padding-top:136px;
+}
+
 .cta-section{display:flex;flex-direction:column;align-items:center;gap:18px;}
 .cta-section.cta-row{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:16px;}
 .cta-section .how-btn{
