@@ -4100,7 +4100,7 @@ function schedulePostLoginUiRefresh() {
   }, 0);
 }
 
-function scheduleEmployerOverviewRefresh() {
+function scheduleEmployerOverviewRefresh(delay = 32) {
   if (employerOverviewRefreshTimer != null) {
     return;
   }
@@ -4114,7 +4114,7 @@ function scheduleEmployerOverviewRefresh() {
       return;
     }
     refreshDataViews().catch(() => {});
-  }, 32);
+  }, Math.max(32, Number(delay || 0)));
 }
 
 function scheduleRefreshDataViews(delay = 0) {
@@ -5523,7 +5523,7 @@ function setupHistoryViewButtons() {
   });
 }
 
-function showEmployerDashboard() {
+function showEmployerDashboard(options = {}) {
   isEmployer = true;
   document.getElementById("homePage").style.display = "none";
   document.getElementById("seekerLandingPage").style.display = "none";
@@ -5539,7 +5539,7 @@ function showEmployerDashboard() {
   setActiveNav("homeLink");
   window.scrollTo(0, 0);
   updateAuthUI();
-  scheduleEmployerOverviewRefresh();
+  scheduleEmployerOverviewRefresh(options.refreshDelay);
 }
 
 function openAddJob() {
@@ -5659,13 +5659,16 @@ async function handleLogin() {
         if (role === "seeker") {
           showHome();
           openWelcome();
+          updateAuthUI();
+          syncBookmarkButtons(document);
+          renderSavedJobs();
         } else {
-          showEmployerDashboard();
-          openEmployerWelcome();
+          showEmployerDashboard({ refreshDelay: 180 });
+          window.setTimeout(() => {
+            openEmployerWelcome();
+            schedulePostLoginUiRefresh();
+          }, 0);
         }
-        updateAuthUI();
-        syncBookmarkButtons(document);
-        renderSavedJobs();
         return;
       }
 
@@ -5677,13 +5680,16 @@ async function handleLogin() {
         if (role === "seeker") {
           showHome();
           openWelcome();
+          updateAuthUI();
+          syncBookmarkButtons(document);
+          renderSavedJobs();
         } else {
-          showEmployerDashboard();
-          openEmployerWelcome();
+          showEmployerDashboard({ refreshDelay: 180 });
+          window.setTimeout(() => {
+            openEmployerWelcome();
+            schedulePostLoginUiRefresh();
+          }, 0);
         }
-        updateAuthUI();
-        syncBookmarkButtons(document);
-        renderSavedJobs();
         return;
       }
 
@@ -5703,13 +5709,16 @@ async function handleLogin() {
       if (role === "seeker") {
         showHome();
         openWelcome();
+        updateAuthUI();
+        syncBookmarkButtons(document);
+        renderSavedJobs();
       } else {
-        showEmployerDashboard();
-        openEmployerWelcome();
+        showEmployerDashboard({ refreshDelay: 180 });
+        window.setTimeout(() => {
+          openEmployerWelcome();
+          schedulePostLoginUiRefresh();
+        }, 0);
       }
-      updateAuthUI();
-      syncBookmarkButtons(document);
-      renderSavedJobs();
     }, { message: "Logging in...", minDuration: 120 });
   } catch (err) {
     alert(err?.message || "Login failed.");
